@@ -1,0 +1,138 @@
+# E-posta Ekleri Analiz Özelliği Uygulama Dokümantasyonu
+
+## Genel Bakış
+
+StopSale Automation Sistemi'ne yeni bir özellik eklenmiştir: E-posta içeriğinde stop sale veya open sale bilgisi yoksa, eklerdeki bilgilerin analiz edilmesi ve mail detay sayfasında gösterilmesi.
+
+Bu özellik, aşağıdaki işlevleri sağlar:
+
+1. E-posta içeriğini analiz et ve stop sale/open sale bilgisi olup olmadığını kontrol et
+2. İçerikte bilgi yoksa, ekleri analiz et
+3. Eklerde bulunan bilgileri çıkar ve yapılandırılmış veri olarak kaydet
+4. E-posta detay sayfasında ek analiz sonuçlarını göster
+
+## Teknik Uygulama
+
+### 1. Veritabanı Değişiklikleri
+
+`EmailRow` modeline yeni bir alan eklenmiştir:
+
+```python
+from_attachment = models.BooleanField(default=False, help_text="Whether this data was extracted from an attachment")
+```
+
+Bu alan, verilerin e-posta içeriğinden mi yoksa eklerden mi çıkarıldığını takip etmek için kullanılır. Eğer `True` ise, veriler bir ekten çıkarılmıştır.
+
+Veritabanı migrasyonu `/home/ubuntu/project/emails/migrations/0006_emailrow_from_attachment.py` dosyasında oluşturulmuştur.
+
+### 2. AI Analiz Motoru Güncellemeleri
+
+`ClaudeAnalyzer` sınıfı, e-posta içeriğini ve eklerini analiz etmek için güncellenmiştir. Yeni uygulama şu şekilde çalışır:
+
+1. Önce e-posta içeriğini analiz et
+2. Eğer içerikte stop sale/open sale bilgisi yoksa, ekleri analiz et
+3. Analiz sonucunu ve verilerin eklerden çıkarılıp çıkarılmadığını belirten bir bayrak döndür
+
+Güncellenen `analyze_email_content` metodu şimdi bir tuple döndürür:
+
+```python
+return result, from_attachment
+```
+
+Burada `result` analiz sonuçlarını içeren bir sözlüktür ve `from_attachment` verilerin eklerden çıkarılıp çıkarılmadığını belirten bir boolean değerdir.
+
+### 3. E-posta İşleme Mantığı Güncellemeleri
+
+`signals.py` dosyasındaki e-posta işleme mantığı, ekleri analiz etmek için güncellenmiştir. Yeni uygulama şu şekilde çalışır:
+
+1. E-posta alındığında, ekler varsa bunları analiz için hazırla
+2. `ClaudeAnalyzer` sınıfını kullanarak e-posta içeriğini ve eklerini analiz et
+3. Analiz sonuçlarını işle ve `from_attachment` bayrağını uygun şekilde ayarla
+4. E-posta satırlarını oluştur ve veritabanına kaydet
+
+Yeni bir yardımcı fonksiyon olan `process_analysis_results` eklenmiştir. Bu fonksiyon, analiz sonuçlarını işler ve `EmailRow` nesnelerini oluşturur.
+
+### 4. Kullanıcı Arayüzü Güncellemeleri
+
+#### E-posta Detay Görünümü
+
+`email_detail` görünümü, ek analiz sonuçlarını göstermek için güncellenmiştir:
+
+```python
+# Get counts for content vs attachment extraction
+content_extracted = email.rows.filter(from_attachment=False).count()
+attachment_extracted = email.rows.filter(from_attachment=True).count()
+
+# Get attachment information
+attachments = email.attachments.all()
+has_analyzed_attachments = attachment_extracted > 0
+```
+
+Bu değişkenler, şablona aktarılır ve kullanıcı arayüzünde gösterilir.
+
+#### E-posta Detay Şablonu
+
+`email_detail.html` şablonu, ek analiz sonuçlarını göstermek için güncellenmiştir:
+
+1. Özet çubuğuna, eklerden çıkarılan satır sayısını gösteren yeni bir öğe eklenmiştir
+2. Ek kartı, ekler analiz edildiğinde görsel olarak vurgulanır
+3. Her satır için, veriler eklerden çıkarıldıysa bir rozet gösterilir
+
+Yeni stil tanımları eklenmiştir:
+
+```css
+.badge.bg-warning.text-dark {
+    background-color: rgba(255, 193, 7, 0.8) !important;
+    color: #212529 !important;
+    font-weight: 500;
+    font-size: 0.75rem;
+}
+
+.badge.bg-warning.text-dark i {
+    margin-right: 3px;
+}
+
+.attachment-analyzed {
+    background-color: rgba(76, 175, 80, 0.1);
+    border-color: rgba(76, 175, 80, 0.3);
+}
+```
+
+## Kullanım
+
+Özellik otomatik olarak çalışır. E-posta alındığında:
+
+1. Sistem önce e-posta içeriğini analiz eder
+2. Eğer içerikte stop sale/open sale bilgisi yoksa, sistem otomatik olarak ekleri analiz eder
+3. Analiz sonuçları e-posta detay sayfasında gösterilir
+4. Eklerden çıkarılan veriler, "Ekten Çıkarıldı" rozeti ile işaretlenir
+5. Özet çubuğunda, eklerden çıkarılan satır sayısı gösterilir
+
+## Teknik Notlar
+
+1. Ek analizi, `FileFormatProcessor` ve `EmailAttachmentProcessor` sınıfları kullanılarak gerçekleştirilir
+2. Desteklenen ek formatları: PDF, Excel, Word ve düz metin dosyaları
+3. Analiz sonuçları, Claude AI tarafından yapılandırılmış JSON formatında döndürülür
+4. Özellik, dil algılama ve çok dilli destek ile uyumludur
+
+## Sınırlamalar ve Gelecek Geliştirmeler
+
+1. Çok büyük ekler için performans sorunları olabilir
+2. Karmaşık tablo yapıları olan PDF dosyaları tam olarak analiz edilemeyebilir
+3. Gelecek geliştirmeler:
+   - Daha fazla dosya formatı desteği
+   - Görüntü tabanlı PDF'ler için OCR desteği
+   - Ek analiz sonuçlarının manuel düzenlenmesi için arayüz
+
+## Test Senaryoları
+
+Özellik, aşağıdaki senaryolar için test edilmiştir:
+
+1. **Senaryo 1**: E-posta içeriğinde stop sale/open sale bilgisi var
+   - Sonuç: Veriler e-posta içeriğinden çıkarılır, `from_attachment=False`
+
+2. **Senaryo 2**: E-posta içeriğinde stop sale/open sale bilgisi yok, ama eklerde var
+   - Sonuç: Veriler eklerden çıkarılır, `from_attachment=True`
+
+3. **Senaryo 3**: Ne e-posta içeriğinde ne de eklerde stop sale/open sale bilgisi var
+   - Sonuç: Hiçbir veri çıkarılmaz

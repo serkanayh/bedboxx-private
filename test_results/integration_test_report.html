@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Integration Test Report</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        h1, h2, h3 {
+            color: #2c3e50;
+        }
+        .summary {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .component {
+            margin-bottom: 30px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+        }
+        .component-header {
+            background-color: #f8f9fa;
+            padding: 10px;
+            margin: -15px -15px 15px -15px;
+            border-bottom: 1px solid #ddd;
+            border-radius: 5px 5px 0 0;
+        }
+        .test {
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .passed {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .failed {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <h1>Integration Test Report</h1>
+    <p>Date: 2025-04-19 12:56:37</p>
+    <div class="summary">
+        <h2>Summary</h2>
+        <p><strong>Total tests:</strong> 16</p>        <p><strong>Passed:</strong> 5</p>        <p><strong>Failed:</strong> 0</p>        <p><strong>Errors:</strong> 11</p>    </div>
+    <div class="component">
+        <div class="component-header">
+            <h2>AI Analysis Component</h2>
+        </div>
+        <p><strong>Total:</strong> 4</p>
+        <p><strong>Passed:</strong> 0</p>
+        <p><strong>Failed:</strong> 0</p>
+        <p><strong>Errors:</strong> 4</p>
+        
+        <h3>Tests</h3>
+
+        <div class="test error">
+            <h4>Import AI modules</h4>
+            <p>Error importing AI modules: f-string expression part cannot include a backslash (multi_language_support.py, line 210)</p>
+        </div>
+
+        <div class="test error">
+            <h4>Create ClaudeAnalyzer instance</h4>
+            <p>Error creating ClaudeAnalyzer instance: local variable 'ClaudeAnalyzer' referenced before assignment</p>
+        </div>
+
+        <div class="test error">
+            <h4>File format processor integration</h4>
+            <p>Error testing file format processor: local variable 'FileFormatProcessor' referenced before assignment</p>
+        </div>
+
+        <div class="test error">
+            <h4>Language detector integration</h4>
+            <p>Error testing language detector: local variable 'LanguageDetector' referenced before assignment</p>
+        </div>
+    </div>
+    <div class="component">
+        <div class="component-header">
+            <h2>Performance Optimization</h2>
+        </div>
+        <p><strong>Total:</strong> 4</p>
+        <p><strong>Passed:</strong> 4</p>
+        <p><strong>Failed:</strong> 0</p>
+        <p><strong>Errors:</strong> 0</p>
+        
+        <h3>Tests</h3>
+
+        <div class="test passed">
+            <h4>Import performance modules</h4>
+            <p>Successfully imported performance modules</p>
+        </div>
+
+        <div class="test passed">
+            <h4>Create CacheManager instance</h4>
+            <p>Successfully created CacheManager instance</p>
+        </div>
+
+        <div class="test passed">
+            <h4>Create AsyncProcessor instance</h4>
+            <p>Successfully created AsyncProcessor instance</p>
+        </div>
+
+        <div class="test passed">
+            <h4>Create DatabaseOptimizer instance</h4>
+            <p>Successfully created DatabaseOptimizer instance</p>
+        </div>
+    </div>
+    <div class="component">
+        <div class="component-header">
+            <h2>Security Improvements</h2>
+        </div>
+        <p><strong>Total:</strong> 4</p>
+        <p><strong>Passed:</strong> 1</p>
+        <p><strong>Failed:</strong> 0</p>
+        <p><strong>Errors:</strong> 3</p>
+        
+        <h3>Tests</h3>
+
+        <div class="test error">
+            <h4>Import security modules</h4>
+            <p>Error importing security modules: No module named 'django'</p>
+        </div>
+
+        <div class="test error">
+            <h4>Create ApiKeyManager instance</h4>
+            <p>Error creating ApiKeyManager instance: ApiKeyManager.__init__() got an unexpected keyword argument 'master_password'</p>
+        </div>
+
+        <div class="test passed">
+            <h4>Create EncryptionManager instance</h4>
+            <p>Successfully created EncryptionManager instance</p>
+        </div>
+
+        <div class="test error">
+            <h4>Create SecurityHeadersMiddleware instance</h4>
+            <p>Error creating SecurityHeadersMiddleware instance: local variable 'SecurityHeadersMiddleware' referenced before assignment</p>
+        </div>
+    </div>
+    <div class="component">
+        <div class="component-header">
+            <h2>Code Quality Improvements</h2>
+        </div>
+        <p><strong>Total:</strong> 4</p>
+        <p><strong>Passed:</strong> 0</p>
+        <p><strong>Failed:</strong> 0</p>
+        <p><strong>Errors:</strong> 4</p>
+        
+        <h3>Tests</h3>
+
+        <div class="test error">
+            <h4>Import code quality modules</h4>
+            <p>Error importing code quality modules: cannot import name 'TestRunner' from 'code_quality.unit_testing' (/home/ubuntu/project/code_quality/unit_testing.py)</p>
+        </div>
+
+        <div class="test error">
+            <h4>Create CodeStyleChecker instance</h4>
+            <p>Error creating CodeStyleChecker instance: local variable 'CodeStyleChecker' referenced before assignment</p>
+        </div>
+
+        <div class="test error">
+            <h4>Create DocumentationGenerator instance</h4>
+            <p>Error creating DocumentationGenerator instance: local variable 'DocumentationGenerator' referenced before assignment</p>
+        </div>
+
+        <div class="test error">
+            <h4>Create DependencyManager instance</h4>
+            <p>Error creating DependencyManager instance: local variable 'DependencyManager' referenced before assignment</p>
+        </div>
+    </div>
+</body>
+</html>

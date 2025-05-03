@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block title %}Confirm Attachment Analysis - {{ email.subject }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h4>Confirm Attachment Analysis Results</h4>
+            <a href="{% url 'emails:email_detail' email_id=email.id %}" class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-arrow-left"></i> Back to Email
+            </a>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i> 
+                Please review the information extracted from attachments and select which rows to keep.
+            </div>
+            
+            <div class="email-info mb-4">
+                <h5>Email Information</h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Subject:</strong> {{ email.subject }}</p>
+                        <p><strong>From:</strong> {{ email.sender }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Date:</strong> {{ email.received_date }}</p>
+                        <p><strong>Attachments:</strong> {{ email.attachments.count }}</p>
+                    </div>
+                </div>
+            </div>
+            
+            <form method="post" action="{% url 'emails:confirm_attachment_analysis' email_id=email.id %}">
+                {% csrf_token %}
+                
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead class="thead-dark">
+                            <tr>
+                                <th width="5%">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="select-all">
+                                    </div>
+                                </th>
+                                <th>Hotel</th>
+                                <th>Room Type</th>
+                                <th>Market</th>
+                                <th>Start Date</th>
+                                <th>End Date</th>
+                                <th>Sale Type</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in attachment_rows %}
+                            <tr>
+                                <td>
+                                    <div class="form-check">
+                                        <input class="form-check-input row-checkbox" type="checkbox" name="row_ids" value="{{ row.id }}" id="row-{{ row.id }}" checked>
+                                    </div>
+                                </td>
+                                <td>{{ row.hotel_name }}</td>
+                                <td>{{ row.room_type }}</td>
+                                <td>{{ row.market }}</td>
+                                <td>{{ row.start_date }}</td>
+                                <td>{{ row.end_date }}</td>
+                                <td>
+                                    {% if row.sale_type == 'stop' %}
+                                    <span class="badge bg-danger">Stop Sale</span>
+                                    {% else %}
+                                    <span class="badge bg-success">Open Sale</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="7" class="text-center">No data extracted from attachments</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="d-flex justify-content-between mt-3">
+                    <a href="{% url 'emails:email_detail' email_id=email.id %}" class="btn btn-secondary">
+                        Cancel
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-check"></i> Confirm Selected Rows
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // Select/deselect all checkboxes
+        $('#select-all').change(function() {
+            $('.row-checkbox').prop('checked', $(this).prop('checked'));
+        });
+        
+        // Update "select all" checkbox when individual checkboxes change
+        $('.row-checkbox').change(function() {
+            if ($('.row-checkbox:checked').length == $('.row-checkbox').length) {
+                $('#select-all').prop('checked', true);
+            } else {
+                $('#select-all').prop('checked', false);
+            }
+        });
+    });
+</script>
+{% endblock %}

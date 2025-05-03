@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Satır Düzenle{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Main content -->
+    {% block content %}
+    <div class="container mt-4">
+        <h1>Satır Düzenle</h1>
+        <form method="post">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="juniper_hotel_id">Juniper Otel:</label>
+                <select name="juniper_hotel_id" id="juniper_hotel_id" class="form-control">
+                    <option value="">Seçiniz...</option>
+                    {% for hotel in hotels %}
+                        <option value="{{ hotel.id }}" {% if row.juniper_hotel and row.juniper_hotel.id == hotel.id %}selected{% endif %}>
+                            {{ hotel.juniper_hotel_name }} ({{ hotel.juniper_code }})
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="markets">Juniper Pazarları (Çoklu seçim):</label>
+                <select name="markets" id="markets" class="form-control" multiple size="5">
+                    {% for market in markets %}
+                        <option value="{{ market.id }}" {% if market in row.markets.all %}selected{% endif %}>
+                            {{ market.name }} {% if market.juniper_code %}({{ market.juniper_code }}){% endif %}
+                        </option>
+                    {% endfor %}
+                </select>
+                <small class="form-text text-muted">Birden fazla seçim için CTRL tuşunu basılı tutun (Mac: CMD)</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="market">Tek Pazar (Eski):</label>
+                <input type="text" class="form-control" id="market" name="market" value="{{ row.market }}">
+            </div>
+            <button type="submit" class="btn btn-primary">Kaydet</button>
+        </form>
+    </div>
+    {% endblock %}
+
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            // Initialize select2 for markets dropdown
+            $('#markets').select2({
+                placeholder: "Pazarları seçiniz...",
+                allowClear: true,
+                width: '100%'
+            });
+            
+            // Initialize select2 for hotel dropdown
+            $('#juniper_hotel_id').select2({
+                placeholder: "Otel seçiniz...",
+                allowClear: true,
+                width: '100%'
+            });
+        });
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html> 

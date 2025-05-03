@@ -1,0 +1,78 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Hotel Rooms - {{ hotel.juniper_hotel_name }} - StopSale Automation System{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+    <h1>{{ hotel.juniper_hotel_name }} - Rooms</h1>
+    <div class="d-flex">
+        <a href="{% url 'hotels:hotel_list' %}" class="btn btn-outline-primary me-2">
+            <i class="bi bi-arrow-left"></i> Back to Hotels
+        </a>
+        <a href="{% url 'hotels:hotel_detail' hotel.id %}" class="btn btn-outline-primary">
+            <i class="bi bi-building"></i> Hotel Details
+        </a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+            <i class="bi bi-door-closed me-2"></i> Room List
+        </h5>
+        {% if user.is_admin or user.is_supervisor %}
+        <a href="{% url 'hotels:room_create' %}" class="btn btn-success btn-sm">
+            <i class="bi bi-plus-circle"></i> Add New Room
+        </a>
+        {% endif %}
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Room Type</th>
+                        <th>Room Code</th>
+                        <th>Created</th>
+                        <th>Updated</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for room in rooms %}
+                    <tr>
+                        <td>{{ room.juniper_room_type }}</td>
+                        <td>{{ room.room_code }}</td>
+                        <td>{{ room.created_at|date:"d M Y H:i" }}</td>
+                        <td>{{ room.updated_at|date:"d M Y H:i" }}</td>
+                        <td>
+                            <div class="btn-group">
+                                <a href="{% url 'hotels:room_detail' room.id %}" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye"></i> View
+                                </a>
+                                {% if user.is_admin or user.is_supervisor %}
+                                {% if not room.juniper_room_type == 'All Rooms' and not room.room_code == 'ALL' %}
+                                <a href="{% url 'hotels:room_delete' room.id %}" class="btn btn-sm btn-outline-danger">
+                                    <i class="bi bi-trash"></i> Delete
+                                </a>
+                                {% endif %}
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center py-4">
+                            <div class="text-muted">
+                                <i class="bi bi-door-closed fs-1 d-block mb-2"></i>
+                                No rooms found for this hotel.
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

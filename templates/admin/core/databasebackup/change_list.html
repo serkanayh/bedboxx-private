@@ -1,0 +1,37 @@
+{% extends "admin/change_list.html" %}
+{% load i18n admin_urls static admin_list %}
+
+{% block object-tools %}
+<div style="margin-bottom: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 5px; border: 1px solid #ddd;">
+    <h3 style="margin-top: 0;">Database Management Tools</h3>
+    <p>These tools help you manage your database backups and check database integrity.</p>
+    
+    <div style="margin-top: 15px; display: flex; gap: 10px;">
+        <form method="post" action="{% url 'admin:core_create_backup' %}">
+            {% csrf_token %}
+            <button type="submit" class="button" style="background-color: #28a745; color: white; padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer;">
+                <i class="fas fa-database" style="margin-right: 5px;"></i> Create Backup
+            </button>
+        </form>
+        
+        <form method="post" action="{% url 'admin:core_check_database' %}">
+            {% csrf_token %}
+            <button type="submit" class="button" style="background-color: #17a2b8; color: white; padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer;">
+                <i class="fas fa-check-circle" style="margin-right: 5px;"></i> Check Database Integrity
+            </button>
+        </form>
+    </div>
+    
+    <div style="margin-top: 10px;">
+        <p style="font-size: 0.9em; color: #666;">
+            <strong>Notes:</strong>
+            <ul style="margin-top: 5px;">
+                <li>Regular backups are recommended to prevent data loss.</li>
+                <li>Check database integrity if you experience database errors.</li>
+                <li>Downloaded backups can be restored manually if needed.</li>
+            </ul>
+        </p>
+    </div>
+</div>
+{{ block.super }}
+{% endblock %} 

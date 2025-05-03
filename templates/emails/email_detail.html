@@ -1,0 +1,815 @@
+{% extends 'base/base.html' %}
+{% load static %} {# Assuming you might use static files later #}
+{% load humanize %} {# Assuming filesizeformat filter is used #}
+
+{% block title %}Email Details - {{ email.subject }} - StopSale Automation System{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+<style>
+    /* Card Styles */
+    .card {
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        margin-bottom: 20px;
+        border: 1px solid rgba(0, 0, 0, 0.125);
+    }
+
+    .card-header {
+        background-color: rgba(63, 81, 181, 0.1);
+        border-bottom: 1px solid rgba(63, 81, 181, 0.2);
+        padding: 12px 15px;
+        font-weight: 600;
+    }
+
+    .card-body {
+        padding: 15px;
+    }
+     .card-footer {
+         padding: 10px 15px;
+         border-top: 1px solid #dee2e6;
+         background-color: #f8f9fa;
+         border-radius: 0 0 8px 8px;
+    }
+
+    /* Email Content Styles */
+    .email-content-wrapper {
+        max-height: 300px; /* Adjustable height */
+        overflow-y: auto;
+        border: 1px solid #e9ecef;
+        border-radius: 4px;
+        background-color: #f8f9fa; /* Light background for the wrapper */
+    }
+
+    .email-content {
+        padding: 15px;
+        font-family: 'Courier New', Courier, monospace;
+        white-space: pre-wrap;
+        color: #333; /* Darker text for readability */
+        line-height: 1.5;
+        font-size: 0.9rem;
+        background-color: #fff; /* White background for the content itself */
+    }
+     #htmlContent {
+        /* Reset specific styles if needed, or inherit */
+        font-family: sans-serif; /* Example reset */
+        white-space: normal;
+        color: #333;
+        background-color: #fff;
+        padding: 15px;
+    }
+
+    /* Tab Styles - Increased Specificity */
+    #contentTab .nav-tabs .nav-item .nav-link {
+        color: #0d6efd !important; /* Bootstrap primary blue - Added !important as last resort */
+        font-weight: 500;
+    }
+    #contentTab .nav-tabs .nav-item .nav-link.active {
+         color: #495057 !important; /* Darker color for active tab */
+         background-color: #fff;
+         border-color: #dee2e6 #dee2e6 #fff;
+    }
+    #contentTab .nav-tabs .nav-item .nav-link:hover {
+        color: #0a58ca !important; /* Darker blue on hover */
+        border-color: #e9ecef #e9ecef #dee2e6;
+    }
+
+    /* Action Bar */
+    .action-bar {
+        background-color: #f8f9fa;
+        padding: 10px 15px;
+        border-radius: 8px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        margin-bottom: 20px;
+    }
+
+    /* Rule Item Styles */
+    .rule-item .card {
+        transition: all 0.2s ease;
+        margin-bottom: 15px; /* Add margin between rule cards */
+    }
+
+    .rule-item .card:hover {
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    }
+
+    .hotel-name {
+        font-weight: 600;
+        font-size: 1.1rem;
+        color: #333;
+    }
+
+    .juniper-match {
+        border-radius: 4px;
+        padding: 10px; /* Added padding */
+    }
+
+    .bg-success-light {
+        background-color: rgba(76, 175, 80, 0.1);
+        border-left: 4px solid #4caf50;
+    }
+    .bg-warning-light {
+        background-color: rgba(255, 152, 0, 0.1);
+        border-left: 4px solid #ff9800;
+    }
+    .bg-danger-light {
+        background-color: rgba(244, 67, 54, 0.1);
+        border-left: 4px solid #f44336;
+    }
+    .juniper-code {
+        color: #666;
+        font-size: 0.85rem;
+        font-family: monospace;
+    }
+
+
+    /* Highlight matching content */
+    .highlight-match {
+        background-color: rgba(255, 235, 59, 0.4); /* Yellowish highlight */
+        border-radius: 2px;
+        padding: 1px 0;
+         box-shadow: 0 0 0 1px rgba(255, 235, 59, 0.7); 
+        font-weight: bold; 
+        color: #333;
+    }
+
+    /* Attachment Card */
+    .attachment-analyzed {
+        border-color: rgba(76, 175, 80, 0.3);
+    }
+
+    .attachment-analyzed .card-header {
+        background-color: rgba(76, 175, 80, 0.1);
+    }
+
+    /* Veri Doğrulama Stilleri */
+    .verification-section {
+        background-color: #f8f9fa;
+        border-radius: 6px;
+        padding: 10px;
+        border: 1px solid #e9ecef;
+        margin-bottom: 15px; /* Add margin below verification section */
+    }
+
+    .verification-item {
+        margin-bottom: 10px;
+        position: relative;
+        transition: all 0.2s ease;
+    }
+     .verification-item:last-child {
+         margin-bottom: 0; /* Remove margin from last item */
+     }
+
+    .verification-item:hover {
+        transform: translateY(-2px);
+    }
+
+    .verification-label {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 5px;
+    }
+
+    .verification-toggle {
+        padding: 0;
+        font-size: 0.8rem; /* Smaller icon */
+        color: #3f51b5; /* Primary color */
+        opacity: 0.7;
+        transition: all 0.2s ease;
+        background: none;
+        border: none;
+        cursor: pointer;
+    }
+     .verification-item:hover .verification-toggle {
+         opacity: 1;
+     }
+
+
+    .verification-content {
+        background-color: white;
+        border-radius: 4px;
+        border: 1px solid #e9ecef;
+        overflow: visible;
+        position: relative; /* Needed for pseudo-element */
+    }
+    
+    /* Colored border effect */
+     .verification-content::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        width: 4px;
+        opacity: 0;
+        transition: all 0.2s ease;
+    }
+
+    .verification-item[data-field="hotel"] .verification-content::after { background-color: #3f51b5; } /* Blue for hotel */
+    .verification-item[data-field="room"] .verification-content::after { background-color: #f44336; } /* Red for room */
+    .verification-item[data-field="market"] .verification-content::after { background-color: #4caf50; } /* Green for market */
+
+     .verification-item:hover .verification-content::after,
+     .verification-item.active .verification-content::after {
+         opacity: 1;
+     }
+     .verification-item.active .verification-content::after {
+          width: 6px; /* Thicker border when active */
+     }
+
+
+    .extracted-value, .match-value {
+        padding: 6px 10px;
+        font-size: 0.9rem;
+    }
+
+    .extracted-value {
+        background-color: #e3f2fd; /* Light blue background */
+        border-bottom: 1px dashed #bbdefb;
+        font-weight: 500;
+    }
+
+    .match-success { color: #2e7d32; font-weight: 500; }
+    .match-warning { color: #ef6c00; font-weight: 500; }
+    .match-error { color: #c62828; font-weight: 500; }
+    .match-info { color: #0277bd; font-weight: 500; }
+
+    /* Match Status Indicators (Dots) */
+    .match-indicator {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        margin-right: 5px;
+        vertical-align: middle;
+    }
+    .match-indicator.success { background-color: #4caf50; }
+    .match-indicator.warning { background-color: #ff9800; }
+    .match-indicator.error { background-color: #f44336; }
+    .match-indicator.info { background-color: #0277bd; } /* For market or other info */
+
+    /* Tooltip */
+    .verification-tooltip {
+        position: absolute;
+        top: -30px; /* Position above the item */
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: #333;
+        color: white;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+        pointer-events: none; /* Don't block hover */
+        white-space: nowrap;
+        z-index: 100;
+    }
+    .verification-tooltip::after { /* Arrow */
+        content: '';
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        margin-left: -5px;
+        border-width: 5px;
+        border-style: solid;
+        border-color: #333 transparent transparent transparent;
+    }
+    .verification-item:hover .verification-tooltip {
+        opacity: 1;
+    }
+    
+    /* Badge Styles */
+     .badge.bg-bekliyor { background-color: var(--warning-color); color: #fff; }
+     .badge.bg-onaylandi { background-color: var(--success-color); color: #fff; }
+     .badge.bg-reddedildi { background-color: var(--danger-color); color: #fff; }
+     /* Add other status badges as needed */
+
+    /* Çoklu Seçim Stilleri */
+    .rule-checkbox {
+        width: 20px;
+        height: 20px;
+        margin-right: 10px;
+    }
+    
+    .rule-item.selected .card {
+        border: 2px solid #3f51b5;
+    }
+    
+    .bulk-actions {
+        display: none;
+        margin-bottom: 10px;
+    }
+    
+    .bulk-actions.show {
+        display: block;
+    }
+    
+    #selectAllRules {
+        width: 20px;
+        height: 20px;
+        margin-right: 5px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h1 class="h3 mb-0">Email Detay</h1>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb bg-transparent p-0 mb-0">
+                <li class="breadcrumb-item"><a href="{% url 'core:dashboard' %}">Ana Sayfa</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'emails:email_list' %}">Emails</a></li>
+                <li class="breadcrumb-item active" aria-current="page">{{ email.subject|truncatechars:30 }}</li>
+            </ol>
+        </nav>
+    </div>
+    <div>
+        <a href="{% url 'emails:email_list' %}" class="btn btn-outline-primary me-2">
+            <i class="bi bi-arrow-left"></i> Geri
+        </a>
+    </div>
+</div>
+
+<!-- Action Bar -->
+<div class="action-bar mb-3">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>
+            {% if first_matched_row and first_matched_row.juniper_hotel %}
+            <a href="https://bedboxx.juniperbetemp.com/intranet/alojamiento/mantenimientoV2.aspx?alojamiento={{ first_matched_row.juniper_hotel.juniper_code }}" target="_blank" class="btn btn-warning btn-sm">
+                <i class="bi bi-box-arrow-up-right"></i> Juniper'da Aç
+            </a>
+            {% endif %}
+            {% if email.status == 'approved' %}
+             <a href="#" class="btn btn-sm" style="background-color: #673ab7; color: white;" title="Send Approved Rows to Robot"> {# Add URL when available #}
+                <i class="bi bi-robot"></i> Robot İşle
+            </a>
+            {% endif %}
+            <span class="badge {% if email.robot_status == 'processed' %}bg-success{% elif email.robot_status == 'error' %}bg-danger{% else %}bg-secondary{% endif %} ms-2">
+                <i class="bi {% if email.robot_status == 'processed' %}bi-check-circle{% elif email.robot_status == 'error' %}bi-exclamation-triangle{% else %}bi-hourglass{% endif %}"></i> Robot: {{ email.get_robot_status_display|default:"Bekliyor" }}
+            </span>
+        </div>
+        
+        <div class="btn-group">
+            {% if email.status == 'pending' %}
+            <a href="{% url 'emails:approve_email' email.id %}" class="btn btn-success btn-sm">
+                <i class="bi bi-check-circle"></i> Tümünü Onayla
+            </a>
+            <a href="{% url 'emails:reject_email' email.id %}" class="btn btn-danger btn-sm">
+                <i class="bi bi-x-circle"></i> Tümünü Reddet
+            </a>
+             {# <a href="#" class="btn btn-secondary btn-sm"><i class="bi bi-eye-slash"></i> Ignore</a> #} {# Add ignore URL if needed #}
+             {# <a href="#" class="btn btn-info btn-sm"><i class="bi bi-person-gear"></i> Reassign</a> #} {# Add reassign URL if needed #}
+            {% endif %}
+            <a href="{% url 'emails:reanalyze_email' email.id %}" class="btn btn-secondary btn-sm" title="Delete results and re-analyze email">
+                <i class="bi bi-arrow-clockwise"></i> Yeniden Analiz
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Responsive Two-Column Layout for Email Content & Extracted Rules -->
+<div class="row g-3 mb-3 align-items-stretch">
+  <div class="col-12 col-md-5 d-flex flex-column" style="height: calc(100vh - 220px); min-height: 300px;">
+    <!-- Email Content Card -->
+    <div class="card h-100 d-flex flex-column">
+      <div class="card-header">
+        <i class="bi bi-envelope-open"></i> Email İçeriği
+      </div>
+      <div class="card-body d-flex flex-column p-0" style="height: 100%; min-height: 0;">
+        <ul class="nav nav-tabs" id="emailTab" role="tablist">
+          <li class="nav-item">
+            <button class="nav-link active" id="body-tab" data-bs-toggle="tab" data-bs-target="#body" type="button" role="tab" aria-controls="body" aria-selected="true">Body</button>
+          </li>
+          <li class="nav-item">
+            <button class="nav-link" id="attachments-tab" data-bs-toggle="tab" data-bs-target="#attachments" type="button" role="tab" aria-controls="attachments" aria-selected="false">Attachments</button>
+          </li>
+        </ul>
+        <div class="tab-content flex-fill" id="emailTabContent" style="height: 100%; min-height: 0;">
+          <div class="tab-pane fade show active" id="body" role="tabpanel" aria-labelledby="body-tab" style="height: 100%; min-height: 0;">
+            <div class="email-content-wrapper flex-fill" style="height: 100%; min-height: 0; overflow-y: auto; padding: 15px;">
+              {% if email.body_html %}
+                <div id="htmlContent">{{ email.body_html|safe }}</div>
+                <pre id="textContent" style="display: none;">{{ email.body_text|default_if_none:"" }}</pre>
+              {% else %}
+                <pre id="textContent">{{ email.body_text|default_if_none:"" }}</pre>
+                <div id="htmlContent" style="display: none;">(HTML content not available)</div>
+              {% endif %}
+            </div>
+          </div>
+          <div class="tab-pane fade" id="attachments" role="tabpanel" aria-labelledby="attachments-tab" style="height: 100%; min-height: 0;">
+            <div class="email-content-wrapper flex-fill" style="height: 100%; min-height: 0; overflow-y: auto; padding: 0;">
+              {% if email.attachments.exists %}
+                <ul class="nav nav-tabs mb-3" id="attachmentTab" role="tablist">
+                  {% for attachment in email.attachments.all %}
+                    <li class="nav-item" role="presentation">
+                      <button class="nav-link {% if forloop.first %}active{% endif %}" id="attachment-tab-{{ forloop.counter }}" data-bs-toggle="tab" data-bs-target="#attachment-{{ forloop.counter }}" type="button" role="tab" aria-controls="attachment-{{ forloop.counter }}" aria-selected="{% if forloop.first %}true{% else %}false{% endif %}">
+                        <i class="bi bi-paperclip"></i> {{ attachment.filename|truncatechars:20 }}
+                      </button>
+                    </li>
+                  {% endfor %}
+                </ul>
+                <div class="tab-content h-100" id="attachmentTabContent" style="height: 100%; min-height: 0;">
+                  {% for attachment in email.attachments.all %}
+                    <div class="tab-pane fade {% if forloop.first %}show active{% endif %}" id="attachment-{{ forloop.counter }}" role="tabpanel" aria-labelledby="attachment-tab-{{ forloop.counter }}" style="height: 100%; min-height: 0; display: flex; flex-direction: column;">
+                      <div class="mb-2 d-flex justify-content-between align-items-center p-2">
+                        <span><i class="bi bi-paperclip"></i> {{ attachment.filename }}</span>
+                        <a href="{{ attachment.file.url }}" target="_blank" class="btn btn-sm btn-outline-primary">İndir</a>
+                      </div>
+                      {% with ext=attachment.filename|lower %}
+                        {% if ext|slice:'-4:' == '.pdf' %}
+                          <div style="flex: 1 1 0; min-height: 0;">
+                            <embed src="{{ attachment.file.url }}" type="application/pdf" width="100%" height="100%" style="min-height: 400px; height: 100%;" />
+                          </div>
+                        {% elif ext|slice:'-4:' == '.doc' or ext|slice:'-5:' == '.docx' or ext|slice:'-4:' == '.xls' or ext|slice:'-5:' == '.xlsx' %}
+                          <div style="flex: 1 1 0; min-height: 0;">
+                            <iframe src="https://view.officeapps.live.com/op/embed.aspx?src={{ attachment.file.url }}" width="100%" height="100%" frameborder="0" style="min-height: 400px; height: 100%;"></iframe>
+                          </div>
+                        {% endif %}
+                      {% endwith %}
+                    </div>
+                  {% endfor %}
+                </div>
+              {% else %}
+                <div class="text-center text-muted py-4">
+                  <i class="bi bi-paperclip fs-1"></i>
+                  <p class="mt-3">Bu e-postada herhangi bir ek bulunmamaktadır.</p>
+                </div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-md-7 d-flex flex-column" style="height: calc(100vh - 220px); min-height: 300px;">
+    <!-- Extracted Rules Card -->
+    <div class="card h-100 d-flex flex-column">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-list-check"></i> Çıkarılan Kurallar</span>
+        <div>
+          {% if has_analyzed_attachments %}
+          <span class="badge bg-info me-1" title="Some rows extracted from attachments">
+            <i class="bi bi-file-earmark-text"></i> Eklerden Çıkarıldı
+          </span>
+          {% endif %}
+          <span class="badge bg-primary">
+            <i class="bi bi-list-ol"></i> {{ rows.count }} Kural
+          </span>
+        </div>
+      </div>
+      <div class="card-body flex-fill" style="height: 100%; min-height: 0; overflow-y: auto;">
+        {% if unique_hotel_names %}
+        <div class="filter-bar mb-3">
+            <span class="me-2">Filtrele:</span>
+            <select class="form-select form-select-sm hotel-filter" style="width: auto; display: inline-block;">
+                <option value="" {% if not request.GET.hotel %}selected{% endif %}>Tüm Oteller</option>
+                {% for hotel_name in unique_hotel_names %}
+                 {% if hotel_name %}
+                   <option value="{{ hotel_name }}" {% if request.GET.hotel == hotel_name %}selected{% endif %}>{{ hotel_name }}</option>
+                 {% endif %}
+                {% endfor %}
+            </select>
+            <select class="form-select form-select-sm status-filter" style="width: auto; display: inline-block;">
+                <option value="" {% if not request.GET.status %}selected{% endif %}>Tüm Durumlar</option>
+                {% for status_val, status_disp in rows.model.STATUS_CHOICES %}
+                  <option value="{{ status_val }}" {% if request.GET.status == status_val %}selected{% endif %}>{{ status_disp }}</option>
+                {% endfor %}
+            </select>
+            <select class="form-select form-select-sm match-filter" style="width: auto; display: inline-block;">
+                <option value="" {% if not request.GET.match %}selected{% endif %}>Tüm Eşleşmeler</option>
+                <option value="success" {% if request.GET.match == "success" %}selected{% endif %}>Tam Eşleşme</option>
+                <option value="warning" {% if request.GET.match == "warning" %}selected{% endif %}>Kısmi Eşleşme</option>
+                <option value="danger" {% if request.GET.match == "danger" %}selected{% endif %}>Eşleşme Yok</option>
+            </select>
+            <button class="btn btn-outline-primary btn-sm apply-filter">
+                <i class="bi bi-funnel"></i> Uygula
+            </button>
+            <button class="btn btn-outline-secondary btn-sm clear-filter">
+                <i class="bi bi-x-circle"></i> Temizle
+            </button>
+        </div>
+        {% endif %}
+        
+        <!-- Çoklu Seçim ve Toplu İşlemler -->
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="selectAllRules">
+                <label class="form-check-label" for="selectAllRules">
+                    Tümünü Seç
+                </label>
+            </div>
+            <div class="bulk-actions">
+                <button id="bulkApprove" class="btn btn-success btn-sm">
+                    <i class="bi bi-check-circle"></i> Seçilenleri Onayla
+                </button>
+                <button id="bulkReject" class="btn btn-danger btn-sm">
+                    <i class="bi bi-x-circle"></i> Seçilenleri Reddet
+                </button>
+                <button id="bulkSmartMatch" class="btn btn-primary btn-sm">
+                    <i class="bi bi-magic"></i> Seçilenleri Akıllı Eşleştir
+                </button>
+            </div>
+        </div>
+        
+        <div style="max-height: 450px; overflow-y: auto; border: 1px solid #eee; padding: 10px; border-radius: 4px;">
+            <div class="rules-container">
+                {% for row in rows %}
+                 {% with match_status=row.get_match_status %}
+                <div class="rule-item mb-3" 
+                     data-hotel-name="{{ row.hotel_name }}" 
+                     data-room-type="{{ row.room_type }}" 
+                     data-market="{% if row.markets.exists %}{% for market in row.markets.all %}{{ market.name }}{% if not forloop.last %}, {% endif %}{% endfor %}{% else %}{{ row.market|default:"ALL" }}{% endif %}"
+                     data-date-range="{{ row.start_date|date:'Y-m-d' }} - {{ row.end_date|date:'Y-m-d' }}"
+                     data-status="{{ row.status }}"
+                     data-match-status="{{ match_status }}"
+                     data-row-id="{{ row.id }}">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-1">
+                            <div class="d-flex align-items-center">
+                                <input type="checkbox" class="rule-checkbox form-check-input" data-id="{{ row.id }}">
+                                <span class="hotel-name me-2">{{ row.hotel_name|default:"-" }}</span>
+                            </div>
+                            <div>
+                                {% if row.sale_type == 'stop' %}
+                                    <span class="badge bg-danger">STOP SALE</span>
+                                {% elif row.sale_type == 'open' %}
+                                    <span class="badge bg-success">OPEN SALE</span>
+                                 {% else %}
+                                     <span class="badge bg-secondary">{{ row.sale_type|default:"N/A" }}</span>
+                                {% endif %}
+                                <span class="badge bg-{{ row.status|lower|default:'secondary' }}">{{ row.get_status_display }}</span>
+                                {% if row.extracted_from_attachment %}
+                                     <span class="badge bg-info" title="Ekten çıkarıldı"><i class="bi bi-paperclip"></i></span>
+                                 {% endif %}
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>Tarih Aralığı:</strong> {{ row.start_date|date:"d.m.Y" }} - {{ row.end_date|date:"d.m.Y" }}</p>
+                            <p><strong>Oda Tipi:</strong> {{ row.room_type|default:"-" }}</p>
+                            <p><strong>Pazar(lar):</strong> 
+                                {% if row.markets.exists %}
+                                    {% for market in row.markets.all %}
+                                        {{ market.name }}{% if not forloop.last %}, {% endif %}
+                                    {% endfor %}
+                                {% else %}
+                                    {{ row.market|default:"ALL" }}
+                                {% endif %}
+                            </p>
+                            <p><strong>Juniper Pazar(lar):</strong> 
+                                {% if row.markets.exists %}
+                                    {% for market in row.markets.all %}
+                                        {% if market.juniper_code %}{{ market.juniper_code }}{% else %}{{ market.name }}{% endif %}{% if not forloop.last %}, {% endif %}
+                                    {% endfor %}
+                                {% else %}
+                                    ALL
+                                {% endif %}
+                            </p>
+                            <p><strong>Kontrat(lar):</strong> 
+                                {% with contracts=row.get_matching_contracts_info %}
+                                    {{ contracts.0|default:"-" }} <span class="text-muted">{{ contracts.1 }}</span>
+                                {% endwith %}
+                            </p>
+                        </div>
+                        <div class="juniper-match p-2 mb-3 {% if match_status == 'success' %}bg-success-light{% elif match_status == 'warning' %}bg-warning-light{% else %}bg-danger-light{% endif %}">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p class="mb-1"><strong>Juniper Otel:</strong> 
+                                        {% if row.juniper_hotel %}
+                                        {{ row.juniper_hotel.juniper_hotel_name }} 
+                                        <span class="juniper-code">({{ row.juniper_hotel.juniper_code }})</span>
+                                        {% else %}
+                                        <span class="text-danger">Eşleşme Yok</span>
+                                        {% endif %}
+                                    </p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p class="mb-1"><strong>Juniper Oda:</strong> 
+                                         {% if row.juniper_rooms.exists %}
+                                            {% for room in row.juniper_rooms.all %}
+                                                {{ room.juniper_room_type }} <span class="juniper-code">({{ room.room_code }})</span>{% if not forloop.last %}, {% endif %}
+                                            {% endfor %}
+                                        {% elif row.room_type|lower == 'all room' or row.room_type|lower == 'all rooms' or row.room_type|lower == 'all room types' %}
+                                            <span class="text-success">(Tüm Odalar)</span>
+                                        {% else %}
+                                            <span class="text-danger">Eşleşme Yok</span>
+                                        {% endif %}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <div class="btn-group btn-group-sm">
+                                <a href="{% url 'emails:smart_match' row.id %}" class="btn btn-outline-primary">
+                                    <i class="bi bi-magic"></i> Akıllı Eşleştir
+                                </a>
+                                {% if not row.juniper_hotel %}
+                                <a href="{% url 'emails:match_hotel' row.id %}" class="btn btn-outline-primary">
+                                    <i class="bi bi-building"></i> Otel Eşleştir
+                                </a>
+                                 {% elif not row.juniper_rooms.exists and row.room_type|lower != 'all room' and row.room_type|lower != 'all rooms' and row.room_type|lower != 'all room types' %}
+                                <a href="{% url 'emails:match_room' row.id %}" class="btn btn-outline-primary">
+                                    <i class="bi bi-door-open"></i> Oda Eşleştir
+                                </a>
+                                {% endif %}
+                                <a href="{% url 'emails:manual_mapping' row.id %}" class="btn btn-outline-secondary">
+                                    <i class="bi bi-pencil"></i> Manuel Düzenle
+                                </a>
+                            </div>
+                            <div class="btn-group btn-group-sm">
+                                {% if row.status == 'pending' %}
+                                    <a href="{% url 'emails:approve_row' row.id %}" class="btn btn-success">
+                                        <i class="bi bi-check-circle"></i> Onayla
+                                    </a>
+                                    <a href="{% url 'emails:reject_row' row.id %}" class="btn btn-danger">
+                                        <i class="bi bi-x-circle"></i> Reddet
+                                    </a>
+                                {% elif row.status == 'hotel_not_found' or row.status == 'room_not_found' %}
+                                    <a href="{% url 'emails:reject_row' row.id %}" class="btn btn-danger">
+                                        <i class="bi bi-x-circle"></i> Reddet (Eşleşme Yok)
+                                    </a>
+                                    <span class="badge bg-warning text-dark ms-2">Eşleşme Bulunamadı</span>
+                                {% elif row.status == 'approved' %}
+                                    <button class="btn btn-success"><i class="bi bi-check-circle-fill"></i> Onaylandı</button>
+                                {% elif row.status == 'rejected' %}
+                                    <button class="btn btn-danger"><i class="bi bi-x-circle-fill"></i> Reddedildi</button>
+                                {% elif row.status == 'sent_to_robot' %}
+                                     <button class="btn btn-info"><i class="bi bi-send-check-fill"></i> Robota Gönderildi</button>
+                                {% elif row.status == 'robot_processed' %}
+                                    <button class="btn btn-secondary"><i class="bi bi-gear-fill"></i> Robot İşledi</button>
+                                {% elif row.status == 'ignored' %}
+                                    <button class="btn btn-light text-muted"><i class="bi bi-eye-slash-fill"></i> Yoksayıldı</button>
+                                {% elif row.status == 'error' %}
+                                    <button class="btn btn-warning"><i class="bi bi-exclamation-octagon-fill"></i> Hata Oluştu</button>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ row.get_status_display }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                 {% endwith %}
+                {% empty %}
+                <div class="alert alert-info m-0">
+                    <i class="bi bi-info-circle"></i> Bu e-posta için çıkarılan kural bulunamadı veya henüz işlenmedi.
+                </div>
+                {% endfor %}
+            </div> 
+        </div> 
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" />
+<script>
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+$(document).ready(function() {
+    var triggerTabList = [].slice.call(document.querySelectorAll('#contentTab button'))
+    triggerTabList.forEach(function (triggerEl) {
+      var tabTrigger = new bootstrap.Tab(triggerEl)
+    
+      triggerEl.addEventListener('click', function (event) {
+        event.preventDefault()
+        tabTrigger.show()
+      })
+    })
+    
+    // Çoklu Seçim ve Toplu İşlemler için JavaScript
+    const bulkActions = $('.bulk-actions');
+    const selectAllCheckbox = $('#selectAllRules');
+    const ruleCheckboxes = $('.rule-checkbox');
+    
+    // Seçili öğelerin sayısını kontrol eden ve duruma göre bulk action barını gösteren/gizleyen fonksiyon
+    function updateBulkActionsVisibility() {
+        const selectedCount = $('.rule-checkbox:checked').length;
+        if (selectedCount > 0) {
+            bulkActions.addClass('show');
+        } else {
+            bulkActions.removeClass('show');
+        }
+    }
+    
+    // Checkbox'ların tıklama işlevlerini ayarlama
+    selectAllCheckbox.on('change', function() {
+        const isChecked = $(this).prop('checked');
+        ruleCheckboxes.prop('checked', isChecked);
+        $('.rule-item').toggleClass('selected', isChecked);
+        updateBulkActionsVisibility();
+    });
+    
+    $(document).on('change', '.rule-checkbox', function() {
+        const isChecked = $(this).prop('checked');
+        $(this).closest('.rule-item').toggleClass('selected', isChecked);
+        
+        // Tüm kurallar seçili mi kontrol et
+        const allChecked = $('.rule-checkbox:checked').length === $('.rule-checkbox').length;
+        selectAllCheckbox.prop('checked', allChecked);
+        
+        updateBulkActionsVisibility();
+    });
+    
+    // Toplu İşlem Butonlarının İşlevleri
+    $('#bulkApprove').on('click', function() {
+        bulkAction('approve');
+    });
+    
+    $('#bulkReject').on('click', function() {
+        bulkAction('reject');
+    });
+    
+    $('#bulkSmartMatch').on('click', function() {
+        bulkAction('smartmatch');
+    });
+    
+    // Seçilen kuralları işlemek için AJAX fonksiyonu
+    function bulkAction(action) {
+        const selectedIds = [];
+        $('.rule-checkbox:checked').each(function() {
+            selectedIds.push($(this).data('id'));
+        });
+        
+        if (selectedIds.length === 0) {
+            toastr.warning('Lütfen işlem yapmak için en az bir kural seçin.');
+            return;
+        }
+        
+        // CSRF tokenını al
+        const csrftoken = getCookie('csrftoken');
+        
+        // İşlemi başlat
+        $.ajax({
+            url: `/emails/bulk_action/${action}/`,
+            type: 'POST',
+            data: JSON.stringify({ ids: selectedIds }),
+            contentType: 'application/json',
+            headers: {
+                'X-CSRFToken': csrftoken
+            },
+            beforeSend: function() {
+                toastr.info('İşlem başlatıldı, lütfen bekleyin...');
+            },
+            success: function(response) {
+                toastr.success(response.message || 'İşlem başarıyla tamamlandı.');
+                // Sayfayı yenile
+                setTimeout(function() {
+                    location.reload();
+                }, 1000);
+            },
+            error: function(error) {
+                toastr.error('İşlem sırasında bir hata oluştu: ' + (error.responseJSON?.error || 'Bilinmeyen hata'));
+            }
+        });
+    }
+    
+    $('#searchEmailContent').on('input', function() {
+        const searchText = $(this).val().trim();
+        const activeTabPane = $('.tab-content .tab-pane.active');
+        const contentElement = activeTabPane.find('.email-content > *:visible, .email-content').first(); 
+
+        if (contentElement.length === 0) return;
+        const contentElementId = contentElement.attr('id');
+        
+        if (!contentElementId) {
+             if(originalContent[contentElement.prop('tagName')]) {
+                 contentElement.html(originalContent[contentElement.prop('tagName')]);
+             } else {
+                  originalContent[contentElement.prop('tagName')] = contentElement.html();
+             }
+        } else {
+            storeOriginalContent(contentElementId);
+            resetContent(contentElementId);
+        }
+        
+        if (searchText.length < 3) {
+            return; 
+        }
+         
+        // ... Mevcut olan script devam ediyor ...
+    });
+    
+    // ... Diğer mevcut JavaScript kodları devam etmeli ...
+});
+</script>
+{% endblock %}

@@ -1,0 +1,159 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Webhook Logs - StopSale Automation System{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+    <h1>Webhook Logs</h1>
+    <div class="btn-group">
+        <a href="{% url 'core:dashboard' %}" class="btn btn-outline-primary">
+            <i class="bi bi-speedometer2 me-2"></i> Dashboard
+        </a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+            <i class="bi bi-link-45deg me-2"></i> Webhook API Calls Log
+        </h5>
+        <div>
+            <form class="d-flex" method="get">
+                <select name="status" class="form-select form-select-sm me-2" onchange="this.form.submit()">
+                    <option value="">All Statuses</option>
+                    <option value="pending" {% if request.GET.status == 'pending' %}selected{% endif %}>Pending</option>
+                    <option value="success" {% if request.GET.status == 'success' %}selected{% endif %}>Success</option>
+                    <option value="failed" {% if request.GET.status == 'failed' %}selected{% endif %}>Failed</option>
+                    <option value="retrying" {% if request.GET.status == 'retrying' %}selected{% endif %}>Retrying</option>
+                </select>
+            </form>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>ID</th>
+                        <th>Email Row</th>
+                        <th>Status</th>
+                        <th>Response Code</th>
+                        <th>Attempts</th>
+                        <th>Created</th>
+                        <th>Updated</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs %}
+                    <tr>
+                        <td>{{ log.id }}</td>
+                        <td>
+                            <a href="{% url 'emails:email_detail' log.email_row.email.id %}">
+                                {{ log.email_row.hotel_name }} - {{ log.email_row.room_type }}
+                            </a>
+                        </td>
+                        <td>
+                            {% if log.status == 'pending' %}
+                            <span class="badge bg-warning">Pending</span>
+                            {% elif log.status == 'success' %}
+                            <span class="badge bg-success">Success</span>
+                            {% elif log.status == 'failed' %}
+                            <span class="badge bg-danger">Failed</span>
+                            {% elif log.status == 'retrying' %}
+                            <span class="badge bg-info">Retrying</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ log.status_code|default_if_none:"-" }}</td>
+                        <td>{{ log.attempt_count }}</td>
+                        <td>{{ log.created_at|date:"d M Y H:i" }}</td>
+                        <td>{{ log.updated_at|date:"d M Y H:i" }}</td>
+                        <td>
+                            <button type="button" class="btn btn-sm btn-outline-primary view-details-btn" 
+                                    data-bs-toggle="modal" data-bs-target="#webhookDetailModal"
+                                    data-id="{{ log.id }}"
+                                    data-payload="{{ log.payload|stringformat:'s'|escapejs }}"
+                                    data-response="{{ log.response|stringformat:'s'|escapejs }}">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center py-4">
+                            <div class="text-muted">
+                                <i class="bi bi-link-45deg fs-1 d-block mb-2"></i>
+                                No webhook logs found.
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Webhook Detail Modal -->
+<div class="modal fade" id="webhookDetailModal" tabindex="-1" aria-labelledby="webhookDetailModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="webhookDetailModalLabel">Webhook Call Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h6>Request Payload</h6>
+                        <pre id="webhookPayload" class="bg-light p-3 rounded" style="max-height: 200px; overflow-y: auto;"></pre>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <h6>Response</h6>
+                        <pre id="webhookResponse" class="bg-light p-3 rounded" style="max-height: 200px; overflow-y: auto;"></pre>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Handle view details button clicks
+        document.querySelectorAll('.view-details-btn').forEach(function(button) {
+            button.addEventListener('click', function() {
+                const logId = this.getAttribute('data-id');
+                let payload = this.getAttribute('data-payload');
+                let response = this.getAttribute('data-response');
+                
+                try {
+                    // Try to format JSON nicely if it's valid JSON
+                    payload = JSON.stringify(JSON.parse(payload), null, 2);
+                } catch (e) {
+                    // Not valid JSON, use as is
+                }
+                
+                try {
+                    // Try to format JSON nicely if it's valid JSON
+                    response = JSON.stringify(JSON.parse(response), null, 2);
+                } catch (e) {
+                    // Not valid JSON, use as is
+                }
+                
+                document.getElementById('webhookPayload').textContent = payload;
+                document.getElementById('webhookResponse').textContent = response || 'No response received';
+                
+                document.getElementById('webhookDetailModalLabel').textContent = `Webhook Call Details - ID: ${logId}`;
+            });
+        });
+    });
+</script>
+{% endblock %} 

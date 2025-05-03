@@ -1,0 +1,819 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Akıllı Eşleştirme - StopSale Automation System{% endblock %}
+
+{% block extra_css %}
+<style>
+    .card-header-tabs {
+        margin-right: -1.25rem;
+        margin-left: -1.25rem;
+        margin-bottom: -0.75rem;
+    }
+    
+    .hotel-card, .room-card {
+        margin-bottom: 15px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    
+    .hotel-card:hover, .room-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    
+    .hotel-card.selected, .room-card.selected {
+        border: 2px solid #3f51b5;
+        background-color: #f0f4ff;
+    }
+    
+    .search-box {
+        margin-bottom: 20px;
+    }
+    
+    .hotel-list, .room-list {
+        max-height: 400px;
+        overflow-y: auto;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+    }
+    
+    .match-controls {
+        margin-top: 20px;
+        display: flex;
+        justify-content: flex-end;
+    }
+    
+    .suggestion-section {
+        background-color: #f8f9fa;
+        border-radius: 5px;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+    
+    .best-match {
+        background-color: #d4edda;
+        border: 1px solid #c3e6cb;
+    }
+    
+    .match-score {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background-color: #3f51b5;
+        color: white;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 0.8rem;
+        font-weight: bold;
+    }
+    
+    .score-90-100 {
+        background-color: #28a745; /* Yeşil */
+    }
+    
+    .score-80-89 {
+        background-color: #4caf50; /* Açık Yeşil */
+    }
+    
+    .score-70-79 {
+        background-color: #ffc107; /* Sarı */
+    }
+    
+    .score-0-69 {
+        background-color: #ff9800; /* Turuncu */
+    }
+    
+    .tab-content {
+        min-height: 300px;
+    }
+    
+    .form-select-all {
+        margin-bottom: 10px;
+        padding: 5px 10px;
+        border-radius: 4px;
+        background-color: #f0f4ff;
+        border: 1px solid #3f51b5;
+        cursor: pointer;
+        display: inline-block;
+    }
+    
+    .form-select-all:hover {
+        background-color: #e2e6f7;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center mb-4">
+    <h1>Akıllı Eşleştirme</h1>
+    <a href="{% url 'emails:email_detail' row.email.id %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Geri Dön
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h5>Eşleştirme Bilgileri</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <h6>E-posta Bilgisi:</h6>
+                <p><strong>Konu:</strong> {{ row.email.subject }}</p>
+                <p><strong>Gönderen:</strong> {{ row.email.sender }}</p>
+                <p><strong>Satır ID:</strong> {{ row.id }}</p>
+            </div>
+            <div class="col-md-6">
+                <h6>Satır Bilgisi:</h6>
+                <p><strong>Otel Adı:</strong> {{ row.hotel_name }}</p>
+                <p><strong>Oda Tipi:</strong> {{ row.room_type }}</p>
+                <p><strong>Tarih Aralığı:</strong> {{ row.start_date|date:"d.m.Y" }} - {{ row.end_date|date:"d.m.Y" }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<form id="smartMatchForm" method="post">
+    {% csrf_token %}
+    
+    <div class="card mt-4">
+        <div class="card-header">
+            <ul class="nav nav-tabs card-header-tabs" id="matchTabs" role="tablist">
+                <li class="nav-item">
+                    <a class="nav-link active" id="hotel-tab" data-bs-toggle="tab" href="#hotel-content" role="tab" aria-controls="hotel-content" aria-selected="true">1. Otel Seçimi</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="room-tab" data-bs-toggle="tab" href="#room-content" role="tab" aria-controls="room-content" aria-selected="false">2. Oda Seçimi</a>
+                </li>
+            </ul>
+        </div>
+        
+        <div class="card-body">
+            <div class="tab-content" id="matchTabsContent">
+                <!-- OTEL SEÇİMİ SAYFASI -->
+                <div class="tab-pane fade show active" id="hotel-content" role="tabpanel" aria-labelledby="hotel-tab">
+                    <!-- Otel Önerileri Bölümü -->
+                    {% if hotel_suggestions %}
+                    <div class="suggestion-section">
+                        <h5><i class="bi bi-lightbulb"></i> Akıllı Otel Önerileri</h5>
+                        
+                        <div class="row">
+                            {% for hotel in hotel_suggestions %}
+                            <div class="col-md-6">
+                                <div class="card hotel-card {% if hotel == best_hotel_match %}best-match{% endif %} mb-3" id="suggestion-{{ hotel.id }}">
+                                    <div class="card-body">
+                                        <div class="match-score 
+                                            {% if hotel.match_score >= 90 %}score-90-100{% elif hotel.match_score >= 80 %}score-80-89{% elif hotel.match_score >= 70 %}score-70-79{% else %}score-0-69{% endif %}
+                                        ">{{ hotel.match_score }}%</div>
+                                        <h6 class="mb-1">{{ hotel.juniper_hotel_name }}</h6>
+                                        <p class="mb-0 text-muted"><small>Kod: {{ hotel.juniper_code }}</small></p>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="search-box">
+                        <input type="text" id="hotelSearch" class="form-control" placeholder="Otel adına göre ara...">
+                    </div>
+                    
+                    <div class="hotel-list">
+                        {% for hotel in hotels %}
+                        <div class="card hotel-card" id="hotel-{{ hotel.id }}">
+                            <div class="card-body">
+                                <div class="form-check">
+                                    <input class="form-check-input hotel-radio" type="radio" name="hotel_id" value="{{ hotel.id }}" id="hotel-radio-{{ hotel.id }}"
+                                           {% if row.juniper_hotel.id == hotel.id %}checked{% endif %}>
+                                    <label class="form-check-label w-100" for="hotel-radio-{{ hotel.id }}">
+                                        <h6 class="mb-1">{{ hotel.juniper_hotel_name }}</h6>
+                                        <p class="mb-0 text-muted"><small>Kod: {{ hotel.juniper_code }}</small></p>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="alert alert-info">Eşleştirilecek otel bulunamadı.</div>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="d-flex justify-content-between mt-4">
+                        <button type="button" class="btn btn-outline-primary" id="autoSelectHotelBtn">
+                            <i class="bi bi-magic"></i> Akıllı Eşleştir
+                        </button>
+                        <button type="button" class="btn btn-primary" id="nextToRoomBtn" disabled>
+                            İleri <i class="bi bi-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- ODA SEÇİMİ SAYFASI -->
+                <div class="tab-pane fade" id="room-content" role="tabpanel" aria-labelledby="room-tab">
+                    <!-- Oda Önerileri Bölümü -->
+                    <div id="roomSuggestionsContainer" {% if not best_room_match and not room_suggestions %}style="display:none"{% endif %}>
+                        <div class="suggestion-section">
+                            <h5><i class="bi bi-lightbulb"></i> Akıllı Oda Önerileri</h5>
+                            
+                            {% if best_room_match %}
+                            <h6>En İyi Eşleşme:</h6>
+                            <div class="card room-card best-match" id="suggestion-room-{{ best_room_match.id }}">
+                                <div class="card-body">
+                                    <h6 class="mb-1">{{ best_room_match.juniper_room_type }}</h6>
+                                    <p class="mb-0 text-muted"><small>Kod: {{ best_room_match.room_code }}</small></p>
+                                </div>
+                            </div>
+                            {% endif %}
+                            
+                            {% if room_suggestions %}
+                            <h6 class="mt-3">Benzer Odalar:</h6>
+                            <div class="row">
+                                {% for room in room_suggestions %}
+                                {% if room != best_room_match %}
+                                <div class="col-md-6">
+                                    <div class="card room-card" id="suggestion-room-{{ room.id }}">
+                                        <div class="card-body">
+                                            <h6 class="mb-1">{{ room.juniper_room_type }}</h6>
+                                            <p class="mb-0 text-muted"><small>Kod: {{ room.room_code }}</small></p>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endif %}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                            
+                            {% if search_pattern %}
+                            <div class="alert alert-info mt-3">
+                                <i class="bi bi-info-circle"></i> Kullanılan arama deseni: <strong>"{{ search_pattern }}"</strong>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="search-box">
+                        <input type="text" id="roomSearch" class="form-control" placeholder="Oda tipine göre ara...">
+                    </div>
+                    
+                    <div class="form-select-all" id="selectAllRooms">
+                        <i class="bi bi-check-all"></i> Tüm Odaları Seç
+                    </div>
+                    
+                    <div class="room-list" id="roomListContainer">
+                        {% if rooms %}
+                            {% for room in rooms %}
+                            <div class="card room-card" id="room-{{ room.id }}">
+                                <div class="card-body">
+                                    <div class="form-check">
+                                        <input class="form-check-input room-checkbox" type="checkbox" name="room_ids" value="{{ room.id }}" id="room-checkbox-{{ room.id }}" 
+                                               {% if room.id in selected_room_ids %}checked{% endif %}>
+                                        <label class="form-check-label w-100" for="room-checkbox-{{ room.id }}">
+                                            <h6 class="mb-1">{{ room.juniper_room_type }}</h6>
+                                            <p class="mb-0 text-muted"><small>Kod: {{ room.room_code }}</small></p>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="alert alert-info" id="noRoomSelectedMessage">Önce bir otel seçin</div>
+                            <div class="alert alert-info" id="noRoomsFoundMessage" style="display: none;">Seçilen otele ait oda bulunamadı</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="d-flex justify-content-between mt-4">
+                        <button type="button" class="btn btn-outline-secondary" id="backToHotelBtn">
+                            <i class="bi bi-arrow-left"></i> Geri
+                        </button>
+                        <div>
+                            <button type="button" class="btn btn-outline-primary" id="autoSelectRoomBtn">
+                                <i class="bi bi-magic"></i> Akıllı Oda Eşleştir
+                            </button>
+                            <button type="submit" class="btn btn-success" id="submitMatchBtn">
+                                <i class="bi bi-check-circle"></i> Eşleştirmeyi Onayla
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Değişkenleri tanımla
+    const hotelSearchBox = document.getElementById('hotelSearch');
+    const hotelCards = document.querySelectorAll('.hotel-card');
+    const hotelRadios = document.querySelectorAll('.hotel-radio');
+    const nextToRoomBtn = document.getElementById('nextToRoomBtn');
+    const backToHotelBtn = document.getElementById('backToHotelBtn');
+    const submitMatchBtn = document.getElementById('submitMatchBtn');
+    const autoSelectHotelBtn = document.getElementById('autoSelectHotelBtn');
+    const autoSelectRoomBtn = document.getElementById('autoSelectRoomBtn');
+    const selectAllRoomsBtn = document.getElementById('selectAllRooms');
+    const roomSearchBox = document.getElementById('roomSearch');
+    const roomSuggestions = document.querySelectorAll('[id^="suggestion-room-"]');
+    
+    // Tab elementlerini seç
+    const hotelTab = document.getElementById('hotel-tab');
+    const roomTab = document.getElementById('room-tab');
+    
+    // Bootstrap Tab nesnesi oluştur
+    const hotelTabElement = new bootstrap.Tab(hotelTab);
+    const roomTabElement = new bootstrap.Tab(roomTab);
+    
+    // Otel arama kutusu işlevi
+    hotelSearchBox.addEventListener('keyup', function() {
+        const searchTerm = this.value.toLowerCase();
+        
+        hotelCards.forEach(function(card) {
+            if (!card.id.startsWith('suggestion-')) { // Sadece ana otel listesinde ara
+                const hotelName = card.querySelector('h6').textContent.toLowerCase();
+                const hotelCode = card.querySelector('.text-muted small').textContent.toLowerCase();
+                
+                if (hotelName.includes(searchTerm) || hotelCode.includes(searchTerm)) {
+                    card.style.display = '';
+                } else {
+                    card.style.display = 'none';
+                }
+            }
+        });
+    });
+    
+    // Oda arama kutusu işlevi
+    if (roomSearchBox) {
+        roomSearchBox.addEventListener('keyup', function() {
+            const searchTerm = this.value.toLowerCase();
+            
+            document.querySelectorAll('.room-card').forEach(function(card) {
+                if (!card.id.startsWith('suggestion-room-')) { // Sadece ana oda listesinde ara
+                    const roomName = card.querySelector('h6').textContent.toLowerCase();
+                    const roomCode = card.querySelector('.text-muted small').textContent.toLowerCase();
+                    
+                    if (roomName.includes(searchTerm) || roomCode.includes(searchTerm)) {
+                        card.style.display = '';
+                    } else {
+                        card.style.display = 'none';
+                    }
+                }
+            });
+        });
+    }
+    
+    // Otel seçimi işlevi
+    hotelRadios.forEach(function(radio) {
+        radio.addEventListener('change', function() {
+            // Tüm kartlardan selected sınıfını kaldır
+            document.querySelectorAll('.hotel-card').forEach(function(card) {
+                card.classList.remove('selected');
+            });
+            
+            // Seçilen karta selected sınıfı ekle
+            const selectedCard = document.getElementById('hotel-' + this.value);
+            if (selectedCard) {
+                selectedCard.classList.add('selected');
+            }
+            
+            // İleri butonunu etkinleştir
+            nextToRoomBtn.disabled = false;
+        });
+        
+        // Başlangıçtaki seçili durumu kontrol et
+        if (radio.checked) {
+            const cardId = 'hotel-' + radio.value;
+            const card = document.getElementById(cardId);
+            if (card) card.classList.add('selected');
+            nextToRoomBtn.disabled = false;
+        }
+    });
+    
+    // Otel önerilerini tıklanabilir yap
+    document.querySelectorAll('[id^="suggestion-"]:not([id^="suggestion-room-"])').forEach(function(card) {
+        card.addEventListener('click', function() {
+            const hotelId = this.id.replace('suggestion-', '');
+            const targetRadio = document.querySelector('#hotel-radio-' + hotelId);
+            
+            if (targetRadio) {
+                targetRadio.checked = true;
+                
+                // Change event'i tetikle
+                const event = new Event('change');
+                targetRadio.dispatchEvent(event);
+                
+                // Otelin olduğu karta kaydır
+                const targetCard = document.getElementById('hotel-' + hotelId);
+                if (targetCard) {
+                    targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }
+        });
+    });
+    
+    // Tüm hotel kartlarını tıklanabilir yap
+    hotelCards.forEach(function(card) {
+        if (!card.id.startsWith('suggestion-')) {
+            card.addEventListener('click', function(e) {
+                // Eğer tıklama checkboxun kendisindeyse, toggle yapma
+                if (e.target.type === 'radio') return;
+                
+                const radio = this.querySelector('.hotel-radio');
+                radio.checked = true;
+                
+                // Change event'i tetikle
+                const event = new Event('change');
+                radio.dispatchEvent(event);
+            });
+        }
+    });
+    
+    // Oda kartlarını tıklanabilir yap
+    document.querySelectorAll('.room-card').forEach(function(card) {
+        if (!card.id.startsWith('suggestion-room-')) {
+            card.addEventListener('click', function(e) {
+                // Eğer tıklama checkboxun kendisindeyse, toggle yapma
+                if (e.target.type === 'checkbox') return;
+                
+                const checkbox = this.querySelector('.room-checkbox');
+                checkbox.checked = !checkbox.checked;
+                
+                // Change event'i tetikle
+                const event = new Event('change');
+                checkbox.dispatchEvent(event);
+                
+                // Selected sınıfını güncelle
+                if (checkbox.checked) {
+                    this.classList.add('selected');
+                } else {
+                    this.classList.remove('selected');
+                }
+            });
+        }
+    });
+    
+    // Oda öneri kartlarını tıklanabilir yap
+    roomSuggestions.forEach(function(card) {
+        card.addEventListener('click', function() {
+            const roomId = this.id.replace('suggestion-room-', '');
+            const targetCheckbox = document.querySelector('#room-checkbox-' + roomId);
+            
+            if (targetCheckbox) {
+                targetCheckbox.checked = true;
+                
+                // Change event'i tetikle
+                const event = new Event('change');
+                targetCheckbox.dispatchEvent(event);
+                
+                // Odanın olduğu karta kaydır
+                const targetCard = document.getElementById('room-' + roomId);
+                if (targetCard) {
+                    targetCard.classList.add('selected');
+                    targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }
+        });
+    });
+    
+    // Oda seçimlerinin başlangıç durumunu ayarla
+    document.querySelectorAll('.room-checkbox').forEach(function(checkbox) {
+        if (checkbox.checked) {
+            const cardId = 'room-' + checkbox.value;
+            const card = document.getElementById(cardId);
+            if (card) card.classList.add('selected');
+        }
+    });
+    
+    // İleri butonuna tıklandığında oda seçimi tabına geç
+    nextToRoomBtn.addEventListener('click', function() {
+        roomTabElement.show();
+        
+        // Seçilen otelin ID'sini al
+        const selectedHotelId = document.querySelector('.hotel-radio:checked').value;
+        
+        // AJAX ile odaları getir
+        fetchRooms(selectedHotelId);
+    });
+    
+    // Geri butonuna tıklandığında otel seçimi tabına geri dön
+    backToHotelBtn.addEventListener('click', function() {
+        hotelTabElement.show();
+    });
+    
+    // Akıllı Otel Eşleştir butonuna tıklandığında
+    autoSelectHotelBtn.addEventListener('click', function() {
+        // En iyi eşleşmeyi bul ve seç
+        const bestMatch = document.querySelector('.hotel-card.best-match');
+        if (bestMatch) {
+            const hotelId = bestMatch.id.replace('suggestion-', '');
+            const targetRadio = document.querySelector('#hotel-radio-' + hotelId);
+            
+            if (targetRadio) {
+                targetRadio.checked = true;
+                targetRadio.dispatchEvent(new Event('change'));
+                bestMatch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                
+                // Otomatik olarak oda seçimi tabına geç
+                setTimeout(() => {
+                    nextToRoomBtn.click();
+                }, 500);
+            }
+        } else {
+            // En iyi eşleşme yoksa, yüksek puanlı bir öneriye bak
+            const highScoreMatch = document.querySelector('.match-score.score-90-100, .match-score.score-80-89');
+            if (highScoreMatch) {
+                const suggestionCard = highScoreMatch.closest('.hotel-card');
+                if (suggestionCard) {
+                    const hotelId = suggestionCard.id.replace('suggestion-', '');
+                    const targetRadio = document.querySelector('#hotel-radio-' + hotelId);
+                    
+                    if (targetRadio) {
+                        targetRadio.checked = true;
+                        targetRadio.dispatchEvent(new Event('change'));
+                        suggestionCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        
+                        // Otomatik olarak oda seçimi tabına geç
+                        setTimeout(() => {
+                            nextToRoomBtn.click();
+                        }, 500);
+                    }
+                }
+            } else {
+                alert('Uygun bir otel eşleşmesi bulunamadı. Lütfen manuel olarak seçin.');
+            }
+        }
+    });
+    
+    // Akıllı Oda Eşleştir butonuna tıklandığında
+    autoSelectRoomBtn.addEventListener('click', function() {
+        // En iyi eşleşen odayı seç
+        const bestRoomMatch = document.querySelector('.room-card.best-match');
+        if (bestRoomMatch) {
+            const roomId = bestRoomMatch.id.replace('suggestion-room-', '');
+            const targetCheckbox = document.querySelector('#room-checkbox-' + roomId);
+            
+            if (targetCheckbox) {
+                // Önce tüm oda seçimlerini temizle
+                document.querySelectorAll('.room-checkbox').forEach(function(checkbox) {
+                    checkbox.checked = false;
+                    const cardId = 'room-' + checkbox.value;
+                    const card = document.getElementById(cardId);
+                    if (card) card.classList.remove('selected');
+                });
+                
+                // En iyi eşleşmeyi seç
+                targetCheckbox.checked = true;
+                targetCheckbox.dispatchEvent(new Event('change'));
+                
+                const targetCard = document.getElementById('room-' + roomId);
+                if (targetCard) {
+                    targetCard.classList.add('selected');
+                    targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }
+        } else {
+            alert('Uygun bir oda eşleşmesi bulunamadı. Lütfen manuel olarak seçin.');
+        }
+    });
+    
+    // Tüm Odaları Seç butonuna tıklandığında
+    selectAllRoomsBtn.addEventListener('click', function() {
+        const checkboxes = document.querySelectorAll('.room-checkbox');
+        const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+        
+        checkboxes.forEach(function(checkbox) {
+            checkbox.checked = !allChecked;
+            const cardId = 'room-' + checkbox.value;
+            const card = document.getElementById(cardId);
+            if (card) {
+                if (!allChecked) {
+                    card.classList.add('selected');
+                } else {
+                    card.classList.remove('selected');
+                }
+            }
+        });
+    });
+    
+    // AJAX ile oda listesini getirme fonksiyonu
+    function fetchRooms(hotelId) {
+        const emailRowId = window.location.pathname.split('/')[3]; // URL'den row_id'yi alıyoruz
+        
+        // Tam URL yolu kullan - başına /emails/ ekle
+        fetch(`/emails/get_rooms_by_hotel/${hotelId}/${emailRowId}/`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Oda bilgileri getirilemedi: ${response.status} ${response.statusText}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log("Odalar başarıyla yüklendi:", data);
+                
+                if (data.rooms && data.rooms.length > 0) {
+                    // Oda listesini güncelle
+                    updateRoomList(data.rooms);
+                    
+                    // Oda önerilerini güncelle
+                    if (data.suggestions && data.suggestions.length > 0) {
+                        updateRoomSuggestions(data.suggestions, data.best_match, data.search_pattern);
+                    } else {
+                        // Öneri yoksa öneri bölümünü gizle
+                        document.getElementById('roomSuggestionsContainer').style.display = 'none';
+                    }
+                } else {
+                    // Oda bulunamadı mesajını göster
+                    document.getElementById('noRoomSelectedMessage').style.display = 'none';
+                    document.getElementById('noRoomsFoundMessage').style.display = 'block';
+                    document.getElementById('roomListContainer').innerHTML = '<div class="alert alert-warning">Bu otele ait oda bulunamadı.</div>';
+                    document.getElementById('roomSuggestionsContainer').style.display = 'none';
+                }
+            })
+            .catch(error => {
+                console.error('Hata:', error);
+                alert('Oda bilgileri yüklenirken bir hata oluştu: ' + error.message);
+            });
+    }
+    
+    // Oda listesini güncelleme fonksiyonu
+    function updateRoomList(rooms) {
+        const roomListContainer = document.getElementById('roomListContainer');
+        
+        // Açıklama mesajlarını gizle
+        document.getElementById('noRoomSelectedMessage').style.display = 'none';
+        document.getElementById('noRoomsFoundMessage').style.display = 'none';
+        
+        // Oda listesini oluştur
+        let html = '';
+        rooms.forEach(room => {
+            const isSelected = room.is_best_match || room.is_suggestion;
+            html += `
+            <div class="card room-card ${isSelected ? 'selected' : ''}" id="room-${room.id}">
+                <div class="card-body">
+                    ${room.match_score > 50 ? `<div class="match-score ${getScoreClass(room.match_score)}">${room.match_score}%</div>` : ''}
+                    <div class="form-check">
+                        <input class="form-check-input room-checkbox" type="checkbox" name="room_ids" value="${room.id}" id="room-checkbox-${room.id}" ${isSelected ? 'checked' : ''}>
+                        <label class="form-check-label w-100" for="room-checkbox-${room.id}">
+                            <h6 class="mb-1">${room.name}</h6>
+                            <p class="mb-0 text-muted"><small>Kod: ${room.code}</small></p>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            `;
+        });
+        
+        roomListContainer.innerHTML = html;
+        
+        // Oda kartlarını tıklanabilir yapma
+        document.querySelectorAll('.room-card').forEach(function(card) {
+            card.addEventListener('click', function(e) {
+                if (e.target.type === 'checkbox') return;
+                
+                const checkbox = this.querySelector('.room-checkbox');
+                checkbox.checked = !checkbox.checked;
+                checkbox.dispatchEvent(new Event('change'));
+                
+                if (checkbox.checked) {
+                    this.classList.add('selected');
+                } else {
+                    this.classList.remove('selected');
+                }
+            });
+        });
+        
+        // Checkbox change event listener
+        document.querySelectorAll('.room-checkbox').forEach(function(checkbox) {
+            checkbox.addEventListener('change', function() {
+                const cardId = 'room-' + this.value;
+                const card = document.getElementById(cardId);
+                
+                if (this.checked) {
+                    card.classList.add('selected');
+                } else {
+                    card.classList.remove('selected');
+                }
+            });
+        });
+    }
+    
+    // Oda önerilerini güncelleme fonksiyonu
+    function updateRoomSuggestions(suggestions, bestMatch, searchPattern) {
+        const container = document.getElementById('roomSuggestionsContainer');
+        
+        if (!suggestions.length && !bestMatch) {
+            container.style.display = 'none';
+            return;
+        }
+        
+        let html = `
+        <div class="suggestion-section">
+            <h5><i class="bi bi-lightbulb"></i> Akıllı Oda Önerileri</h5>
+        `;
+        
+        // En iyi eşleşme
+        if (bestMatch) {
+            html += `
+            <h6>En İyi Eşleşme:</h6>
+            <div class="card room-card best-match" id="suggestion-room-${bestMatch.id}">
+                <div class="card-body">
+                    <h6 class="mb-1">${bestMatch.name}</h6>
+                    <p class="mb-0 text-muted"><small>Kod: ${bestMatch.code}</small></p>
+                </div>
+            </div>
+            `;
+        }
+        
+        // Diğer öneriler
+        if (suggestions.length > 0) {
+            html += `<h6 class="mt-3">Benzer Odalar:</h6><div class="row">`;
+            
+            suggestions.forEach(room => {
+                if (!bestMatch || room.id !== bestMatch.id) {
+                    html += `
+                    <div class="col-md-6">
+                        <div class="card room-card" id="suggestion-room-${room.id}">
+                            <div class="card-body">
+                                <h6 class="mb-1">${room.name}</h6>
+                                <p class="mb-0 text-muted"><small>Kod: ${room.code}</small></p>
+                            </div>
+                        </div>
+                    </div>
+                    `;
+                }
+            });
+            
+            html += `</div>`;
+        }
+        
+        // Arama deseni
+        if (searchPattern) {
+            html += `
+            <div class="alert alert-info mt-3">
+                <i class="bi bi-info-circle"></i> Kullanılan arama deseni: <strong>"${searchPattern}"</strong>
+            </div>
+            `;
+        }
+        
+        html += `</div>`;
+        
+        container.innerHTML = html;
+        container.style.display = 'block';
+        
+        // Öneri kartlarını tıklanabilir yap
+        document.querySelectorAll('[id^="suggestion-room-"]').forEach(function(card) {
+            card.addEventListener('click', function() {
+                const roomId = this.id.replace('suggestion-room-', '');
+                const targetCheckbox = document.querySelector('#room-checkbox-' + roomId);
+                
+                if (targetCheckbox) {
+                    targetCheckbox.checked = true;
+                    targetCheckbox.dispatchEvent(new Event('change'));
+                    
+                    const targetCard = document.getElementById('room-' + roomId);
+                    if (targetCard) {
+                        targetCard.classList.add('selected');
+                        targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                }
+            });
+        });
+    }
+    
+    // Puan sınıfını getiren yardımcı fonksiyon
+    function getScoreClass(score) {
+        if (score >= 90) return 'score-90-100';
+        if (score >= 80) return 'score-80-89';
+        if (score >= 70) return 'score-70-79';
+        return 'score-0-69';
+    }
+    
+    // Form submit olduğunda gerekli doğrulama
+    document.getElementById('smartMatchForm').addEventListener('submit', function(event) {
+        const selectedHotel = document.querySelector('.hotel-radio:checked');
+        
+        if (!selectedHotel) {
+            event.preventDefault();
+            alert('Lütfen bir otel seçin!');
+            hotelTabElement.show();
+            return false;
+        }
+        
+        const selectedRooms = document.querySelectorAll('.room-checkbox:checked');
+        
+        if (selectedRooms.length === 0) {
+            const confirmNoRooms = confirm('Hiçbir oda seçilmedi. Devam etmek istiyor musunuz?');
+            if (!confirmNoRooms) {
+                event.preventDefault();
+                roomTabElement.show();
+                return false;
+            }
+        }
+        
+        return true;
+    });
+});
+</script>
+{% endblock %}

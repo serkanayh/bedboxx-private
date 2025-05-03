@@ -1,0 +1,41 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Delete Room - StopSale Automation System{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+    <h1>Delete Room</h1>
+    <a href="{% url 'hotels:hotel_rooms' room.hotel.id %}" class="btn btn-outline-primary">
+        <i class="bi bi-arrow-left"></i> Back to Hotel Rooms
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-header bg-danger text-white">
+        <h5 class="mb-0">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i> Warning
+        </h5>
+    </div>
+    <div class="card-body">
+        <p class="lead">Are you sure you want to delete the room type "<strong>{{ room.juniper_room_type }}</strong>" ({{ room.room_code }}) from hotel {{ room.hotel.juniper_hotel_name }}?</p>
+        
+        <div class="alert alert-warning">
+            <h6><i class="bi bi-exclamation-diamond-fill me-2"></i> This action cannot be undone!</h6>
+            <p class="mb-0">Deleting this room type may affect existing stop sale and open sale records.</p>
+        </div>
+        
+        <form method="post" class="mt-4">
+            {% csrf_token %}
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-danger">
+                    <i class="bi bi-trash"></i> Yes, Delete Room
+                </button>
+                <a href="{% url 'hotels:hotel_rooms' room.hotel.id %}" class="btn btn-secondary">
+                    <i class="bi bi-x-circle"></i> Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %} 

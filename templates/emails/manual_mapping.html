@@ -1,0 +1,235 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Manual Mapping - {{ row.email.subject }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h4>Manual Data Mapping</h4>
+            <a href="{% url 'emails:email_detail' email_id=row.email.id %}" class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-arrow-left"></i> Back to Email
+            </a>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i> 
+                Please manually map the data for this row to the corresponding Juniper entities.
+            </div>
+            
+            <div class="email-info mb-4">
+                <h5>Original Data</h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Hotel:</strong> {{ row.hotel_name }}</p>
+                        <p><strong>Room Type:</strong> {{ row.room_type }}</p>
+                        <p><strong>Market:</strong> {{ row.market }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Start Date:</strong> {{ row.start_date }}</p>
+                        <p><strong>End Date:</strong> {{ row.end_date }}</p>
+                        <p><strong>Sale Type:</strong> 
+                            {% if row.sale_type == 'stop' %}
+                            <span class="badge bg-danger">Stop Sale</span>
+                            {% else %}
+                            <span class="badge bg-success">Open Sale</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <form method="post" action="{% url 'emails:manual_mapping' row_id=row.id %}">
+                {% csrf_token %}
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="hotel_id" class="form-label"><strong>Juniper Hotel</strong></label>
+                        <select class="form-select" id="hotel_id" name="hotel_id" required>
+                            <option value="">-- Select Hotel --</option>
+                            {% for hotel in hotels %}
+                            <option value="{{ hotel.id }}" {% if row.juniper_hotel.id == hotel.id %}selected{% endif %}>
+                                {{ hotel.juniper_hotel_name }} ({{ hotel.juniper_code }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label for="market_id" class="form-label"><strong>Market</strong></label>
+                        <select class="form-select" id="market_id" name="market_id" required>
+                            <option value="">-- Select Market --</option>
+                            {% for market in markets %}
+                            <option value="{{ market.id }}" {% if row.market == market.name %}selected{% endif %}>
+                                {{ market.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-12">
+                        <label class="form-label"><strong>Room Types</strong></label>
+                        <div id="room-types-container" class="border rounded p-3">
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="all-rooms" name="room_types" value="all">
+                                <label class="form-check-label" for="all-rooms">All Room Types</label>
+                            </div>
+                            <hr>
+                            <div id="room-types-list">
+                                {% for room in rooms %}
+                                <div class="form-check">
+                                    <input class="form-check-input room-type-checkbox" type="checkbox" name="room_types" value="{{ room.id }}" id="room-{{ room.id }}" {% if row.juniper_room.id == room.id %}checked{% endif %}>
+                                    <label class="form-check-label" for="room-{{ room.id }}">
+                                        {{ room.juniper_room_type }}
+                                    </label>
+                                </div>
+                                {% empty %}
+                                <p class="text-muted">Select a hotel to see available room types</p>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="start_date" class="form-label"><strong>Start Date</strong></label>
+                        <input type="date" class="form-control" id="start_date" name="start_date" value="{{ row.start_date|date:'Y-m-d' }}" required>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label for="end_date" class="form-label"><strong>End Date</strong></label>
+                        <input type="date" class="form-control" id="end_date" name="end_date" value="{{ row.end_date|date:'Y-m-d' }}" required>
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label"><strong>Sale Type</strong></label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="sale_type" id="stop_sale" value="stop" {% if row.sale_type == 'stop' %}checked{% endif %} required>
+                            <label class="form-check-label" for="stop_sale">
+                                Stop Sale
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="sale_type" id="open_sale" value="open" {% if row.sale_type == 'open' %}checked{% endif %} required>
+                            <label class="form-check-label" for="open_sale">
+                                Open Sale
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="d-flex justify-content-between mt-4">
+                    <a href="{% url 'emails:email_detail' email_id=row.email.id %}" class="btn btn-secondary">
+                        Cancel
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Save Mapping
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // Handle hotel selection change
+        $('#hotel_id').change(function() {
+            const hotelId = $(this).val();
+            if (hotelId) {
+                // Clear current room types
+                $('#room-types-list').html('<p class="text-center"><i class="fas fa-spinner fa-spin"></i> Loading room types...</p>');
+                
+                // Fetch room types for selected hotel
+                $.ajax({
+                    url: `/api/hotels/${hotelId}/rooms/`,
+                    type: 'GET',
+                    dataType: 'json',
+                    success: function(data) {
+                        let roomsHtml = '';
+                        if (data.rooms && data.rooms.length > 0) {
+                            data.rooms.forEach(function(room) {
+                                roomsHtml += `
+                                    <div class="form-check">
+                                        <input class="form-check-input room-type-checkbox" type="checkbox" name="room_types" value="${room.id}" id="room-${room.id}">
+                                        <label class="form-check-label" for="room-${room.id}">
+                                            ${room.name}
+                                        </label>
+                                    </div>
+                                `;
+                            });
+                        } else {
+                            roomsHtml = '<p class="text-muted">No room types available for this hotel</p>';
+                        }
+                        $('#room-types-list').html(roomsHtml);
+                        
+                        // Reattach event handlers
+                        attachRoomTypeHandlers();
+                    },
+                    error: function() {
+                        $('#room-types-list').html('<p class="text-danger">Error loading room types</p>');
+                    }
+                });
+            } else {
+                $('#room-types-list').html('<p class="text-muted">Select a hotel to see available room types</p>');
+            }
+        });
+        
+        // Function to attach event handlers to room type checkboxes
+        function attachRoomTypeHandlers() {
+            // "All Rooms" checkbox logic
+            $('#all-rooms').change(function() {
+                if ($(this).is(':checked')) {
+                    $('.room-type-checkbox').prop('checked', false).prop('disabled', true);
+                } else {
+                    $('.room-type-checkbox').prop('disabled', false);
+                }
+            });
+            
+            // Individual room type checkbox logic
+            $('.room-type-checkbox').change(function() {
+                if ($(this).is(':checked')) {
+                    $('#all-rooms').prop('checked', false);
+                }
+            });
+        }
+        
+        // Initial setup
+        attachRoomTypeHandlers();
+        
+        // Check if "All Rooms" is selected initially
+        if ($('#all-rooms').is(':checked')) {
+            $('.room-type-checkbox').prop('checked', false).prop('disabled', true);
+        }
+        
+        // Validate form before submission
+        $('form').submit(function(e) {
+            // Check if either "All Rooms" or at least one room type is selected
+            if (!$('#all-rooms').is(':checked') && $('.room-type-checkbox:checked').length === 0) {
+                alert('Please select either "All Room Types" or at least one specific room type.');
+                e.preventDefault();
+                return false;
+            }
+            
+            // Validate date range
+            const startDate = new Date($('#start_date').val());
+            const endDate = new Date($('#end_date').val());
+            
+            if (startDate > endDate) {
+                alert('End date must be after start date.');
+                e.preventDefault();
+                return false;
+            }
+            
+            return true;
+        });
+    });
+</script>
+{% endblock %}

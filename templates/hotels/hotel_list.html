@@ -1,0 +1,150 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Hotels - StopSale Automation System{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+    <h1>Hotels</h1>
+    <div class="d-flex">
+        <form method="get" class="d-flex me-2">
+            <div class="input-group">
+                <input type="text" name="search" class="form-control" placeholder="Search hotels..." value="{{ request.GET.search|default:'' }}">
+                <button class="btn btn-outline-primary" type="submit">
+                    <i class="bi bi-search"></i>
+                </button>
+            </div>
+        </form>
+        {% if user.is_admin or user.is_supervisor %}
+        <div class="btn-group me-2">
+            <a href="{% url 'hotels:hotel_create' %}" class="btn btn-success">
+                <i class="bi bi-building-add"></i> New Hotel
+            </a>
+            <a href="{% url 'hotels:room_create' %}" class="btn btn-info">
+                <i class="bi bi-door-open"></i> New Room
+            </a>
+        </div>
+        {% endif %}
+        {% if user.is_admin %}
+        <a href="{% url 'hotels:import_hotel_data' %}" class="btn btn-primary">
+            <i class="bi bi-upload"></i> Import Data
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Hotel Name</th>
+                        <th>Juniper Code</th>
+                        <th>Rooms</th>
+                        <th>Created</th>
+                        <th>Updated</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for hotel in hotels %}
+                    <tr>
+                        <td>{{ hotel.juniper_hotel_name }}</td>
+                        <td>{{ hotel.juniper_code }}</td>
+                        <td>{{ hotel.rooms.count }}</td>
+                        <td>{{ hotel.created_at|date:"d M Y H:i" }}</td>
+                        <td>{{ hotel.updated_at|date:"d M Y H:i" }}</td>
+                        <td>
+                            <div class="btn-group">
+                                <a href="{% url 'hotels:hotel_detail' hotel.id %}" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye"></i> View
+                                </a>
+                                <a href="{% url 'hotels:hotel_rooms' hotel.id %}" class="btn btn-sm btn-outline-info">
+                                    <i class="bi bi-door-closed"></i> Rooms
+                                </a>
+                                {% if user.is_admin or user.is_supervisor %}
+                                <a href="{% url 'hotels:hotel_delete' hotel.id %}" class="btn btn-sm btn-outline-danger">
+                                    <i class="bi bi-trash"></i> Delete
+                                </a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-4">
+                            <div class="text-muted">
+                                <i class="bi bi-building fs-1 d-block mb-2"></i>
+                                No hotels found.
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% if hotels.has_other_pages %}
+<nav aria-label="Page navigation" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if hotels.has_previous %}
+        <li class="page-item">
+            <a class="page-link" href="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}" aria-label="First">
+                <span aria-hidden="true">&laquo;&laquo;</span>
+            </a>
+        </li>
+        <li class="page-item">
+            <a class="page-link" href="?page={{ hotels.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}" aria-label="Previous">
+                <span aria-hidden="true">&laquo;</span>
+            </a>
+        </li>
+        {% else %}
+        <li class="page-item disabled">
+            <a class="page-link" href="#" aria-label="First">
+                <span aria-hidden="true">&laquo;&laquo;</span>
+            </a>
+        </li>
+        <li class="page-item disabled">
+            <a class="page-link" href="#" aria-label="Previous">
+                <span aria-hidden="true">&laquo;</span>
+            </a>
+        </li>
+        {% endif %}
+        
+        {% for i in hotels.paginator.page_range %}
+            {% if hotels.number == i %}
+            <li class="page-item active"><a class="page-link" href="#">{{ i }}</a></li>
+            {% elif i > hotels.number|add:'-3' and i < hotels.number|add:'3' %}
+            <li class="page-item"><a class="page-link" href="?page={{ i }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">{{ i }}</a></li>
+            {% endif %}
+        {% endfor %}
+        
+        {% if hotels.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ hotels.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}" aria-label="Next">
+                <span aria-hidden="true">&raquo;</span>
+            </a>
+        </li>
+        <li class="page-item">
+            <a class="page-link" href="?page={{ hotels.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}" aria-label="Last">
+                <span aria-hidden="true">&raquo;&raquo;</span>
+            </a>
+        </li>
+        {% else %}
+        <li class="page-item disabled">
+            <a class="page-link" href="#" aria-label="Next">
+                <span aria-hidden="true">&raquo;</span>
+            </a>
+        </li>
+        <li class="page-item disabled">
+            <a class="page-link" href="#" aria-label="Last">
+                <span aria-hidden="true">&raquo;&raquo;</span>
+            </a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,21 @@
+[2025-05-02 19:19:45,655: INFO/MainProcess] beat: Starting...
+[2025-05-02 19:31:35,974: INFO/MainProcess] beat: Starting...
+[2025-05-02 19:31:35,976: ERROR/MainProcess] Removing corrupted schedule file 'celerybeat-schedule': error('db type could not be determined')
+Traceback (most recent call last):
+  File "/opt/homebrew/lib/python3.11/site-packages/celery/beat.py", line 532, in setup_schedule
+    self._store = self._open_schedule()
+                  ^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/lib/python3.11/site-packages/celery/beat.py", line 522, in _open_schedule
+    return self.persistence.open(self.schedule_filename, writeback=True)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.11/3.11.12/Frameworks/Python.framework/Versions/3.11/lib/python3.11/shelve.py", line 243, in open
+    return DbfilenameShelf(filename, flag, protocol, writeback)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.11/3.11.12/Frameworks/Python.framework/Versions/3.11/lib/python3.11/shelve.py", line 227, in __init__
+    Shelf.__init__(self, dbm.open(filename, flag), protocol, writeback)
+                         ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.11/3.11.12/Frameworks/Python.framework/Versions/3.11/lib/python3.11/dbm/__init__.py", line 89, in open
+    raise error[0]("db type could not be determined")
+dbm.error: db type could not be determined
+[2025-05-03 04:13:40,582: INFO/MainProcess] Scheduler: Sending due task celery.backend_cleanup (celery.backend_cleanup)
+[2025-05-03 04:15:09,748: INFO/MainProcess] Scheduler: Sending due task celery.backend_cleanup (celery.backend_cleanup)

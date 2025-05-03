@@ -1,0 +1,166 @@
+{% extends 'base/base.html' %}
+
+{% block title %}User Activity Logs - StopSale Automation System{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+    <h1>User Activity Logs</h1>
+    <div class="btn-group">
+        <a href="{% url 'core:dashboard' %}" class="btn btn-outline-primary">
+            <i class="bi bi-speedometer2 me-2"></i> Dashboard
+        </a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+            <i class="bi bi-list-check me-2"></i> User Actions Log
+        </h5>
+        <div>
+            <form class="d-flex" method="get">
+                <select name="action" class="form-select form-select-sm me-2" onchange="this.form.submit()">
+                    <option value="">All Actions</option>
+                    <option value="login" {% if request.GET.action == 'login' %}selected{% endif %}>Login</option>
+                    <option value="logout" {% if request.GET.action == 'logout' %}selected{% endif %}>Logout</option>
+                    <option value="approve_row" {% if request.GET.action == 'approve_row' %}selected{% endif %}>Approve Row</option>
+                    <option value="edit_row" {% if request.GET.action == 'edit_row' %}selected{% endif %}>Edit Row</option>
+                    <option value="send_to_robot" {% if request.GET.action == 'send_to_robot' %}selected{% endif %}>Send to Robot</option>
+                    <option value="mark_hotel_not_found" {% if request.GET.action == 'mark_hotel_not_found' %}selected{% endif %}>Mark Hotel Not Found</option>
+                    <option value="mark_room_not_found" {% if request.GET.action == 'mark_room_not_found' %}selected{% endif %}>Mark Room Not Found</option>
+                    <option value="ignore_email" {% if request.GET.action == 'ignore_email' %}selected{% endif %}>Ignore Email</option>
+                    <option value="assign_email" {% if request.GET.action == 'assign_email' %}selected{% endif %}>Assign Email</option>
+                </select>
+                <select name="user" class="form-select form-select-sm me-2" onchange="this.form.submit()">
+                    <option value="">All Users</option>
+                    {% for user in users %}
+                    <option value="{{ user.id }}" {% if request.GET.user == user.id|stringformat:"i" %}selected{% endif %}>{{ user.username }}</option>
+                    {% endfor %}
+                </select>
+            </form>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>ID</th>
+                        <th>User</th>
+                        <th>Action</th>
+                        <th>Email</th>
+                        <th>IP Address</th>
+                        <th>Time</th>
+                        <th>Details</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs %}
+                    <tr>
+                        <td>{{ log.id }}</td>
+                        <td>{{ log.user.username }}</td>
+                        <td>
+                            {% if log.action_type == 'login' %}
+                            <span class="badge bg-success">Login</span>
+                            {% elif log.action_type == 'logout' %}
+                            <span class="badge bg-secondary">Logout</span>
+                            {% elif log.action_type == 'approve_row' %}
+                            <span class="badge bg-primary">Approve Row</span>
+                            {% elif log.action_type == 'edit_row' %}
+                            <span class="badge bg-info">Edit Row</span>
+                            {% elif log.action_type == 'send_to_robot' %}
+                            <span class="badge bg-warning">Send to Robot</span>
+                            {% elif log.action_type == 'mark_hotel_not_found' %}
+                            <span class="badge bg-danger">Hotel Not Found</span>
+                            {% elif log.action_type == 'mark_room_not_found' %}
+                            <span class="badge bg-danger">Room Not Found</span>
+                            {% elif log.action_type == 'ignore_email' %}
+                            <span class="badge bg-dark">Ignore Email</span>
+                            {% elif log.action_type == 'assign_email' %}
+                            <span class="badge bg-primary">Assign Email</span>
+                            {% else %}
+                            <span class="badge bg-secondary">{{ log.action_type }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if log.email %}
+                            <a href="{% url 'emails:email_detail' log.email.id %}">
+                                {{ log.email.subject|truncatechars:30 }}
+                            </a>
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
+                        <td>{{ log.ip_address|default_if_none:"-" }}</td>
+                        <td>{{ log.timestamp|date:"d M Y H:i:s" }}</td>
+                        <td>
+                            {% if log.details %}
+                            <button type="button" class="btn btn-sm btn-outline-primary view-details-btn" 
+                                    data-bs-toggle="modal" data-bs-target="#logDetailModal"
+                                    data-id="{{ log.id }}"
+                                    data-details="{{ log.details|stringformat:'s'|escapejs }}">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center py-4">
+                            <div class="text-muted">
+                                <i class="bi bi-list-check fs-1 d-block mb-2"></i>
+                                No user logs found.
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Log Detail Modal -->
+<div class="modal fade" id="logDetailModal" tabindex="-1" aria-labelledby="logDetailModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="logDetailModalLabel">Log Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <pre id="logDetails" class="bg-light p-3 rounded" style="max-height: 300px; overflow-y: auto;"></pre>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Handle view details button clicks
+        document.querySelectorAll('.view-details-btn').forEach(function(button) {
+            button.addEventListener('click', function() {
+                const logId = this.getAttribute('data-id');
+                let details = this.getAttribute('data-details');
+                
+                try {
+                    // Try to format JSON nicely if it's valid JSON
+                    details = JSON.stringify(JSON.parse(details), null, 2);
+                } catch (e) {
+                    // Not valid JSON, use as is
+                }
+                
+                document.getElementById('logDetails').textContent = details;
+                document.getElementById('logDetailModalLabel').textContent = `Log Details - ID: ${logId}`;
+            });
+        });
+    });
+</script>
+{% endblock %} 

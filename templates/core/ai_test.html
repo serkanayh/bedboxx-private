@@ -1,0 +1,464 @@
+{% extends 'base/base.html' %}
+{% load email_filters %}
+
+{% block title %}AI Analysis Test - StopSale Automation System{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Custom styling for nav tabs */
+    .nav-tabs .nav-link {
+        color: #333 !important;
+        font-weight: bold;
+        border-color: #dee2e6 #dee2e6 #fff;
+        background-color: #f8f9fa;
+        transition: all 0.2s ease;
+    }
+    
+    .nav-tabs .nav-link:hover {
+        background-color: #e9ecef;
+        border-color: #dee2e6 #dee2e6 #dee2e6;
+    }
+    
+    .nav-tabs .nav-link.active {
+        color: #495057 !important;
+        background-color: #fff;
+        border-color: #dee2e6 #dee2e6 #fff;
+        border-top: 3px solid #3f51b5;
+    }
+    
+    /* Styles for file input */
+    .custom-file-upload {
+        display: inline-block;
+        padding: 6px 12px;
+        cursor: pointer;
+        background-color: #f8f9fa;
+        border: 1px solid #ced4da;
+        border-radius: .25rem;
+    }
+    
+    /* Email display styles */
+    .email-preview-wrapper {
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        background-color: #fff;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    .email-preview-header {
+        padding: 10px 15px;
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #ddd;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    /* Email header styles */
+    .email-headers {
+        background-color: #f8f9fa;
+        border-radius: 4px;
+        padding: 15px;
+        margin-bottom: 15px;
+    }
+    
+    .header-line {
+        margin-bottom: 8px;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    
+    .header-line strong {
+        display: inline-block;
+        width: 80px;
+        color: #555;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+    <h1>AI Email Analysis Test</h1>
+    <div class="btn-group">
+        <a href="{% url 'core:dashboard' %}" class="btn btn-outline-primary">
+            <i class="bi bi-speedometer2 me-2"></i> Dashboard
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <ul class="nav nav-tabs card-header-tabs" id="email-content-tabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link {% if not email_content or not is_html_content %}active{% endif %}" id="paste-tab" data-bs-toggle="tab" data-bs-target="#paste-content" type="button" role="tab" aria-controls="paste-content" aria-selected="{% if not email_content or not is_html_content %}true{% else %}false{% endif %}">
+                            <i class="bi bi-clipboard"></i> Paste Content
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="upload-tab" data-bs-toggle="tab" data-bs-target="#upload-file" type="button" role="tab" aria-controls="upload-file" aria-selected="false">
+                            <i class="bi bi-upload"></i> Upload Email
+                        </button>
+                    </li>
+                    {% if email_content %}
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link {% if is_html_content %}active{% endif %}" id="preview-tab" data-bs-toggle="tab" data-bs-target="#preview-content" type="button" role="tab" aria-controls="preview-content" aria-selected="{% if is_html_content %}true{% else %}false{% endif %}">
+                            <i class="bi bi-eye"></i> Preview
+                        </button>
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+            <div class="card-body">
+                <div class="tab-content" id="email-content-tabContent">
+                    <div class="tab-pane fade {% if not email_content or not is_html_content %}show active{% endif %}" id="paste-content" role="tabpanel" aria-labelledby="paste-tab">
+                        <form method="post" action="{% url 'core:ai_test' %}">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <label for="emailContent" class="form-label">Email Content</label>
+                                <textarea class="form-control" id="emailContent" name="email_content" rows="15" placeholder="Paste the email content you want to analyze...">{{ email_content }}</textarea>
+                            </div>
+                            <div class="mb-3 form-check">
+                                <input type="checkbox" class="form-check-input" id="useActiveAI" name="use_active_ai" checked>
+                                <label class="form-check-label" for="useActiveAI">Use active AI model and prompt</label>
+                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-robot"></i> Analyze with AI
+                            </button>
+                        </form>
+                    </div>
+                    <div class="tab-pane fade" id="upload-file" role="tabpanel" aria-labelledby="upload-tab">
+                        <form method="post" action="{% url 'core:ai_test' %}" enctype="multipart/form-data">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <label for="emailFile" class="form-label">Upload .eml File</label>
+                                <input class="form-control" type="file" id="emailFile" name="email_file" accept=".eml">
+                                <div class="form-text">Only .eml files are supported.</div>
+                            </div>
+                            <div class="mb-3 form-check">
+                                <input type="checkbox" class="form-check-input" id="useActiveAIFile" name="use_active_ai" checked>
+                                <label class="form-check-label" for="useActiveAIFile">Use active AI model and prompt</label>
+                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-robot"></i> Analyze with AI
+                            </button>
+                        </form>
+                    </div>
+                    {% if email_content %}
+                    <div class="tab-pane fade {% if is_html_content %}show active{% endif %}" id="preview-content" role="tabpanel" aria-labelledby="preview-tab">
+                        <div class="email-preview-wrapper">
+                            {% if is_html_content %}
+                                <div class="email-preview-header">
+                                    <span class="badge bg-info">HTML Email</span>
+                                    <div>
+                                        <button class="btn btn-sm btn-outline-secondary" onclick="toggleFullscreenPreview()">
+                                            <i class="bi bi-arrows-fullscreen"></i> Toggle Fullscreen
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                {% if email_headers %}
+                                <div class="email-headers p-3">
+                                    {% if email_headers.from %}
+                                    <div class="header-line">
+                                        <strong class="text-primary">From:</strong> {{ email_headers.from }}
+                                    </div>
+                                    {% endif %}
+                                    
+                                    {% if email_headers.to %}
+                                    <div class="header-line">
+                                        <strong class="text-primary">To:</strong> {{ email_headers.to }}
+                                    </div>
+                                    {% endif %}
+                                    
+                                    {% if email_headers.subject %}
+                                    <div class="header-line">
+                                        <strong class="text-primary">Subject:</strong> {{ email_headers.subject }}
+                                    </div>
+                                    {% endif %}
+                                    
+                                    {% if email_headers.date %}
+                                    <div class="header-line">
+                                        <strong class="text-primary">Date:</strong> {{ email_headers.date }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                {% endif %}
+                                
+                                <div id="email-preview-container" style="height: 500px; overflow: auto; background-color: #fff; padding: 0;">
+                                    <div id="email-html-content">
+                                        {{ email_content|safe }}
+                                    </div>
+                                </div>
+                            {% else %}
+                                <div class="email-preview-header">
+                                    <span class="badge bg-secondary">Plain Text Email</span>
+                                </div>
+                                <div class="p-3 bg-white">
+                                    {% if email_headers %}
+                                    <div class="email-headers mb-3 border-bottom pb-3">
+                                        {% if email_headers.from %}
+                                        <div class="header-line">
+                                            <strong class="text-primary">From:</strong> {{ email_headers.from }}
+                                        </div>
+                                        {% endif %}
+                                        
+                                        {% if email_headers.to %}
+                                        <div class="header-line">
+                                            <strong class="text-primary">To:</strong> {{ email_headers.to }}
+                                        </div>
+                                        {% endif %}
+                                        
+                                        {% if email_headers.subject %}
+                                        <div class="header-line">
+                                            <strong class="text-primary">Subject:</strong> {{ email_headers.subject }}
+                                        </div>
+                                        {% endif %}
+                                        
+                                        {% if email_headers.date %}
+                                        <div class="header-line">
+                                            <strong class="text-primary">Date:</strong> {{ email_headers.date }}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    {% endif %}
+                                    
+                                    <pre style="white-space: pre-wrap; word-break: break-word; max-height: 450px; overflow: auto;">{{ email_content|text_to_html|safe }}</pre>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-info-circle me-2"></i> How it works
+                </h5>
+            </div>
+            <div class="card-body">
+                <p>This page allows you to test the AI analysis function without having to upload a real email. You can either paste email content or upload an .EML file.</p>
+                
+                <p>The system will:</p>
+                <ol>
+                    <li>Process the text using AI analysis with the active prompt</li>
+                    <li>Extract hotel, room, market and date information</li>
+                    <li>Determine if it's a stop sale or open sale</li>
+                    <li>Display the results in a table format on the right</li>
+                </ol>
+                
+                <div class="alert alert-info">
+                    <i class="bi bi-lightbulb-fill me-2"></i>
+                    <strong>Tip:</strong> Try including clear hotel names, room types, dates, and market information in your test content for the best results.
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-table me-2"></i> Analysis Results
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if analysis_result %}
+                    {% if email_source %}
+                    <div class="alert alert-info mb-3">
+                        <i class="bi bi-file-earmark-text me-2"></i>
+                        Analyzed from: <strong>{{ email_source }}</strong>
+                    </div>
+                    {% endif %}
+                    
+                    {% if active_ai_model and active_prompt %}
+                    <div class="alert alert-primary mb-3">
+                        <i class="bi bi-robot me-2"></i>
+                        Analyzed using: <strong>{{ active_ai_model.name }} with prompt "{{ active_prompt.title }}"</strong>
+                    </div>
+                    {% endif %}
+                
+                    {% if analysis_result.rows %}
+                        <div class="table-responsive">
+                            <table class="table table-bordered">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Hotel</th>
+                                        <th>Room Type</th>
+                                        <th>Market</th>
+                                        <th>Start Date</th>
+                                        <th>End Date</th>
+                                        <th>Sale Type</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for row in analysis_result.rows %}
+                                    <tr>
+                                        <td>{{ row.hotel_name }}</td>
+                                        <td>{{ row.room_type }}</td>
+                                        <td>{{ row.market }}</td>
+                                        <td>{{ row.start_date }}</td>
+                                        <td>{{ row.end_date }}</td>
+                                        <td>
+                                            {% if row.sale_type == 'stop' %}
+                                            <span class="badge bg-danger">Stop Sale</span>
+                                            {% else %}
+                                            <span class="badge bg-success">Open Sale</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div class="alert alert-success mt-3">
+                            <i class="bi bi-check-circle-fill me-2"></i>
+                            Successfully extracted <strong>{{ analysis_result.rows|length }}</strong> row(s) from the email content.
+                        </div>
+                    {% else %}
+                        <div class="alert alert-warning">
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                            No rows were extracted from the email content. Try with different content.
+                        </div>
+                    {% endif %}
+                {% else %}
+                    <div class="alert alert-secondary">
+                        <i class="bi bi-hourglass me-2"></i>
+                        Enter email content and click "Analyze with AI" to see results here.
+                    </div>
+                    
+                    <div class="text-center py-5 text-muted">
+                        <i class="bi bi-robot fs-1 d-block mb-3"></i>
+                        <p>AI results will appear here after analysis</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        {% if analysis_result %}
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-code-slash me-2"></i> Raw JSON Response
+                </h5>
+            </div>
+            <div class="card-body">
+                <pre class="bg-light p-3 rounded" style="max-height: 300px; overflow-y: auto;">{{ analysis_result|pprint }}</pre>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Auto-resize textarea as content grows
+        const textarea = document.getElementById('emailContent');
+        if (textarea) {
+            textarea.addEventListener('input', function() {
+                this.style.height = 'auto';
+                this.style.height = (this.scrollHeight) + 'px';
+            });
+            
+            // Trigger resize on load if there's content
+            if (textarea.value) {
+                textarea.style.height = 'auto';
+                textarea.style.height = (textarea.scrollHeight) + 'px';
+            }
+        }
+        
+        // Handle file input change
+        const fileInput = document.getElementById('emailFile');
+        if (fileInput) {
+            fileInput.addEventListener('change', function() {
+                const fileLabel = document.querySelector('label[for="emailFile"]');
+                if (this.files.length > 0) {
+                    fileLabel.textContent = `Selected: ${this.files[0].name}`;
+                    
+                    // Enable the analyze button
+                    const analyzeBtn = fileInput.closest('form').querySelector('button[type="submit"]');
+                    analyzeBtn.disabled = false;
+                } else {
+                    fileLabel.textContent = 'Select .EML file:';
+                    
+                    // Disable the analyze button if no file is selected
+                    const analyzeBtn = fileInput.closest('form').querySelector('button[type="submit"]');
+                    analyzeBtn.disabled = true;
+                }
+            });
+        }
+        
+        // Add custom styling for nav tabs
+        const navTabs = document.querySelectorAll('.nav-tabs .nav-link');
+        navTabs.forEach(tab => {
+            tab.classList.add('fw-bold');
+            
+            // Change background color when active or on hover
+            tab.addEventListener('mouseenter', function() {
+                if (!this.classList.contains('active')) {
+                    this.style.backgroundColor = '#f0f0f0';
+                }
+            });
+            
+            tab.addEventListener('mouseleave', function() {
+                if (!this.classList.contains('active')) {
+                    this.style.backgroundColor = '';
+                }
+            });
+        });
+
+        // If we have results, scroll to them
+        if (document.querySelector('.table-responsive')) {
+            setTimeout(() => {
+                document.querySelector('.table-responsive').scrollIntoView({ behavior: 'smooth' });
+            }, 500);
+        }
+    });
+</script>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function toggleFullscreenPreview() {
+        const container = document.getElementById('email-preview-container');
+        if (container.style.height === '500px') {
+            container.style.height = '90vh';
+            container.style.position = 'fixed';
+            container.style.top = '5vh';
+            container.style.left = '5%';
+            container.style.width = '90%';
+            container.style.zIndex = '1050';
+            container.style.backgroundColor = 'white';
+            container.style.boxShadow = '0 0 10px rgba(0,0,0,0.5)';
+        } else {
+            container.style.height = '500px';
+            container.style.position = 'static';
+            container.style.width = '100%';
+            container.style.zIndex = 'auto';
+            container.style.boxShadow = 'none';
+        }
+    }
+</script>
+{% endblock %}
+
+{% block extra_filters %}
+{{ block.super }}
+<script>
+// Custom filter for splitting strings
+var register_filter = function(name, fn) {
+    var e = django.template.defaultfilters;
+    if (e[name] === undefined) {
+        e[name] = fn;
+    }
+};
+
+register_filter('split', function(value, arg) {
+    return value.split(arg);
+});
+</script>
+{% endblock %} 

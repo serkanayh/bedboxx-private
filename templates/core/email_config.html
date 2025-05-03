@@ -1,0 +1,353 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Email Configuration - StopSale Automation System{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+    <h1>Email Server Configuration</h1>
+    <a href="{% url 'core:dashboard' %}" class="btn btn-outline-primary">
+        <i class="bi bi-arrow-left"></i> Back to Dashboard
+    </a>
+</div>
+
+{% if messages %}
+<div class="mt-4 mb-4">
+    {% for message in messages %}
+    <div class="alert {% if message.tags == 'error' %}alert-danger{% elif message.tags == 'success' %}alert-success{% else %}alert-info{% endif %} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<form method="post" class="mb-4">
+    {% csrf_token %}
+    
+    <div class="row">
+        <!-- SMTP Settings -->
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-envelope me-2"></i> SMTP Settings (For Sending Emails)
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="smtp_host" class="form-label">SMTP Host</label>
+                        <input type="text" class="form-control" id="smtp_host" name="smtp_host" value="{{ config.smtp_host }}" required>
+                        <div class="form-text">Example: smtp.gmail.com</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="smtp_port" class="form-label">SMTP Port</label>
+                        <input type="number" class="form-control" id="smtp_port" name="smtp_port" value="{{ config.smtp_port }}" required>
+                        <div class="form-text">Default: 587 for TLS, 465 for SSL</div>
+                    </div>
+                    
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="smtp_use_tls" name="smtp_use_tls" {% if config.smtp_use_tls %}checked{% endif %}>
+                        <label class="form-check-label" for="smtp_use_tls">Use TLS</label>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="smtp_username" class="form-label">SMTP Username</label>
+                        <input type="email" class="form-control" id="smtp_username" name="smtp_username" value="{{ config.smtp_username }}">
+                        <div class="form-text">Usually your email address</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="smtp_password" class="form-label">SMTP Password</label>
+                        <input type="password" class="form-control" id="smtp_password" name="smtp_password" placeholder="{% if config.smtp_password %}••••••••••{% else %}Enter password{% endif %}">
+                        <div class="form-text">Leave blank to keep current password</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="default_from_email" class="form-label">Default From Email</label>
+                        <input type="email" class="form-control" id="default_from_email" name="default_from_email" value="{{ config.default_from_email }}">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="email_subject_prefix" class="form-label">Email Subject Prefix</label>
+                        <input type="text" class="form-control" id="email_subject_prefix" name="email_subject_prefix" value="{{ config.email_subject_prefix }}">
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- IMAP Settings -->
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-inbox me-2"></i> IMAP Settings (For Receiving Emails)
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="imap_host" class="form-label">IMAP Host</label>
+                        <input type="text" class="form-control" id="imap_host" name="imap_host" value="{{ config.imap_host }}" required>
+                        <div class="form-text">Example: imap.gmail.com</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="imap_port" class="form-label">IMAP Port</label>
+                        <input type="number" class="form-control" id="imap_port" name="imap_port" value="{{ config.imap_port }}" required>
+                        <div class="form-text">Default: 993 for SSL</div>
+                    </div>
+                    
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="imap_use_ssl" name="imap_use_ssl" {% if config.imap_use_ssl %}checked{% endif %}>
+                        <label class="form-check-label" for="imap_use_ssl">Use SSL</label>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="imap_username" class="form-label">IMAP Username</label>
+                        <input type="email" class="form-control" id="imap_username" name="imap_username" value="{{ config.imap_username }}">
+                        <div class="form-text">Usually your email address</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="imap_password" class="form-label">IMAP Password</label>
+                        <input type="password" class="form-control" id="imap_password" name="imap_password" placeholder="{% if config.imap_password %}••••••••••{% else %}Enter password{% endif %}">
+                        <div class="form-text">Leave blank to keep current password</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="imap_folder" class="form-label">IMAP Folder</label>
+                        <input type="text" class="form-control" id="imap_folder" name="imap_folder" value="{{ config.imap_folder }}">
+                        <div class="form-text">Folder to check for new emails (e.g., INBOX, StopSale)</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="imap_check_interval" class="form-label">Check Interval (seconds)</label>
+                        <input type="number" class="form-control" id="imap_check_interval" name="imap_check_interval" value="{{ config.imap_check_interval }}">
+                        <div class="form-text">How often to check for new emails (in seconds)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Local Email Folder Settings -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-folder me-2"></i> Local Email Folder Settings (For .eml Files)
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="use_local_folder" name="use_local_folder" {% if config.use_local_folder %}checked{% endif %}>
+                        <label class="form-check-label" for="use_local_folder">Use Local Folder Instead of IMAP</label>
+                        <div class="form-text">When enabled, the system will read .eml files from the specified folder instead of connecting to an IMAP server</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="local_email_folder" class="form-label">Local Email Folder Path</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="local_email_folder" name="local_email_folder" value="{{ config.local_email_folder }}">
+                            <button type="button" class="btn btn-outline-secondary" onclick="openFolderBrowser('local_email_folder')">
+                                <i class="bi bi-folder2-open"></i> Browse
+                            </button>
+                        </div>
+                        <div class="form-text">Full path to the folder containing .eml files (e.g., /path/to/emails)</div>
+                    </div>
+                    
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="process_subdirectories" name="process_subdirectories" {% if config.process_subdirectories %}checked{% endif %}>
+                        <label class="form-check-label" for="process_subdirectories">Process Subdirectories</label>
+                        <div class="form-text">Also look for .eml files in subdirectories</div>
+                    </div>
+                    
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="delete_after_processing" name="delete_after_processing" {% if config.delete_after_processing %}checked{% endif %}>
+                        <label class="form-check-label" for="delete_after_processing">Delete Files After Processing</label>
+                        <div class="form-text">Delete .eml files after they have been processed</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="move_to_folder" class="form-label">Move Processed Files To</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="move_to_folder" name="move_to_folder" value="{{ config.move_to_folder }}">
+                            <button type="button" class="btn btn-outline-secondary" onclick="openFolderBrowser('move_to_folder')">
+                                <i class="bi bi-folder2-open"></i> Browse
+                            </button>
+                        </div>
+                        <div class="form-text">Full path to folder where processed files should be moved (leave blank to not move files)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="mb-3 form-check">
+        <input type="checkbox" class="form-check-input" id="is_active" name="is_active" {% if config.is_active %}checked{% endif %}>
+        <label class="form-check-label" for="is_active">Activate Email Checking</label>
+        <div class="form-text">Enable automatic email checking</div>
+    </div>
+    
+    <div class="d-flex justify-content-center">
+        <button type="submit" class="btn btn-primary btn-lg">
+            <i class="bi bi-save"></i> Save Configuration
+        </button>
+    </div>
+</form>
+
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="bi bi-info-circle me-2"></i> Information
+        </h5>
+    </div>
+    <div class="card-body">
+        <h6 class="fw-bold">Gmail Configuration Notes</h6>
+        <p>If you're using Gmail, you need to:</p>
+        <ol>
+            <li>Enable "Less secure app access" in your Google Account settings, or</li>
+            <li>Use an "App Password" instead of your regular password</li>
+        </ol>
+        
+        <h6 class="fw-bold">Testing Connection</h6>
+        <p>After configuring, make sure to test the connection to ensure everything is working correctly.</p>
+        
+        <h6 class="fw-bold">Email Folders</h6>
+        <p>The system will check the specified IMAP folder for new emails. Common folder names:</p>
+        <ul>
+            <li>INBOX - Main inbox folder</li>
+            <li>StopSale - Custom folder (if you've set up email rules to move messages)</li>
+        </ul>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<!-- Folder Browser Modal -->
+<div class="modal fade" id="folderBrowserModal" tabindex="-1" aria-labelledby="folderBrowserModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="folderBrowserModalLabel">Browse Folders</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Current Path</label>
+                    <div class="input-group">
+                        <input type="text" id="currentPath" class="form-control" readonly>
+                        <button class="btn btn-outline-secondary" type="button" id="parentDirButton">
+                            <i class="bi bi-arrow-up"></i> Parent Directory
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="list-group mb-3" id="folderList" style="max-height: 400px; overflow-y: auto;">
+                    <!-- Folders will be listed here dynamically -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="selectFolderButton">Select This Folder</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // The input field that will receive the selected folder path
+    let targetInputId = '';
+    
+    // Store the current path in the browser
+    let currentPath = '';
+    
+    // Initialize folder browser modal
+    function openFolderBrowser(inputId) {
+        targetInputId = inputId;
+        
+        // Get initial path from the input field or use empty string to get home directory
+        const initialPath = document.getElementById(inputId).value || '';
+        
+        // Load folders for the initial path
+        loadFolders(initialPath);
+        
+        // Show the modal
+        const folderModal = new bootstrap.Modal(document.getElementById('folderBrowserModal'));
+        folderModal.show();
+    }
+    
+    // Load folders for a given path
+    function loadFolders(path) {
+        currentPath = path;
+        document.getElementById('currentPath').value = path;
+        
+        fetch(`{% url 'core:list_folders' %}?path=${encodeURIComponent(path)}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Error loading folders');
+                }
+                return response.json();
+            })
+            .then(data => {
+                const folderList = document.getElementById('folderList');
+                folderList.innerHTML = '';
+                
+                // Set current path from response
+                currentPath = data.current_path;
+                document.getElementById('currentPath').value = data.current_path;
+                
+                // Sort directories alphabetically
+                data.directories.sort((a, b) => a.name.localeCompare(b.name));
+                
+                // Add directories to the list
+                data.directories.forEach(dir => {
+                    const item = document.createElement('a');
+                    item.href = '#';
+                    item.className = 'list-group-item list-group-item-action';
+                    item.innerHTML = `<i class="bi bi-folder me-2"></i> ${dir.name}`;
+                    item.onclick = function(e) {
+                        e.preventDefault();
+                        loadFolders(dir.path);
+                    };
+                    folderList.appendChild(item);
+                });
+                
+                // If there are .eml files, show a message about them
+                if (data.files.length > 0) {
+                    const fileInfo = document.createElement('div');
+                    fileInfo.className = 'list-group-item bg-light text-muted';
+                    fileInfo.innerHTML = `<i class="bi bi-info-circle me-2"></i> Found ${data.files.length} .eml files in this directory`;
+                    folderList.appendChild(fileInfo);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error loading folders: ' + error.message);
+            });
+    }
+    
+    // Document ready function
+    document.addEventListener('DOMContentLoaded', function() {
+        // Handle parent directory button
+        document.getElementById('parentDirButton').addEventListener('click', function() {
+            const path = currentPath;
+            if (!path || path === '/') return;
+            
+            const parts = path.split('/');
+            // Remove last part (current directory)
+            parts.pop();
+            const parentPath = parts.join('/') || '/';
+            loadFolders(parentPath);
+        });
+        
+        // Handle select folder button
+        document.getElementById('selectFolderButton').addEventListener('click', function() {
+            document.getElementById(targetInputId).value = currentPath;
+            bootstrap.Modal.getInstance(document.getElementById('folderBrowserModal')).hide();
+        });
+    });
+</script>
+{% endblock %} 

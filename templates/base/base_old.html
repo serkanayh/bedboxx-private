@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}StopSale Automation System{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css">
+    {% block extra_css %}{% endblock %}
+    <style>
+        :root {
+            --primary: #3f51b5;
+            --secondary: #f50057;
+            --success: #4caf50;
+            --warning: #ff9800;
+            --danger: #f44336;
+            --light: #f5f5f5;
+            --dark: #212121;
+            --sidebar-width: 240px;
+            --sidebar-width-collapsed: 60px;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+            padding-top: 56px;
+        }
+        .navbar {
+            background-color: var(--primary);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .navbar-brand {
+            font-weight: 600;
+            color: white !important;
+        }
+        .nav-link {
+            color: rgba(255,255,255,0.85) !important;
+        }
+        .nav-link:hover, .nav-link.active {
+            color: white !important;
+        }
+        .sidebar {
+            position: fixed;
+            top: 56px;
+            bottom: 0;
+            left: 0;
+            z-index: 100;
+            padding: 0;
+            box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
+            background-color: #fff;
+            width: var(--sidebar-width);
+            transition: all 0.3s;
+        }
+        .sidebar.collapsed {
+            width: var(--sidebar-width-collapsed);
+        }
+        .sidebar-sticky {
+            position: sticky;
+            top: 0;
+            height: calc(100vh - 56px);
+            padding-top: 1rem;
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+        .sidebar .nav-link {
+            color: #333 !important;
+            font-weight: 500;
+            padding: 0.75rem 1rem;
+            border-left: 3px solid transparent;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .sidebar .nav-link:hover {
+            background-color: #f5f5f5;
+            border-left: 3px solid #ddd;
+        }
+        .sidebar .nav-link.active {
+            color: var(--primary) !important;
+            background-color: #f0f2ff;
+            border-left: 3px solid var(--primary);
+        }
+        .sidebar .nav-link i {
+            margin-right: 0.5rem;
+            color: #999;
+            min-width: 20px;
+            text-align: center;
+        }
+        .sidebar .nav-link.active i {
+            color: var(--primary);
+        }
+        .sidebar-toggle {
+            position: absolute;
+            right: -15px;
+            top: 10px;
+            width: 30px;
+            height: 30px;
+            background-color: var(--primary);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 101;
+            border: 2px solid white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        .sidebar-toggle:hover {
+            background-color: #303f9f;
+        }
+        .sidebar.collapsed .nav-link span {
+            display: none;
+        }
+        .content {
+            margin-left: var(--sidebar-width);
+            padding: 2rem;
+            transition: margin-left 0.3s;
+        }
+        .content.expanded {
+            margin-left: var(--sidebar-width-collapsed);
+        }
+        
+        /* When sidebar is collapsed, adjust content width to fill screen */
+        @media (min-width: 768px) {
+            .sidebar.collapsed + main.content.expanded {
+                width: calc(100% - var(--sidebar-width-collapsed));
+                margin-left: var(--sidebar-width-collapsed);
+            }
+        }
+        
+        @media (max-width: 767.98px) {
+            .sidebar {
+                top: 5rem;
+                width: 100%;
+                position: relative;
+                height: auto;
+            }
+            .sidebar.collapsed {
+                width: 100%;
+            }
+            .content, .content.expanded {
+                margin-left: 0;
+                padding: 1rem;
+            }
+            .sidebar-toggle {
+                display: none;
+            }
+        }
+        .card {
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+        }
+        .card-header {
+            background-color: white;
+            border-bottom: 1px solid rgba(0,0,0,0.1);
+            font-weight: 600;
+        }
+        .btn-primary {
+            background-color: var(--primary);
+            border-color: var(--primary);
+        }
+        .btn-primary:hover {
+            background-color: #303f9f;
+            border-color: #303f9f;
+        }
+        .btn-outline-primary {
+            color: var(--primary);
+            border-color: var(--primary);
+        }
+        .btn-outline-primary:hover {
+            background-color: var(--primary);
+            border-color: var(--primary);
+        }
+        .badge-primary {
+            background-color: var(--primary);
+        }
+        .badge-success {
+            background-color: var(--success);
+        }
+        .badge-warning {
+            background-color: var(--warning);
+        }
+        .badge-danger {
+            background-color: var(--danger);
+        }
+        .table th {
+            font-weight: 600;
+            color: #555;
+        }
+        .page-header {
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 1rem;
+        }
+        .page-header h1 {
+            font-size: 1.75rem;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark fixed-top">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{% url 'core:dashboard' %}">
+                <i class="bi bi-envelope-check me-2"></i>
+                StopSale Automation
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    {% if user.is_authenticated %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-person-circle me-1"></i> {{ user.username }}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
+                            <li><a class="dropdown-item" href="{% url 'core:dashboard' %}">Dashboard</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{% url 'core:logout' %}">Logout</a></li>
+                        </ul>
+                    </li>
+                    {% else %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'core:login' %}">Login</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            {% if user.is_authenticated %}
+            <nav id="sidebar" class="col-md-3 col-lg-2 d-md-block sidebar">
+                <div class="sidebar-toggle" id="sidebarToggle">
+                    <i class="bi bi-chevron-left" id="toggleIcon"></i>
+                </div>
+                <div class="sidebar-sticky">
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.app_name == 'core' and request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'core:dashboard' %}">
+                                <i class="bi bi-speedometer2"></i> <span>Dashboard</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.app_name == 'emails' and request.resolver_match.url_name == 'email_list' %}active{% endif %}" href="{% url 'emails:email_list' %}">
+                                <i class="bi bi-envelope"></i> <span>Emails</span>
+                            </a>
+                        </li>
+                        {% if user.is_admin or user.is_supervisor %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.app_name == 'hotels' %}active{% endif %}" href="{% url 'hotels:hotel_list' %}">
+                                <i class="bi bi-building"></i> <span>Hotels</span>
+                            </a>
+                        </li>
+                        {% endif %}
+                        {% if user.is_admin %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.app_name == 'users' %}active{% endif %}" href="{% url 'users:user_list' %}">
+                                <i class="bi bi-people"></i> <span>Users</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.app_name == 'core' and request.resolver_match.url_name == 'ai_performance' %}active{% endif %}" href="{% url 'core:ai_performance' %}">
+                                <i class="bi bi-graph-up"></i> <span>AI Performance</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.app_name == 'core' and request.resolver_match.url_name == 'ai_model_list' %}active{% endif %}" href="{% url 'core:ai_model_list' %}">
+                                <i class="bi bi-robot"></i> <span>AI Models</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.app_name == 'core' and request.resolver_match.url_name == 'ai_test' %}active{% endif %}" href="{% url 'core:ai_test' %}">
+                                <i class="bi bi-lightning"></i> <span>AI Test</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.app_name == 'core' and request.resolver_match.url_name == 'prompt_list' %}active{% endif %}" href="{% url 'core:prompt_list' %}">
+                                <i class="bi bi-chat-left-text"></i> <span>Prompts</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.app_name == 'core' and request.resolver_match.url_name == 'regex_rule_list' %}active{% endif %}" href="{% url 'core:regex_rule_list' %}">
+                                <i class="bi bi-code-slash"></i> <span>Regex Rules</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.app_name == 'core' and request.resolver_match.url_name == 'email_filter_list' %}active{% endif %}" href="{% url 'core:email_filter_list' %}">
+                                <i class="bi bi-funnel"></i> <span>Email Filters</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.app_name == 'core' and request.resolver_match.url_name == 'email_config' %}active{% endif %}" href="{% url 'core:email_config' %}">
+                                <i class="bi bi-gear"></i> <span>Email Configuration</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.app_name == 'core' and request.resolver_match.url_name == 'webhook_log_list' %}active{% endif %}" href="{% url 'core:webhook_log_list' %}">
+                                <i class="bi bi-link-45deg"></i> <span>Webhook Logs</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.app_name == 'core' and request.resolver_match.url_name == 'user_log_list' %}active{% endif %}" href="{% url 'core:user_log_list' %}">
+                                <i class="bi bi-list-check"></i> <span>User Logs</span>
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </nav>
+            {% endif %}
+
+            <!-- Main Content -->
+            <main id="content" class="{% if user.is_authenticated %}content{% else %}col-12{% endif %}">
+                <div class="container-fluid py-4">
+                    {% if messages %}
+                    <div class="messages">
+                        {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    
+                    {% block content %}{% endblock %}
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check if sidebar state is saved in localStorage
+            const sidebarCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+            const sidebar = document.getElementById('sidebar');
+            const content = document.getElementById('content');
+            const toggleIcon = document.getElementById('toggleIcon');
+            
+            // Set initial state based on saved preference
+            if (sidebarCollapsed) {
+                sidebar.classList.add('collapsed');
+                content.classList.add('expanded');
+                toggleIcon.classList.remove('bi-chevron-left');
+                toggleIcon.classList.add('bi-chevron-right');
+            }
+            
+            // Toggle sidebar on button click
+            document.getElementById('sidebarToggle').addEventListener('click', function() {
+                sidebar.classList.toggle('collapsed');
+                content.classList.toggle('expanded');
+                
+                if (sidebar.classList.contains('collapsed')) {
+                    toggleIcon.classList.remove('bi-chevron-left');
+                    toggleIcon.classList.add('bi-chevron-right');
+                    localStorage.setItem('sidebarCollapsed', 'true');
+                } else {
+                    toggleIcon.classList.remove('bi-chevron-right');
+                    toggleIcon.classList.add('bi-chevron-left');
+                    localStorage.setItem('sidebarCollapsed', 'false');
+                }
+            });
+        });
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

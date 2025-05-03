@@ -1,0 +1,223 @@
+{% extends 'base.html' %}
+
+{% block title %}Email Filter Details{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Heading -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Email Filter Details</h1>
+        <a href="{% url 'email_filter_list' %}" class="btn btn-sm btn-primary shadow-sm">
+            <i class="fas fa-arrow-left fa-sm text-white-50 mr-1"></i>Back to Filters
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Filter Information</h6>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="updateEmailFilterForm">
+                        {% csrf_token %}
+                        <div class="form-group">
+                            <label for="name">Filter Name</label>
+                            <input type="text" class="form-control" id="name" name="name" value="{{ filter.name }}" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="filter_type">Filter Type</label>
+                            <select class="form-control" id="filter_type" name="filter_type" required>
+                                <option value="subject" {% if filter.filter_type == 'subject' %}selected{% endif %}>Subject</option>
+                                <option value="sender" {% if filter.filter_type == 'sender' %}selected{% endif %}>Sender</option>
+                                <option value="keyword" {% if filter.filter_type == 'keyword' %}selected{% endif %}>Keyword</option>
+                                <option value="date" {% if filter.filter_type == 'date' %}selected{% endif %}>Date</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="pattern">Filter Pattern</label>
+                            <input type="text" class="form-control" id="pattern" name="pattern" value="{{ filter.pattern }}" required>
+                            <small class="form-text text-muted">For subject and sender, use regex patterns. For keywords, use comma-separated words.</small>
+                        </div>
+                        <div class="form-group">
+                            <div class="custom-control custom-switch">
+                                <input type="checkbox" class="custom-control-input" id="is_active" name="is_active" {% if filter.is_active %}checked{% endif %}>
+                                <label class="custom-control-label" for="is_active">Active</label>
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <button type="submit" class="btn btn-primary">Save Changes</button>
+                            <button type="button" class="btn btn-danger" data-toggle="modal" data-target="#deleteModal">
+                                Delete Filter
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Filter Information</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-borderless">
+                            <tbody>
+                                <tr>
+                                    <th>Created By:</th>
+                                    <td>{{ filter.created_by.username }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Created At:</th>
+                                    <td>{{ filter.created_at|date:"Y-m-d H:i" }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Updated At:</th>
+                                    <td>{{ filter.updated_at|date:"Y-m-d H:i" }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Status:</th>
+                                    <td>
+                                        {% if filter.is_active %}
+                                        <span class="badge badge-success">Active</span>
+                                        {% else %}
+                                        <span class="badge badge-danger">Inactive</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Filter Usage</h6>
+                </div>
+                <div class="card-body">
+                    <p>This filter has been used to process <strong>{{ filter.emails_matched_count }}</strong> emails.</p>
+                    <p>Last matched: {% if filter.last_matched %}{{ filter.last_matched|date:"Y-m-d H:i" }}{% else %}Never{% endif %}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Test Filter</h6>
+                </div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <label for="test_input">Test Input</label>
+                        <textarea class="form-control" id="test_input" rows="5" placeholder="Enter text to test against the filter pattern..."></textarea>
+                    </div>
+                    <button type="button" class="btn btn-info" onclick="testFilter()">Test Filter</button>
+                    <div class="mt-3" id="test_result" style="display: none;">
+                        <div class="alert" id="test_result_alert">
+                            <span id="test_result_text"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" role="dialog" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">Confirm Deletion</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to delete the filter "<strong>{{ filter.name }}</strong>"? This action cannot be undone.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                <form method="post" action="{% url 'email_filter_delete' filter.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function testFilter() {
+        const input = document.getElementById('test_input').value;
+        const pattern = document.getElementById('pattern').value;
+        const filterType = document.getElementById('filter_type').value;
+        
+        let matches = false;
+        let matchDetails = '';
+        
+        if (filterType === 'subject' || filterType === 'sender' || filterType === 'keyword') {
+            try {
+                if (filterType === 'keyword') {
+                    // For keywords, split by comma and check if any keyword is in the input
+                    const keywords = pattern.split(',').map(k => k.trim().toLowerCase());
+                    const inputLower = input.toLowerCase();
+                    
+                    for (const keyword of keywords) {
+                        if (inputLower.includes(keyword)) {
+                            matches = true;
+                            matchDetails = `Found keyword "${keyword}" in the text.`;
+                            break;
+                        }
+                    }
+                    
+                    if (!matches) {
+                        matchDetails = 'None of the keywords were found in the text.';
+                    }
+                } else {
+                    // For subject and sender, use regex pattern
+                    const regex = new RegExp(pattern, 'i');
+                    const regexResult = regex.exec(input);
+                    
+                    if (regexResult) {
+                        matches = true;
+                        matchDetails = `Matched with: "${regexResult[0]}"`;
+                        
+                        if (regexResult.length > 1) {
+                            matchDetails += `. Capture groups: `;
+                            for (let i = 1; i < regexResult.length; i++) {
+                                matchDetails += `(${i}): "${regexResult[i]}" `;
+                            }
+                        }
+                    } else {
+                        matchDetails = 'No match found.';
+                    }
+                }
+            } catch (e) {
+                matchDetails = `Error testing pattern: ${e.message}`;
+            }
+        } else if (filterType === 'date') {
+            matchDetails = 'Date filtering is processed server-side based on email metadata.';
+        }
+        
+        const resultDiv = document.getElementById('test_result');
+        const resultAlert = document.getElementById('test_result_alert');
+        const resultText = document.getElementById('test_result_text');
+        
+        resultDiv.style.display = 'block';
+        
+        if (matches) {
+            resultAlert.className = 'alert alert-success';
+            resultText.innerHTML = `<strong>Match found!</strong> ${matchDetails}`;
+        } else {
+            resultAlert.className = 'alert alert-warning';
+            resultText.innerHTML = `<strong>No match.</strong> ${matchDetails}`;
+        }
+    }
+</script>
+{% endblock %} 

@@ -1,0 +1,160 @@
+{% extends 'base/base.html' %}
+
+{% block title %}AI Model Details - {{ model.name }} - StopSale Automation System{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+    <h1>AI Model Details</h1>
+    <a href="{% url 'core:ai_model_list' %}" class="btn btn-outline-primary">
+        <i class="bi bi-arrow-left me-2"></i> Back to Models
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="bi bi-robot me-2"></i> {{ model.name }}
+                </h5>
+                <span class="badge {% if model.active %}bg-success{% else %}bg-secondary{% endif %}">
+                    {{ model.active|yesno:"Active,Inactive" }}
+                </span>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Model Name</label>
+                        <input type="text" class="form-control" id="name" name="name" value="{{ model.name }}" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="api_key" class="form-label">API Key</label>
+                        <div class="input-group">
+                            <input type="password" class="form-control" id="api_key" name="api_key" 
+                                   placeholder="Leave blank to keep current API key">
+                            <button class="btn btn-outline-secondary" type="button" id="showApiKeyBtn">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </div>
+                        <div class="form-text">Current API key: 
+                            <span id="apiKeyPreview">{{ model.api_key|slice:":10" }}•••••</span>
+                            <button class="btn btn-sm btn-link p-0 ms-2" type="button" id="showFullApiKeyBtn">Show</button>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="active" name="active" {% if model.active %}checked{% endif %}>
+                        <label class="form-check-label" for="active">Set as Active Model</label>
+                        <div class="form-text">Only one model can be active at a time. Setting this model as active will deactivate any currently active model.</div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-save me-2"></i> Save Changes
+                        </button>
+                        <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModelModal">
+                            <i class="bi bi-trash me-2"></i> Delete Model
+                        </button>
+                    </div>
+                </form>
+            </div>
+            <div class="card-footer">
+                <small class="text-muted">Created: {{ model.created_at|date:"d M Y H:i" }} | Last Updated: {{ model.updated_at|date:"d M Y H:i" }}</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i> API Information</h5>
+            </div>
+            <div class="card-body">
+                <p>This model uses the following API endpoints:</p>
+                <ul class="list-group mb-3">
+                    <li class="list-group-item">
+                        <strong>OpenAI GPT Model:</strong>
+                        <code>https://api.openai.com/v1/chat/completions</code>
+                    </li>
+                    <li class="list-group-item">
+                        <strong>Anthropic Claude Model:</strong>
+                        <code>https://api.anthropic.com/v1/messages</code>
+                    </li>
+                </ul>
+                <p>To configure this model, you need to:</p>
+                <ol>
+                    <li>Obtain an API key from the provider</li>
+                    <li>Enter the key in the form</li>
+                    <li>Set the model as active to use it for email processing</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModelModal" tabindex="-1" aria-labelledby="deleteModelModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="{% url 'core:ai_model_delete' model.id %}">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title" id="deleteModelModalLabel">Confirm Deletion</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete the AI model <strong>{{ model.name }}</strong>? This action cannot be undone.</p>
+                    {% if model.active %}
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        <strong>Warning:</strong> This is currently the active model. Deleting it will require you to set another model as active.
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Toggle password visibility
+        const showApiKeyBtn = document.getElementById('showApiKeyBtn');
+        const apiKeyInput = document.getElementById('api_key');
+        
+        showApiKeyBtn.addEventListener('click', function() {
+            if (apiKeyInput.type === 'password') {
+                apiKeyInput.type = 'text';
+                showApiKeyBtn.innerHTML = '<i class="bi bi-eye-slash"></i>';
+            } else {
+                apiKeyInput.type = 'password';
+                showApiKeyBtn.innerHTML = '<i class="bi bi-eye"></i>';
+            }
+        });
+        
+        // Show full API key
+        const showFullApiKeyBtn = document.getElementById('showFullApiKeyBtn');
+        const apiKeyPreview = document.getElementById('apiKeyPreview');
+        const fullApiKey = "{{ model.api_key }}";
+        
+        showFullApiKeyBtn.addEventListener('click', function() {
+            if (apiKeyPreview.textContent.includes('•')) {
+                apiKeyPreview.textContent = fullApiKey;
+                showFullApiKeyBtn.textContent = 'Hide';
+            } else {
+                apiKeyPreview.textContent = fullApiKey.slice(0, 10) + '•••••';
+                showFullApiKeyBtn.textContent = 'Show';
+            }
+        });
+    });
+</script>
+{% endblock %} 

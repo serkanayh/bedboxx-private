@@ -1,0 +1,18 @@
+{% comment %} Renders a Bootstrap badge based on the provided status string. {% endcomment %}
+{% if status == 'pending' %}
+<span class="badge bg-pending">Pending</span>
+{% elif status == 'approved' %}
+<span class="badge bg-approved">Approved</span>
+{% elif status == 'manual_processed' %}
+<span class="badge bg-manual">Manual Processed</span>
+{% elif status == 'sent_to_robot' %}
+<span class="badge bg-robot-sent">Sent to Robot</span>
+{% elif status == 'robot_processed' %}
+<span class="badge bg-robot-processed">Robot Processed</span>
+{% elif status == 'ignored' %}
+<span class="badge bg-ignored">Ignored</span>
+{% elif status == 'error' %}
+<span class="badge bg-error">Error</span>
+{% else %}
+<span class="badge bg-secondary">{{ status|default:'Unknown'|title }}</span>
+{% endif %} 

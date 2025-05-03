@@ -1,0 +1,1060 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Basitleştirilmiş Extracted Tablo - StopSale Automation</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --primary-color: #3f51b5;
+            --secondary-color: #f50057;
+            --success-color: #4caf50;
+            --warning-color: #ff9800;
+            --danger-color: #f44336;
+            --light-color: #f5f5f5;
+            --dark-color: #212121;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+            color: #333;
+        }
+        
+        .navbar {
+            background-color: var(--primary-color);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .navbar-brand {
+            font-weight: 700;
+            color: white;
+        }
+        
+        .card {
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            margin-bottom: 20px;
+        }
+        
+        .card-header {
+            background-color: rgba(63, 81, 181, 0.1);
+            border-bottom: 1px solid rgba(63, 81, 181, 0.2);
+            font-weight: 600;
+        }
+        
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+        
+        .btn-primary:hover {
+            background-color: #303f9f;
+            border-color: #303f9f;
+        }
+        
+        .extracted-item {
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            background-color: white;
+            transition: all 0.2s;
+        }
+        
+        .extracted-item:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .extracted-item .header {
+            padding: 12px 15px;
+            border-bottom: 1px solid #dee2e6;
+            background-color: #f8f9fa;
+            border-radius: 8px 8px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .extracted-item .body {
+            padding: 15px;
+        }
+        
+        .extracted-item .footer {
+            padding: 10px 15px;
+            border-top: 1px solid #dee2e6;
+            background-color: #f8f9fa;
+            border-radius: 0 0 8px 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .match-status {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        
+        .match-status.success {
+            background-color: rgba(76, 175, 80, 0.1);
+            color: #2e7d32;
+        }
+        
+        .match-status.warning {
+            background-color: rgba(255, 152, 0, 0.1);
+            color: #ef6c00;
+        }
+        
+        .match-status.danger {
+            background-color: rgba(244, 67, 54, 0.1);
+            color: #c62828;
+        }
+        
+        .match-status i {
+            margin-right: 5px;
+        }
+        
+        .info-row {
+            display: flex;
+            margin-bottom: 10px;
+        }
+        
+        .info-row:last-child {
+            margin-bottom: 0;
+        }
+        
+        .info-label {
+            width: 120px;
+            font-weight: 500;
+            color: #666;
+        }
+        
+        .info-value {
+            flex: 1;
+        }
+        
+        .juniper-match {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #f5f5f5;
+            border-radius: 4px;
+            border-left: 4px solid var(--primary-color);
+        }
+        
+        .juniper-match-title {
+            font-weight: 500;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        
+        .match-percentage {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-left: 5px;
+        }
+        
+        .match-percentage.high {
+            background-color: rgba(76, 175, 80, 0.2);
+            color: #2e7d32;
+        }
+        
+        .match-percentage.medium {
+            background-color: rgba(255, 152, 0, 0.2);
+            color: #ef6c00;
+        }
+        
+        .match-percentage.low {
+            background-color: rgba(244, 67, 54, 0.2);
+            color: #c62828;
+        }
+        
+        .action-buttons .btn {
+            padding: 4px 8px;
+            font-size: 0.85rem;
+        }
+        
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        
+        .status-badge.pending {
+            background-color: rgba(255, 152, 0, 0.1);
+            color: #ef6c00;
+        }
+        
+        .status-badge.approved {
+            background-color: rgba(76, 175, 80, 0.1);
+            color: #2e7d32;
+        }
+        
+        .status-badge.rejected {
+            background-color: rgba(244, 67, 54, 0.1);
+            color: #c62828;
+        }
+        
+        .hotel-name {
+            font-weight: 600;
+            font-size: 1.1rem;
+            color: #333;
+        }
+        
+        .date-range {
+            color: #666;
+            font-size: 0.9rem;
+        }
+        
+        .room-type {
+            font-weight: 500;
+        }
+        
+        .market {
+            color: #666;
+        }
+        
+        .action-type {
+            font-weight: 600;
+        }
+        
+        .action-type.stop {
+            color: #c62828;
+        }
+        
+        .action-type.open {
+            color: #2e7d32;
+        }
+        
+        .juniper-code {
+            color: #666;
+            font-size: 0.85rem;
+            font-family: monospace;
+        }
+        
+        .match-options {
+            margin-top: 10px;
+        }
+        
+        .match-option {
+            display: flex;
+            align-items: center;
+            padding: 8px 10px;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            margin-bottom: 5px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .match-option:hover {
+            background-color: #f5f5f5;
+        }
+        
+        .match-option.selected {
+            background-color: rgba(63, 81, 181, 0.05);
+            border-color: rgba(63, 81, 181, 0.2);
+        }
+        
+        .match-option-radio {
+            margin-right: 10px;
+        }
+        
+        .match-option-details {
+            flex: 1;
+        }
+        
+        .match-option-name {
+            font-weight: 500;
+        }
+        
+        .match-option-code {
+            font-size: 0.85rem;
+            color: #666;
+        }
+        
+        .match-option-score {
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        
+        .content-container {
+            display: flex;
+            height: calc(100vh - 120px);
+        }
+        
+        .email-panel {
+            width: 40%;
+            padding: 15px;
+            overflow-y: auto;
+            border-right: 1px solid #dee2e6;
+        }
+        
+        .extracted-panel {
+            width: 60%;
+            padding: 15px;
+            overflow-y: auto;
+        }
+        
+        .panel-title {
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #dee2e6;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .action-bar {
+            position: sticky;
+            top: 0;
+            background-color: white;
+            padding: 10px 0;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #dee2e6;
+            z-index: 100;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .action-bar .btn-group {
+            margin-left: auto;
+        }
+        
+        .filter-bar {
+            margin-bottom: 15px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            border: 1px solid #dee2e6;
+        }
+        
+        .filter-bar .form-select {
+            max-width: 200px;
+            display: inline-block;
+            margin-right: 10px;
+        }
+        
+        .filter-bar .btn {
+            margin-left: 10px;
+        }
+        
+        .summary-bar {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            border: 1px solid #dee2e6;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .summary-item {
+            display: flex;
+            align-items: center;
+        }
+        
+        .summary-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-right: 8px;
+            color: white;
+            font-size: 0.8rem;
+        }
+        
+        .summary-icon.success {
+            background-color: var(--success-color);
+        }
+        
+        .summary-icon.warning {
+            background-color: var(--warning-color);
+        }
+        
+        .summary-icon.danger {
+            background-color: var(--danger-color);
+        }
+        
+        .summary-text {
+            font-size: 0.9rem;
+        }
+        
+        .summary-count {
+            font-weight: 600;
+            margin-right: 3px;
+        }
+        
+        .hotel-info {
+            cursor: help;
+            color: #3f51b5;
+            margin-left: 5px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">StopSale Automation</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#"><i class="bi bi-speedometer2"></i> Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#"><i class="bi bi-envelope"></i> Emails</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#"><i class="bi bi-building"></i> Hotels</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#"><i class="bi bi-gear"></i> Settings</a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-person-circle"></i> Admin User
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="#"><i class="bi bi-person"></i> Profile</a></li>
+                            <li><a class="dropdown-item" href="#"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container-fluid py-3">
+        <!-- Page Header -->
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <h1 class="h3 mb-0">Email Detay</h1>
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="#">Ana Sayfa</a></li>
+                        <li class="breadcrumb-item"><a href="#">Emails</a></li>
+                        <li class="breadcrumb-item active">Email Detay</li>
+                    </ol>
+                </nav>
+            </div>
+            <div>
+                <a href="#" class="btn btn-outline-primary me-2">
+                    <i class="bi bi-arrow-left"></i> Geri
+                </a>
+            </div>
+        </div>
+
+        <!-- Content Container -->
+        <div class="content-container">
+            <!-- Email Panel -->
+            <div class="email-panel">
+                <div class="panel-title">
+                    <i class="bi bi-envelope-open"></i> Email İçeriği
+                </div>
+                
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span>Email Bilgileri</span>
+                        <span class="badge bg-danger">STOP SALE</span>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Konu:</strong> ALBA HOTELS - STOP SALE - 15.04.2025 - 17.04.2025</p>
+                        <p><strong>Gönderen:</strong> reservations@albahotels.com.tr</p>
+                        <p><strong>Alıcı:</strong> sales@juniper.com</p>
+                        <p><strong>Tarih:</strong> 11.04.2025 14:23</p>
+                        
+                        <hr>
+                        
+                        <div style="font-family: 'Courier New', Courier, monospace; white-space: pre-wrap; color: #000080;">
+Sayın Yetkili,
+ 
+Öncelikle Alba Hotels olarak güzel bir gün geçirmenizi dileriz.
+ 
+<span style="color: #d32f2f; font-weight: bold;">Alba Royal Hotel</span>, <span style="color: #d32f2f; font-weight: bold;">Alba Queen Hotel</span> ve <span style="color: #d32f2f; font-weight: bold;">Alba Resort Hotel</span> tesislerimizde, TÜM PAZARLARDA aşağıda belirtilen oda tipleri satışa kapatılmıştır. Acilen satışa kapatmanız önemle ricadır.
+ 
+<span style="color: #d32f2f; font-weight: bold;">ALBA QUEEN</span>
+<span style="color: #1976d2; font-weight: bold;">15.04.2025 – 17.04.2025(DAHİL)</span> – <span style="color: #388e3c; font-weight: bold;">TÜM ODA TİPLERİ</span> - <span style="color: #d32f2f; font-weight: bold;">STOP SALE</span>
+ 
+<span style="color: #d32f2f; font-weight: bold;">ALBA ROYAL</span>
+<span style="color: #1976d2; font-weight: bold;">15.04.2025 – 17.04.2025(DAHİL)</span> – <span style="color: #388e3c; font-weight: bold;">TÜM ODA TİPLERİ</span> – <span style="color: #d32f2f; font-weight: bold;">STOP SALE</span>
+ 
+<span style="color: #d32f2f; font-weight: bold;">ALBA RESORT</span>
+<span style="color: #1976d2; font-weight: bold;">15.04.2025 – 17.04.2025(DAHİL)</span> – <span style="color: #388e3c; font-weight: bold;">TÜM ODA TİPLERİ</span> – <span style="color: #d32f2f; font-weight: bold;">STOP SALE</span>
+<span style="color: #1976d2; font-weight: bold;">11.05.2025 – 19.05.2025(DAHİL)</span> – <span style="color: #388e3c; font-weight: bold;">TÜM ODA TİPLERİ</span> – <span style="color: #d32f2f; font-weight: bold;">STOP SALE</span>
+ 
+Bilgilerinize sunarız.
+ 
+Saygılarımızla,
+ 
+Alba Hotels
+Rezervasyon Departmanı
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Extracted Panel -->
+            <div class="extracted-panel">
+                <div class="action-bar">
+                    <div>
+                        <a href="https://bedboxx.juniperbetemp.com/intranet/alojamiento/mantenimientoV2.aspx?alojamiento=ALB-QUE" target="_blank" class="btn btn-warning btn-sm">
+                            <i class="bi bi-box-arrow-up-right"></i> Juniper'da Aç
+                        </a>
+                        <button type="button" class="btn btn-purple btn-sm" style="background-color: #673ab7; color: white;">
+                            <i class="bi bi-robot"></i> Robot İşle
+                        </button>
+                        <span class="badge bg-secondary ms-2">
+                            <i class="bi bi-hourglass"></i> Robot: Bekliyor
+                        </span>
+                    </div>
+                    
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#actionConfirmationModal">
+                            <i class="bi bi-check-circle"></i> Tümünü Onayla
+                        </button>
+                        <button type="button" class="btn btn-danger btn-sm">
+                            <i class="bi bi-x-circle"></i> Tümünü Reddet
+                        </button>
+                        <button type="button" class="btn btn-secondary btn-sm">
+                            <i class="bi bi-eye-slash"></i> İşleme Alma
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="filter-bar">
+                    <span class="me-2">Filtrele:</span>
+                    <select class="form-select form-select-sm">
+                        <option>Tüm Oteller</option>
+                        <option>Alba Queen</option>
+                        <option>Alba Royal</option>
+                        <option>Alba Resort</option>
+                    </select>
+                    <select class="form-select form-select-sm">
+                        <option>Tüm Durumlar</option>
+                        <option>Bekliyor</option>
+                        <option>Onaylandı</option>
+                        <option>Reddedildi</option>
+                    </select>
+                    <select class="form-select form-select-sm">
+                        <option>Tüm Eşleşmeler</option>
+                        <option>Tam Eşleşme</option>
+                        <option>Kısmi Eşleşme</option>
+                        <option>Eşleşme Yok</option>
+                    </select>
+                    <button class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-funnel"></i> Uygula
+                    </button>
+                    <button class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-x-circle"></i> Temizle
+                    </button>
+                </div>
+                
+                <div class="panel-title">
+                    <i class="bi bi-table"></i> Çıkarılan Veriler ve Juniper Eşleşmeleri
+                    <span class="badge bg-primary ms-2">4 Satır</span>
+                </div>
+                
+                <!-- Extracted Item 1 -->
+                <div class="extracted-item">
+                    <div class="header">
+                        <div>
+                            <span class="hotel-name">ALBA QUEEN</span>
+                            <span class="match-status success ms-2">
+                                <i class="bi bi-check-circle-fill"></i> Tam Eşleşme
+                            </span>
+                        </div>
+                        <div>
+                            <span class="status-badge pending">Bekliyor</span>
+                        </div>
+                    </div>
+                    <div class="body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="info-row">
+                                    <div class="info-label">Tarih Aralığı:</div>
+                                    <div class="info-value">15.04.2025 - 17.04.2025</div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-label">Oda Tipi:</div>
+                                    <div class="info-value">
+                                        <span class="room-type">TÜM ODA TİPLERİ</span>
+                                    </div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-label">Pazar:</div>
+                                    <div class="info-value">
+                                        <span class="market">TÜM PAZARLAR</span>
+                                    </div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-label">İşlem:</div>
+                                    <div class="info-value">
+                                        <span class="action-type stop">STOP SALE</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="juniper-match">
+                                    <div class="juniper-match-title">
+                                        Juniper Eşleşmesi
+                                        <span class="match-percentage high">95%</span>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-label">Otel:</div>
+                                        <div class="info-value">
+                                            Alba Queen Hotel
+                                            <i class="bi bi-info-circle hotel-info" data-bs-toggle="tooltip" title="Alba Queen Hotel & Spa - Side, Antalya"></i>
+                                            <span class="juniper-code">(JUN-ALB-QUE)</span>
+                                        </div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-label">Oda Tipleri:</div>
+                                        <div class="info-value">
+                                            All Rooms
+                                            <i class="bi bi-info-circle" data-bs-toggle="tooltip" title="Standard Room, Superior Room, Family Room, Suite, Deluxe Room"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="footer">
+                        <div>
+                            <span class="text-muted small">Satır #1</span>
+                        </div>
+                        <div class="action-buttons">
+                            <button class="btn btn-success btn-sm">
+                                <i class="bi bi-check"></i> Onayla
+                            </button>
+                            <button class="btn btn-danger btn-sm">
+                                <i class="bi bi-x"></i> Reddet
+                            </button>
+                            <button class="btn btn-primary btn-sm">
+                                <i class="bi bi-pencil"></i> Düzenle
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Extracted Item 2 -->
+                <div class="extracted-item">
+                    <div class="header">
+                        <div>
+                            <span class="hotel-name">ALBA ROYAL</span>
+                            <span class="match-status success ms-2">
+                                <i class="bi bi-check-circle-fill"></i> Tam Eşleşme
+                            </span>
+                        </div>
+                        <div>
+                            <span class="status-badge pending">Bekliyor</span>
+                        </div>
+                    </div>
+                    <div class="body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="info-row">
+                                    <div class="info-label">Tarih Aralığı:</div>
+                                    <div class="info-value">15.04.2025 - 17.04.2025</div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-label">Oda Tipi:</div>
+                                    <div class="info-value">
+                                        <span class="room-type">TÜM ODA TİPLERİ</span>
+                                    </div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-label">Pazar:</div>
+                                    <div class="info-value">
+                                        <span class="market">TÜM PAZARLAR</span>
+                                    </div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-label">İşlem:</div>
+                                    <div class="info-value">
+                                        <span class="action-type stop">STOP SALE</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="juniper-match">
+                                    <div class="juniper-match-title">
+                                        Juniper Eşleşmesi
+                                        <span class="match-percentage high">98%</span>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-label">Otel:</div>
+                                        <div class="info-value">
+                                            Alba Royal Hotel
+                                            <i class="bi bi-info-circle hotel-info" data-bs-toggle="tooltip" title="Alba Royal Hotel Adults Only - Side, Antalya"></i>
+                                            <span class="juniper-code">(JUN-ALB-ROY)</span>
+                                        </div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-label">Oda Tipleri:</div>
+                                        <div class="info-value">
+                                            All Rooms
+                                            <i class="bi bi-info-circle" data-bs-toggle="tooltip" title="Standard Room, Superior Room, Suite, Royal Suite"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="footer">
+                        <div>
+                            <span class="text-muted small">Satır #2</span>
+                        </div>
+                        <div class="action-buttons">
+                            <button class="btn btn-success btn-sm">
+                                <i class="bi bi-check"></i> Onayla
+                            </button>
+                            <button class="btn btn-danger btn-sm">
+                                <i class="bi bi-x"></i> Reddet
+                            </button>
+                            <button class="btn btn-primary btn-sm">
+                                <i class="bi bi-pencil"></i> Düzenle
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Extracted Item 3 -->
+                <div class="extracted-item">
+                    <div class="header">
+                        <div>
+                            <span class="hotel-name">ALBA RESORT</span>
+                            <span class="match-status warning ms-2">
+                                <i class="bi bi-exclamation-triangle-fill"></i> Kısmi Eşleşme
+                            </span>
+                        </div>
+                        <div>
+                            <span class="status-badge pending">Bekliyor</span>
+                        </div>
+                    </div>
+                    <div class="body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="info-row">
+                                    <div class="info-label">Tarih Aralığı:</div>
+                                    <div class="info-value">15.04.2025 - 17.04.2025</div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-label">Oda Tipi:</div>
+                                    <div class="info-value">
+                                        <span class="room-type">TÜM ODA TİPLERİ</span>
+                                    </div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-label">Pazar:</div>
+                                    <div class="info-value">
+                                        <span class="market">TÜM PAZARLAR</span>
+                                    </div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-label">İşlem:</div>
+                                    <div class="info-value">
+                                        <span class="action-type stop">STOP SALE</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="juniper-match">
+                                    <div class="juniper-match-title">
+                                        Juniper Eşleşmesi
+                                        <span class="match-percentage medium">85%</span>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-label">Otel:</div>
+                                        <div class="info-value">
+                                            Alba Resort Hotel
+                                            <i class="bi bi-info-circle hotel-info" data-bs-toggle="tooltip" title="Alba Resort Hotel & Spa - Side, Antalya"></i>
+                                            <span class="juniper-code">(JUN-ALB-RES)</span>
+                                        </div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-label">Oda Tipleri:</div>
+                                        <div class="info-value">
+                                            All Rooms
+                                            <i class="bi bi-info-circle" data-bs-toggle="tooltip" title="Standard Room, Superior Room, Family Room, Suite, Villa, Bungalow"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="match-options mt-3">
+                                    <div class="match-option selected">
+                                        <div class="match-option-radio">
+                                            <input type="radio" name="hotel3" id="hotel3_1" checked>
+                                        </div>
+                                        <div class="match-option-details">
+                                            <div class="match-option-name">Alba Resort Hotel</div>
+                                            <div class="match-option-code">JUN-ALB-RES</div>
+                                        </div>
+                                        <div class="match-option-score high">85%</div>
+                                    </div>
+                                    <div class="match-option">
+                                        <div class="match-option-radio">
+                                            <input type="radio" name="hotel3" id="hotel3_2">
+                                        </div>
+                                        <div class="match-option-details">
+                                            <div class="match-option-name">Alba Resort</div>
+                                            <div class="match-option-code">JUN-ALB-RST</div>
+                                        </div>
+                                        <div class="match-option-score medium">80%</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="footer">
+                        <div>
+                            <span class="text-muted small">Satır #3</span>
+                        </div>
+                        <div class="action-buttons">
+                            <button class="btn btn-success btn-sm">
+                                <i class="bi bi-check"></i> Onayla
+                            </button>
+                            <button class="btn btn-danger btn-sm">
+                                <i class="bi bi-x"></i> Reddet
+                            </button>
+                            <button class="btn btn-primary btn-sm">
+                                <i class="bi bi-pencil"></i> Düzenle
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Extracted Item 4 -->
+                <div class="extracted-item">
+                    <div class="header">
+                        <div>
+                            <span class="hotel-name">ALBA RESORT</span>
+                            <span class="match-status danger ms-2">
+                                <i class="bi bi-x-circle-fill"></i> Eşleşme Yok
+                            </span>
+                        </div>
+                        <div>
+                            <span class="status-badge pending">Bekliyor</span>
+                        </div>
+                    </div>
+                    <div class="body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="info-row">
+                                    <div class="info-label">Tarih Aralığı:</div>
+                                    <div class="info-value">11.05.2025 - 19.05.2025</div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-label">Oda Tipi:</div>
+                                    <div class="info-value">
+                                        <span class="room-type">TÜM ODA TİPLERİ</span>
+                                    </div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-label">Pazar:</div>
+                                    <div class="info-value">
+                                        <span class="market">TÜM PAZARLAR</span>
+                                    </div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-label">İşlem:</div>
+                                    <div class="info-value">
+                                        <span class="action-type stop">STOP SALE</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="alert alert-danger">
+                                    <i class="bi bi-exclamation-triangle-fill"></i> Juniper sisteminde eşleşme bulunamadı.
+                                </div>
+                                
+                                <div class="match-options">
+                                    <div class="match-option">
+                                        <div class="match-option-radio">
+                                            <input type="radio" name="hotel4" id="hotel4_1">
+                                        </div>
+                                        <div class="match-option-details">
+                                            <div class="match-option-name">Alba Resort Hotel</div>
+                                            <div class="match-option-code">JUN-ALB-RES</div>
+                                        </div>
+                                        <div class="match-option-score medium">85%</div>
+                                    </div>
+                                    <div class="match-option">
+                                        <div class="match-option-radio">
+                                            <input type="radio" name="hotel4" id="hotel4_2">
+                                        </div>
+                                        <div class="match-option-details">
+                                            <div class="match-option-name">Alba Resort</div>
+                                            <div class="match-option-code">JUN-ALB-RST</div>
+                                        </div>
+                                        <div class="match-option-score medium">80%</div>
+                                    </div>
+                                    <div class="match-option selected">
+                                        <div class="match-option-radio">
+                                            <input type="radio" name="hotel4" id="hotel4_3" checked>
+                                        </div>
+                                        <div class="match-option-details">
+                                            <div class="match-option-name">Sistemde bulunamadı</div>
+                                            <div class="match-option-code text-danger">Eşleşme yok</div>
+                                        </div>
+                                        <div class="match-option-score low">0%</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="footer">
+                        <div>
+                            <span class="text-muted small">Satır #4</span>
+                        </div>
+                        <div class="action-buttons">
+                            <button class="btn btn-success btn-sm" disabled>
+                                <i class="bi bi-check"></i> Onayla
+                            </button>
+                            <button class="btn btn-danger btn-sm">
+                                <i class="bi bi-x"></i> Reddet
+                            </button>
+                            <button class="btn btn-primary btn-sm">
+                                <i class="bi bi-pencil"></i> Düzenle
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Summary Bar -->
+                <div class="summary-bar">
+                    <div class="summary-item">
+                        <div class="summary-icon success">
+                            <i class="bi bi-check"></i>
+                        </div>
+                        <div class="summary-text">
+                            <span class="summary-count">2</span> Tam Eşleşme
+                        </div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-icon warning">
+                            <i class="bi bi-exclamation"></i>
+                        </div>
+                        <div class="summary-text">
+                            <span class="summary-count">1</span> Kısmi Eşleşme
+                        </div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-icon danger">
+                            <i class="bi bi-x"></i>
+                        </div>
+                        <div class="summary-text">
+                            <span class="summary-count">1</span> Eşleşme Yok
+                        </div>
+                    </div>
+                    <div>
+                        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#actionConfirmationModal">
+                            <i class="bi bi-check-all"></i> Tümünü Onayla
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Action Confirmation Modal -->
+    <div class="modal fade" id="actionConfirmationModal" tabindex="-1" aria-labelledby="actionConfirmationModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="actionConfirmationModalLabel">İşlem Seçin</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Tüm satırları onayladınız. Şimdi ne yapmak istersiniz?</p>
+                    
+                    <div class="form-check mb-3 p-3 border rounded">
+                        <input class="form-check-input" type="radio" name="actionOption" id="juniperOption" checked>
+                        <label class="form-check-label" for="juniperOption">
+                            <div class="d-flex align-items-center">
+                                <div class="me-3 fs-3 text-warning">
+                                    <i class="bi bi-box-arrow-up-right"></i>
+                                </div>
+                                <div>
+                                    <div class="fw-bold">Juniper'e Git</div>
+                                    <div class="text-muted small">Juniper sisteminde manuel olarak işlem yapmak için Juniper sayfasına yönlendirileceksiniz.</div>
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+                    
+                    <div class="form-check p-3 border rounded">
+                        <input class="form-check-input" type="radio" name="actionOption" id="robotOption">
+                        <label class="form-check-label" for="robotOption">
+                            <div class="d-flex align-items-center">
+                                <div class="me-3 fs-3 text-purple" style="color: #673ab7;">
+                                    <i class="bi bi-robot"></i>
+                                </div>
+                                <div>
+                                    <div class="fw-bold">Robot İşle</div>
+                                    <div class="text-muted small">RPA robotu otomatik olarak Juniper sisteminde gerekli işlemleri yapacaktır.</div>
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                    <button type="button" class="btn btn-primary">Devam Et</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Enable tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        });
+        
+        // Show modal on "Tümünü Onayla" button click
+        document.querySelectorAll('.btn-primary:contains("Tümünü Onayla")').forEach(function(button) {
+            button.addEventListener('click', function() {
+                var modal = new bootstrap.Modal(document.getElementById('actionConfirmationModal'));
+                modal.show();
+            });
+        });
+        
+        // Match option selection
+        document.querySelectorAll('.match-option').forEach(function(option) {
+            option.addEventListener('click', function() {
+                var radio = this.querySelector('input[type="radio"]');
+                radio.checked = true;
+                
+                var name = radio.name;
+                document.querySelectorAll('input[name="' + name + '"]').forEach(function(input) {
+                    input.closest('.match-option').classList.remove('selected');
+                });
+                
+                this.classList.add('selected');
+            });
+        });
+    </script>
+</body>
+</html>

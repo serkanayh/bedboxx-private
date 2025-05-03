@@ -1,0 +1,429 @@
+# Copilot Talimatları: Gelişmiş Oda Eşleştirme Mantığı ve Arayüzü
+
+Bu talimatlar, Django projesindeki `emails` uygulamasında oda eşleştirme (`match_room`) işlevselliğini geliştirmek için yapılması gereken değişiklikleri özetlemektedir.
+
+**Hedef:**
+
+1.  Oda eşleştirme algoritmasını, önce en yüksek skorlu tek bir odayı bulacak, ardından bu odanın adını (varsa "PAX" veya "SNG" sonrası kısmı alarak) kullanarak ilgili diğer odaları filtreleyip önerecek şekilde güncellemek.
+2.  `match_room.html` şablonunu, bu önerileri görsel olarak vurgulayacak ve birden fazla oda seçimine izin verecek şekilde güncellemek.
+
+**Adım 1: `emails/views.py` Dosyasını Güncelleme**
+
+1.  **Gerekli İçe Aktarmaları Ekle:**
+    ```python
+    import unicodedata
+    import re
+    from thefuzz import fuzz
+    from .models import RoomTypeMatch, RoomTypeReject # Mevcut importlara ekle
+    from django.views.decorators.http import require_POST # Eğer yoksa ekle
+    ```
+2.  **Sabitleri ve Yardımcı Fonksiyonları Ekle:** `ClaudeAnalyzer` importundan sonra veya uygun bir yere aşağıdaki sabitleri ve fonksiyonları ekleyin (bunlar `tasks.py` dosyasından alınmıştır):
+    ```python
+    # --- Constants for matching ---
+    ROOM_FUZZY_MATCH_THRESHOLD = 97
+    ROOM_REMOVE_WORDS = [
+        "room", "oda", "suite", "suit", "deluxe", "family", "superior", "junior", "grand", "king", "queen", "single", "double", "triple", "quad", "presidential", "apart", "apartman", "apartments", "apartmanlar"
+    ]
+    ROOM_ALIASES = {
+        "suite": ["suite", "suit"],
+    }
+    SEGMENT_KEYWORDS = [
+        "main", "building", "club", "standard", "family", "sea", "land", "view", "suite", "deluxe", "superior", "junior", "grand", "king", "queen", "single", "double", "triple", "quad", "presidential", "apart", "sng", "dbl", "garden", "pool", "connection", "connected", "annex", "villa", "residence", "penthouse"
+    ]
+
+    # --- Normalization functions ---
+    def normalize_room_type(name):
+        # ... (tasks.py dosyasındaki fonksiyonun içeriği) ...
+        if not name:
+            return ""
+        name = name.replace("ç", "c").replace("ğ", "g").replace("ı", "i").replace("ö", "o").replace("ş", "s").replace("ü", "u")
+        name = name.replace("Ç", "C").replace("Ğ", "G").replace("İ", "I").replace("Ö", "O").replace("Ş", "S").replace("Ü", "U")
+        name = unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode("ascii")
+        name = name.lower()
+        for word in ROOM_REMOVE_WORDS:
+            name = name.replace(f" {word} ", " ")
+            if name.endswith(f" {word}"):
+                name = name[:-(len(word)+1)]
+            if name.startswith(f"{word} "):
+                name = name[len(word)+1:]
+            name = name.replace(f" {word}", " ")
+            name = name.replace(f"{word} ", " ")
+        name = " ".join(name.split())
+        return name.strip()
+
+    def room_alias_match(input_name, juniper_name):
+        # ... (tasks.py dosyasındaki fonksiyonun içeriği) ...
+        for alias, variations in ROOM_ALIASES.items():
+            if any(v in input_name for v in variations) and any(v in juniper_name for v in variations):
+                return True
+        return False
+    ```
+3.  **Yeni Eşleştirme Mantığı Fonksiyonunu Ekle (`get_suggested_room_matches`):** `match_room` view fonksiyonundan *önce* aşağıdaki yardımcı fonksiyonu ekleyin:
+    ```python
+    # --- Helper function for enhanced room matching logic ---
+    def get_suggested_room_matches(email_row, hotel_rooms):
+        """
+        Applies enhanced matching logic to find the best match and related rooms.
+        Returns: (best_single_room_match, related_rooms_set, best_single_room_score)
+        """
+        # ... (Yukarıdaki kod bloğunda sağlanan fonksiyonun tam içeriği) ...
+        room_type_input = email_row.room_type
+        best_single_room_match = None
+        best_single_room_score = 0
+        related_rooms_set = set()
+        normalized_input_room_type = normalize_room_type(str(room_type_input))
+        if "," in room_type_input:
+            logger.warning(f"  [Suggest Match] Row {email_row.id}: Multiple room types detected (\"{room_type_input}\") - Skipping suggestions.")
+            return None, set(), 0
+        if room_type_input.upper() in ["ALL ROOM", "ALL ROOMS", "ALL ROOM TYPES"]:
+            logger.info(f"  [Suggest Match] Row {email_row.id}: \"{room_type_input}\" detected. No specific suggestions.")
+            return None, set(), 0
+        if not normalized_input_room_type:
+            logger.warning(f"  [Suggest Match] Row {email_row.id}: Normalized input room type is empty. Skipping suggestions.")
+            return None, set(), 0
+        hotel_rooms_normalized = [(room, normalize_room_type(str(room.juniper_room_type))) for room in hotel_rooms]
+        for juniper_room, norm_juniper in hotel_rooms_normalized:
+            if not norm_juniper: continue
+            score = fuzz.token_set_ratio(normalized_input_room_type, norm_juniper)
+            if room_alias_match(normalized_input_room_type, norm_juniper):
+                score = 100
+            logger.debug(f"    [Suggest Score Calc] Row {email_row.id}: \"{normalized_input_room_type}\" <-> \"{norm_juniper}\" => {score}")
+            if score > best_single_room_score:
+                best_single_room_score = score
+                best_single_room_match = juniper_room
+        if best_single_room_match and best_single_room_score >= ROOM_FUZZY_MATCH_THRESHOLD:
+            logger.info(f"  [Suggest Best Match] Row {email_row.id}: Found best single match: \"{best_single_room_match.juniper_room_type}\" (Score: {best_single_room_score})")
+            related_rooms_set.add(best_single_room_match)
+            best_match_name_norm = normalize_room_type(str(best_single_room_match.juniper_room_type))
+            filter_name_part = best_match_name_norm
+            match_pax = re.search(r"(?:pax|sng)\s*(.*)", best_match_name_norm, re.IGNORECASE)
+            if match_pax:
+                extracted_part = match_pax.group(1).strip()
+                if extracted_part:
+                    filter_name_part = extracted_part
+                    logger.info(f"    [Suggest Filter Name] Using extracted part after PAX/SNG: \"{filter_name_part}\"")
+                else:
+                    logger.info(f"    [Suggest Filter Name] PAX/SNG found but nothing after, using full name: \"{filter_name_part}\"")
+            else:
+                 logger.info(f"    [Suggest Filter Name] Using full normalized name: \"{filter_name_part}\"")
+            if filter_name_part:
+                logger.info(f"    [Suggest Filtering] Looking for other rooms containing \"{filter_name_part}\"")
+                for other_room, other_norm_name in hotel_rooms_normalized:
+                    if other_room == best_single_room_match: continue
+                    if filter_name_part in other_norm_name:
+                        logger.info(f"      -> Found related room: \"{other_room.juniper_room_type}\"")
+                        related_rooms_set.add(other_room)
+            else:
+                logger.warning(f"    [Suggest Filtering] Filter name part is empty, skipping filtering step.")
+            return best_single_room_match, related_rooms_set, best_single_room_score
+        else:
+            logger.warning(f"  [Suggest Match] Row {email_row.id}: No single room match found above threshold ({ROOM_FUZZY_MATCH_THRESHOLD}) for \"{room_type_input}\". Best score was {best_single_room_score}.")
+            return None, set(), best_single_room_score
+    ```
+4.  **`match_room` View Fonksiyonunu Tamamen Değiştir:** Mevcut `match_room` fonksiyonunu aşağıdaki güncellenmiş versiyonla değiştirin:
+    ```python
+    # --- UPDATED match_room VIEW --- 
+    @login_required
+    def match_room(request, row_id):
+        """
+        View for matching a row to one or more rooms, incorporating enhanced suggestions.
+        """
+        row = get_object_or_404(EmailRow, id=row_id)
+        
+        if not row.juniper_hotel:
+            messages.error(request, "Must match hotel before matching room")
+            return redirect("emails:email_detail", email_id=row.email.id)
+        
+        all_hotel_rooms = list(Room.objects.filter(hotel=row.juniper_hotel).order_by("juniper_room_type"))
+        
+        # --- Apply Enhanced Matching Logic (for suggestions) --- 
+        best_match_suggestion, related_rooms_suggestion, suggestion_score = get_suggested_room_matches(row, all_hotel_rooms)
+        suggested_room_ids = {room.id for room in related_rooms_suggestion}
+        # --- End Enhanced Matching Logic --- 
+
+        if request.method == "POST":
+            selected_room_ids = request.POST.getlist("room_ids") # Use getlist for checkboxes
+            
+            if selected_room_ids:
+                try:
+                    selected_rooms = Room.objects.filter(id__in=selected_room_ids, hotel=row.juniper_hotel)
+                    if len(selected_rooms) != len(selected_room_ids):
+                        messages.error(request, "Invalid room selection detected.")
+                        return redirect("emails:match_room", row_id=row.id) 
+
+                    row.juniper_rooms.set(selected_rooms)
+                    row.status = "pending"
+                    row.room_match_score = None
+                    row.save()
+                    
+                    UserLog.objects.create(
+                        user=request.user,
+                        action_type="match_room",
+                        email=row.email,
+                        email_row=row,
+                        ip_address=request.META.get("REMOTE_ADDR"),
+                        details=f"Manually matched rooms: {[r.juniper_room_type for r in selected_rooms]}"
+                    )
+                    
+                    messages.success(request, f"Row matched to room(s): {[r.juniper_room_type for r in selected_rooms]}")
+                    return redirect("emails:email_detail", email_id=row.email.id)
+
+                except Exception as e:
+                    logger.error(f"Error saving room match for row {row.id}: {e}", exc_info=True)
+                    messages.error(request, f"An error occurred while saving the room match: {str(e)}")
+                    return redirect("emails:match_room", row_id=row.id) 
+            else:
+                row.juniper_rooms.clear()
+                row.status = "room_not_found"
+                row.room_match_score = None
+                row.save()
+                messages.warning(request, "No rooms selected. Existing room matches cleared.")
+                return redirect("emails:email_detail", email_id=row.email.id)
+        
+        current_matched_room_ids = set(row.juniper_rooms.values_list("id", flat=True))
+        
+        context = {
+            "row": row,
+            "all_rooms": all_hotel_rooms,
+            "best_match_suggestion": best_match_suggestion,
+            "related_rooms_suggestion": related_rooms_suggestion,
+            "suggested_room_ids": suggested_room_ids,
+            "suggestion_score": suggestion_score,
+            "current_matched_room_ids": current_matched_room_ids,
+            "ROOM_FUZZY_MATCH_THRESHOLD": ROOM_FUZZY_MATCH_THRESHOLD
+        }
+        
+        return render(request, "emails/match_room.html", context)
+    # --- END UPDATED match_room VIEW --- 
+    ```
+5.  **`match_hotel` View'ını Güncelle:** Otel değiştirildiğinde oda eşleşmesini sıfırlamak ve gerekirse `match_room`'a yönlendirmek için `match_hotel` içindeki POST bloğunu güncelleyin:
+    ```python
+    # ... (match_hotel içinde) ...
+    if request.method == "POST":
+        hotel_id = request.POST.get("hotel_id")
+        if hotel_id:
+            try:
+                hotel = Hotel.objects.get(id=hotel_id)
+                row.juniper_hotel = hotel
+                # --- ADDED: Reset room match when hotel changes --- 
+                row.juniper_rooms.clear()
+                row.room_match_score = None
+                # Update status based on whether room needs matching
+                if row.room_type.upper() in ["ALL ROOM", "ALL ROOMS", "ALL ROOM TYPES"]:
+                    row.status = "pending" # No room match needed
+                else:
+                    row.status = "room_not_found" # Needs room matching
+                # --- END ADDED --- 
+                row.save()
+                # ... (UserLog creation) ...
+                messages.success(request, f"Row matched to hotel: {hotel.juniper_hotel_name}. Please verify room match if needed.")
+                # --- Redirect to room matching if needed --- 
+                if row.status == "room_not_found":
+                    return redirect("emails:match_room", row_id=row.id)
+                # --- End Redirect --- 
+            # ... (except blocks) ...
+        # ... (else block) ...
+        return redirect("emails:email_detail", email_id=row.email.id)
+    # ... (context and render) ...
+    ```
+6.  **(Opsiyonel) `manual_mapping` View'ını Güncelle:** Çoklu market ve oda ID'lerini işlemek için `manual_mapping` içindeki POST bloğunu güncelleyin (bu zaten önceki adımda yapılmış olabilir, kontrol edin):
+    ```python
+    # ... (manual_mapping içinde) ...
+    if request.method == "POST":
+        hotel_id = request.POST.get("hotel_id")
+        room_ids = request.POST.getlist("room_ids") # Changed to room_ids
+        market_ids = request.POST.getlist("market_ids") # Changed to market_ids
+        # ... (diğer alanlar) ...
+
+        # --- Validation --- 
+        if not hotel_id or not market_ids or not start_date or not end_date or not sale_type:
+            # ... (error message) ...
+        if not room_ids and not room_type_override.upper() in ["ALL ROOM", "ALL ROOMS", "ALL ROOM TYPES"]:
+             # ... (error message) ...
+            
+        try:
+            # ... (hotel get) ...
+            selected_markets = Market.objects.filter(id__in=market_ids)
+            if len(selected_markets) != len(market_ids):
+                 raise Market.DoesNotExist("One or more selected markets not found.")
+            # ... (date parsing) ...
+            
+            # Update row fields
+            # ... (hotel_name, start_date, end_date, sale_type) ...
+            row.markets.set(selected_markets)
+            row.manually_edited = True
+
+            # Handle room types
+            if room_type_override.upper() in ["ALL ROOM", "ALL ROOMS", "ALL ROOM TYPES"]:
+                row.juniper_rooms.clear()
+                row.room_type = "All Room"
+            elif room_ids:
+                selected_rooms = Room.objects.filter(hotel=hotel, id__in=room_ids)
+                if len(selected_rooms) != len(room_ids):
+                     raise Room.DoesNotExist("One or more selected rooms not found for this hotel.")
+                row.juniper_rooms.set(selected_rooms)
+                row.room_type = room_type_override if room_type_override else ", ".join(selected_rooms.values_list("juniper_room_type", flat=True))
+            else:
+                 row.juniper_rooms.clear()
+                 row.room_type = room_type_override
+            # ... (status update, save, log, messages, redirect) ...
+        # ... (except blocks) ...
+    # ... (GET request handling) ...
+    ```
+
+**Adım 2: `templates/emails/match_room.html` Şablonunu Güncelleme**
+
+Mevcut `match_room.html` şablonunu aşağıdaki güncellenmiş versiyonla değiştirin:
+
+```html
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Match Room for Row {{ row.id }} - {{ row.hotel_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* ... (Yukarıdaki kod bloğunda sağlanan CSS stillerinin tamamı) ... */
+    .room-option {
+        border: 1px solid #eee;
+        padding: 10px 15px;
+        margin-bottom: 10px;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+    }
+    .room-option:hover {
+        background-color: #f8f9fa;
+    }
+    .room-option input[type="checkbox"] { /* Changed to checkbox */
+        margin-right: 10px;
+    }
+    .current-match-info {
+        background-color: #e9ecef;
+        padding: 15px;
+        border-radius: 5px;
+        margin-bottom: 20px;
+    }
+    .suggestion-info {
+        background-color: #fff3cd; /* Light yellow for suggestions */
+        border: 1px solid #ffeeba;
+        padding: 15px;
+        border-radius: 5px;
+        margin-bottom: 20px;
+    }
+    .suggested-match {
+        border-left: 5px solid #ffc107; /* Yellow border for suggested */
+        background-color: #fff9e6; /* Slightly lighter yellow */
+    }
+    .best-match {
+        border-left: 5px solid #28a745; /* Green border for best match */
+        background-color: #eaf6ec; /* Lighter green */
+        font-weight: bold;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Header -->
+    <div class="page-header d-flex justify-content-between align-items-center">
+        <h1>Match Room for Email Row #{{ row.id }}</h1>
+        <a href="{% url 'emails:email_detail' row.email.id %}" class="btn btn-secondary">Back to Email Detail</a>
+    </div>
+
+    <!-- Email and Hotel Info Cards -->
+    <!-- ... (Mevcut kartlar) ... -->
+    <div class="card mb-4">
+        <div class="card-header">Email Information</div>
+        <div class="card-body">
+            <p><strong>Subject:</strong> {{ row.email.subject }}</p>
+            <p><strong>Extracted Hotel Name:</strong> {{ row.hotel_name }}</p>
+            <p><strong>Extracted Room Type:</strong> {{ row.room_type }}</p>
+            <p><strong>Date Range:</strong> {{ row.start_date|date:"d.m.Y" }} - {{ row.end_date|date:"d.m.Y" }}</p>
+            <p><strong>Sale Type:</strong> {{ row.get_sale_type_display }}</p>
+        </div>
+    </div>
+    <div class="card mb-4">
+        <div class="card-header">Matched Hotel Information</div>
+        <div class="card-body">
+            {% if row.juniper_hotel %}
+                <p><strong>Juniper Hotel Name:</strong> {{ row.juniper_hotel.juniper_hotel_name }}</p>
+                <p><strong>Juniper Hotel Code:</strong> {{ row.juniper_hotel.juniper_code }}</p>
+            {% else %}
+                <p class="text-danger">No hotel matched for this row yet.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if row.juniper_hotel %}
+        <div class="card mb-4">
+            <div class="card-header">Select Juniper Room(s)</div>
+            <div class="card-body">
+                <!-- Current Matches -->
+                <div class="current-match-info">
+                    <strong>Currently Matched Room(s):</strong>
+                    {% if current_matched_room_ids %}
+                        <ul>
+                        {% for current_room in row.juniper_rooms.all %}
+                            <li>{{ current_room.juniper_room_type }} [{{ current_room.room_code }}]</li>
+                        {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="mb-0">No room currently matched.</p>
+                    {% endif %}
+                </div>
+
+                <!-- Suggestion Info -->
+                {% if best_match_suggestion %}
+                    <div class="suggestion-info">
+                        <strong>Suggestion based on "{{ row.room_type }}":</strong>
+                        <p class="mb-1">Best Match: <strong>{{ best_match_suggestion.juniper_room_type }}</strong> (Score: {{ suggestion_score }})</p>
+                        {% if related_rooms_suggestion|length > 1 %}
+                            <p class="mb-0">Other related rooms are also highlighted below.</p>
+                        {% endif %}
+                    </div>
+                {% elif suggestion_score > 0 %}
+                     <div class="suggestion-info">
+                        <strong>Suggestion based on "{{ row.room_type }}":</strong>
+                        <p class="mb-0 text-warning">No strong match found (Best score: {{ suggestion_score }}). Please review carefully.</p>
+                    </div>
+                {% endif %}
+
+                <!-- Room Selection Form -->
+                <form method="post">
+                    {% csrf_token %}
+                    {% if all_rooms %}
+                        <p>Please select the correct Juniper room(s) corresponding to "<strong>{{ row.room_type }}</strong>":</p>
+                        {% for room in all_rooms %}
+                            {% with room_id=room.id %}
+                            {% capture highlight_classes %}
+                                {% if room_id == best_match_suggestion.id %}best-match{% elif room_id in suggested_room_ids %}suggested-match{% endif %}
+                            {% endcapture %}
+                            <div class="room-option form-check {{ highlight_classes|strip }}">
+                                <input class="form-check-input" 
+                                       type="checkbox" 
+                                       name="room_ids" 
+                                       id="room_{{ room_id }}" 
+                                       value="{{ room_id }}" 
+                                       {% if room_id in current_matched_room_ids %}checked{% endif %}>
+                                <label class="form-check-label w-100" for="room_{{ room_id }}">
+                                    {{ room.juniper_room_type }} <span class="text-muted">[{{ room.room_code }}]</span>
+                                </label>
+                            </div>
+                            {% endwith %}
+                        {% endfor %}
+                        <button type="submit" class="btn btn-primary mt-3">Save Room Match(es)</button>
+                    {% else %}
+                        <p class="text-warning">No rooms found for hotel {{ row.juniper_hotel.juniper_hotel_name }}. Please add rooms in the hotel management section.</p>
+                    {% endif %}
+                </form>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+```
+
+**Özet:**
+
+Bu değişiklikler, `match_room` sayfasında kullanıcının oda tipi için otomatik öneriler görmesini, bu önerilerin görsel olarak vurgulanmasını ve birden fazla ilgili odayı aynı anda seçip kaydedebilmesini sağlayacaktır.

@@ -1,0 +1,167 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Otel Eşleştirme - StopSale Automation System{% endblock %}
+
+{% block extra_css %}
+<style>
+    .hotel-card {
+        margin-bottom: 15px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    .hotel-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .hotel-card.selected {
+        border: 2px solid #3f51b5;
+        background-color: #f0f4ff;
+    }
+    .search-box {
+        margin-bottom: 20px;
+    }
+    .hotel-list {
+        max-height: 500px;
+        overflow-y: auto;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+    }
+    .match-controls {
+        margin-top: 20px;
+        display: flex;
+        justify-content: flex-end;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center mb-4">
+    <h1>Otel Eşleştirme</h1>
+    <a href="{% url 'emails:email_detail' row.email.id %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Geri Dön
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h5>Eşleştirme Bilgileri</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <h6>E-posta Bilgisi:</h6>
+                <p><strong>Konu:</strong> {{ row.email.subject }}</p>
+                <p><strong>Gönderen:</strong> {{ row.email.sender }}</p>
+            </div>
+            <div class="col-md-6">
+                <h6>Satır Bilgisi:</h6>
+                <p><strong>Otel Adı:</strong> {{ row.hotel_name }}</p>
+                <p><strong>Oda Tipi:</strong> {{ row.room_type }}</p>
+                <p><strong>Tarih Aralığı:</strong> {{ row.start_date|date:"d.m.Y" }} - {{ row.end_date|date:"d.m.Y" }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>Otel Seç</h5>
+            </div>
+            <div class="card-body">
+                <div class="search-box">
+                    <input type="text" id="hotelSearch" class="form-control" placeholder="Otel adına göre ara...">
+                </div>
+                
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="hotel-list">
+                        {% for hotel in hotels %}
+                        <div class="card hotel-card" id="hotel-{{ hotel.id }}">
+                            <div class="card-body">
+                                <div class="form-check">
+                                    <input class="form-check-input hotel-radio" type="radio" name="hotel_id" value="{{ hotel.id }}" id="hotel-radio-{{ hotel.id }}">
+                                    <label class="form-check-label w-100" for="hotel-radio-{{ hotel.id }}">
+                                        <h6 class="mb-1">{{ hotel.juniper_hotel_name }}</h6>
+                                        <p class="mb-0 text-muted"><small>Kod: {{ hotel.juniper_code }}</small></p>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="alert alert-info">Eşleştirilecek otel bulunamadı.</div>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="match-controls">
+                        <a href="{% url 'emails:email_detail' row.email.id %}" class="btn btn-outline-secondary me-2">İptal</a>
+                        <button type="submit" class="btn btn-primary" id="matchButton" disabled>Oteli Eşleştir</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Search functionality
+    const searchBox = document.getElementById('hotelSearch');
+    const hotelCards = document.querySelectorAll('.hotel-card');
+    
+    searchBox.addEventListener('keyup', function() {
+        const searchTerm = this.value.toLowerCase();
+        
+        hotelCards.forEach(function(card) {
+            const hotelName = card.querySelector('h6').textContent.toLowerCase();
+            const hotelCode = card.querySelector('.text-muted small').textContent.toLowerCase();
+            
+            if (hotelName.includes(searchTerm) || hotelCode.includes(searchTerm)) {
+                card.style.display = '';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    });
+    
+    // Selection functionality
+    const radioButtons = document.querySelectorAll('.hotel-radio');
+    const matchButton = document.getElementById('matchButton');
+    
+    radioButtons.forEach(function(radio) {
+        radio.addEventListener('change', function() {
+            // Remove selected class from all cards
+            document.querySelectorAll('.hotel-card').forEach(function(card) {
+                card.classList.remove('selected');
+            });
+            
+            // Add selected class to the selected card
+            const selectedCard = document.getElementById('hotel-' + this.value);
+            if (selectedCard) {
+                selectedCard.classList.add('selected');
+            }
+            
+            // Enable the match button
+            matchButton.disabled = false;
+        });
+    });
+    
+    // Make the entire card clickable
+    hotelCards.forEach(function(card) {
+        card.addEventListener('click', function() {
+            const radio = this.querySelector('.hotel-radio');
+            radio.checked = true;
+            
+            // Trigger the change event manually
+            const event = new Event('change');
+            radio.dispatchEvent(event);
+        });
+    });
+});
+</script>
+{% endblock %}

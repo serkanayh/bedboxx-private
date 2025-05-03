@@ -1,0 +1,463 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Dashboard - StopSale Automation System{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stat-card {
+        border-radius: 10px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        transition: all 0.3s ease;
+    }
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+    }
+    .stat-icon {
+        font-size: 2.5rem;
+        opacity: 0.8;
+    }
+    .stat-card.primary {
+        background-color: var(--primary);
+        color: white;
+    }
+    .stat-card.success {
+        background-color: var(--success);
+        color: white;
+    }
+    .stat-card.warning {
+        background-color: var(--warning);
+        color: white;
+    }
+    .stat-card.danger {
+        background-color: var(--danger);
+        color: white;
+    }
+    .chart-container {
+        position: relative;
+        height: 300px;
+        width: 100%;
+    }
+    .activity-item {
+        padding: 15px;
+        border-left: 3px solid #eee;
+        position: relative;
+    }
+    .activity-item:hover {
+        background-color: #f8f9fa;
+    }
+    .activity-item::before {
+        content: '';
+        position: absolute;
+        left: -6px;
+        top: 15px;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background-color: var(--primary);
+    }
+    .activity-item.success::before {
+        background-color: var(--success);
+    }
+    .activity-item.warning::before {
+        background-color: var(--warning);
+    }
+    .activity-item.danger::before {
+        background-color: var(--danger);
+    }
+    .activity-time {
+        color: #6c757d;
+        font-size: 0.85rem;
+    }
+    .performance-table th, .performance-table td {
+        padding: 12px 15px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Dashboard</h1>
+</div>
+
+<!-- Stats Cards -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="stat-card primary card h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title text-white-50">Processed Emails</h6>
+                        <h2 class="mb-0">{{ stats.processed_emails }}</h2>
+                    </div>
+                    <div class="stat-icon">
+                        <i class="bi bi-envelope-check"></i>
+                    </div>
+                </div>
+                <div class="mt-3 text-white-50">
+                    <small>{{ stats.pending_emails }} pending</small>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="stat-card success card h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title text-white-50">Approved Rows</h6>
+                        <h2 class="mb-0">{{ stats.approved_rows }}</h2>
+                    </div>
+                    <div class="stat-icon">
+                        <i class="bi bi-check-circle"></i>
+                    </div>
+                </div>
+                <div class="mt-3 text-white-50">
+                    <small>{{ stats.approval_rate }}% approval rate</small>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="stat-card warning card h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title text-white-50">Manual Edits</h6>
+                        <h2 class="mb-0">{{ stats.manual_edits }}</h2>
+                    </div>
+                    <div class="stat-icon">
+                        <i class="bi bi-pencil-square"></i>
+                    </div>
+                </div>
+                <div class="mt-3 text-white-50">
+                    <small>{{ stats.edit_rate }}% edit rate</small>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="stat-card danger card h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title text-white-50">AI Success Rate</h6>
+                        <h2 class="mb-0">{{ stats.ai_success_rate }}%</h2>
+                    </div>
+                    <div class="stat-icon">
+                        <i class="bi bi-robot"></i>
+                    </div>
+                </div>
+                <div class="mt-3 text-white-50">
+                    <small>Last 7 days</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Processing Trend Chart -->
+    <div class="col-lg-8 mb-4">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Processing Trend</h5>
+                <div class="btn-group btn-group-sm" role="group">
+                    <button type="button" class="btn btn-outline-primary active" id="weekBtn">Week</button>
+                    <button type="button" class="btn btn-outline-primary" id="monthBtn">Month</button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="processingTrendChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Performance -->
+    <div class="col-lg-4 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0">User Performance</h5>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-hover performance-table mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>User</th>
+                            <th>Processed</th>
+                            <th>Rate</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in user_performance %}
+                        <tr>
+                            <td>{{ user.username }}</td>
+                            <td>{{ user.processed_count }}</td>
+                            <td>
+                                <div class="progress" style="height: 8px;">
+                                    <div class="progress-bar bg-primary" role="progressbar" style="width: {{ user.rate }}%;" aria-valuenow="{{ user.rate }}" aria-valuemin="0" aria-valuemax="100"></div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="3" class="text-center py-3">No data available</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- AI Performance Chart -->
+    <div class="col-lg-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0">AI Performance</h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="aiPerformanceChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hotel Correction Rates -->
+    <div class="col-lg-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0">Hotel AI Correction Rates</h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="hotelCorrectionChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Activity -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">Recent Activity</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="list-group list-group-flush">
+            {% for activity in recent_activity %}
+            <div class="activity-item {% if activity.action_type == 'approve_row' or activity.action_type == 'login' %}success{% elif activity.action_type == 'edit_row' %}warning{% elif activity.action_type == 'mark_hotel_not_found' or activity.action_type == 'mark_room_not_found' %}danger{% endif %}">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <strong>{{ activity.user.username }}</strong> 
+                        {% if activity.action_type == 'login' %}
+                        logged in
+                        {% elif activity.action_type == 'logout' %}
+                        logged out
+                        {% elif activity.action_type == 'approve_row' %}
+                        approved a row
+                        {% elif activity.action_type == 'edit_row' %}
+                        edited a row
+                        {% elif activity.action_type == 'send_to_robot' %}
+                        sent a row to robot
+                        {% elif activity.action_type == 'mark_hotel_not_found' %}
+                        marked hotel not found
+                        {% elif activity.action_type == 'mark_room_not_found' %}
+                        marked room not found
+                        {% elif activity.action_type == 'ignore_email' %}
+                        ignored an email
+                        {% elif activity.action_type == 'assign_email' %}
+                        assigned an email
+                        {% endif %}
+                        
+                        {% if activity.email %}
+                        <a href="{% url 'emails:email_detail' activity.email.id %}">{{ activity.email.subject|truncatechars:50 }}</a>
+                        {% endif %}
+                    </div>
+                    <span class="activity-time">{{ activity.timestamp|timesince }} ago</span>
+                </div>
+                {% if activity.details %}
+                <div class="text-muted small mt-1">{{ activity.details|truncatechars:100 }}</div>
+                {% endif %}
+            </div>
+            {% empty %}
+            <div class="p-4 text-center text-muted">
+                <i class="bi bi-clock-history fs-1 d-block mb-2"></i>
+                No recent activity
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+    // Processing Trend Chart
+    const processingTrendCtx = document.getElementById('processingTrendChart').getContext('2d');
+    const processingTrendChart = new Chart(processingTrendCtx, {
+        type: 'line',
+        data: {
+            labels: {{ chart_data.processing_trend.labels|safe }},
+            datasets: [
+                {
+                    label: 'Processed Emails',
+                    data: {{ chart_data.processing_trend.processed|safe }},
+                    borderColor: '#3f51b5',
+                    backgroundColor: 'rgba(63, 81, 181, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                },
+                {
+                    label: 'Approved Rows',
+                    data: {{ chart_data.processing_trend.approved|safe }},
+                    borderColor: '#4caf50',
+                    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top',
+                },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+
+    // AI Performance Chart
+    const aiPerformanceCtx = document.getElementById('aiPerformanceChart').getContext('2d');
+    const aiPerformanceChart = new Chart(aiPerformanceCtx, {
+        type: 'line',
+        data: {
+            labels: {{ chart_data.ai_performance.labels|safe }},
+            datasets: [
+                {
+                    label: 'Success Rate',
+                    data: {{ chart_data.ai_performance.success_rate|safe }},
+                    borderColor: '#f44336',
+                    backgroundColor: 'rgba(244, 67, 54, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top',
+                },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    ticks: {
+                        callback: function(value) {
+                            return value + '%';
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // Hotel Correction Rates Chart
+    const hotelCorrectionCtx = document.getElementById('hotelCorrectionChart').getContext('2d');
+    const hotelCorrectionChart = new Chart(hotelCorrectionCtx, {
+        type: 'bar',
+        data: {
+            labels: {{ chart_data.hotel_correction.labels|safe }},
+            datasets: [
+                {
+                    label: 'Correction Rate',
+                    data: {{ chart_data.hotel_correction.rates|safe }},
+                    backgroundColor: [
+                        'rgba(63, 81, 181, 0.7)',
+                        'rgba(76, 175, 80, 0.7)',
+                        'rgba(255, 152, 0, 0.7)',
+                        'rgba(244, 67, 54, 0.7)',
+                        'rgba(156, 39, 176, 0.7)'
+                    ],
+                    borderWidth: 1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.raw + '% correction rate';
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    ticks: {
+                        callback: function(value) {
+                            return value + '%';
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // Time period toggle for Processing Trend Chart
+    document.getElementById('weekBtn').addEventListener('click', function() {
+        this.classList.add('active');
+        document.getElementById('monthBtn').classList.remove('active');
+        
+        // Update chart with weekly data
+        processingTrendChart.data.labels = {{ chart_data.processing_trend_week.labels|safe }};
+        processingTrendChart.data.datasets[0].data = {{ chart_data.processing_trend_week.processed|safe }};
+        processingTrendChart.data.datasets[1].data = {{ chart_data.processing_trend_week.approved|safe }};
+        processingTrendChart.update();
+    });
+
+    document.getElementById('monthBtn').addEventListener('click', function() {
+        this.classList.add('active');
+        document.getElementById('weekBtn').classList.remove('active');
+        
+        // Update chart with monthly data
+        processingTrendChart.data.labels = {{ chart_data.processing_trend_month.labels|safe }};
+        processingTrendChart.data.datasets[0].data = {{ chart_data.processing_trend_month.processed|safe }};
+        processingTrendChart.data.datasets[1].data = {{ chart_data.processing_trend_month.approved|safe }};
+        processingTrendChart.update();
+    });
+</script>
+{% endblock %}
+
+{% endblock %}

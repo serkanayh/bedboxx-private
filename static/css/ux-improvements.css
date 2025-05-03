@@ -1,0 +1,502 @@
+/* UX Improvements - CSS Styles */
+
+/* Form Enhancements */
+.form-control:focus,
+.form-select:focus {
+    border-color: rgba(63, 81, 181, 0.5);
+    box-shadow: 0 0 0 0.25rem rgba(63, 81, 181, 0.25);
+}
+
+.form-floating > .form-control:focus ~ label,
+.form-floating > .form-control:not(:placeholder-shown) ~ label {
+    color: #3f51b5;
+}
+
+.form-label {
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+    color: #555;
+}
+
+.form-text {
+    color: #6c757d;
+    font-size: 0.85rem;
+    margin-top: 0.25rem;
+}
+
+.invalid-feedback {
+    font-size: 0.85rem;
+    margin-top: 0.25rem;
+}
+
+/* Custom form controls */
+.custom-checkbox .custom-control-input:checked ~ .custom-control-label::before {
+    background-color: #3f51b5;
+    border-color: #3f51b5;
+}
+
+.custom-radio .custom-control-input:checked ~ .custom-control-label::before {
+    background-color: #3f51b5;
+    border-color: #3f51b5;
+}
+
+/* Flatpickr date picker customization */
+.flatpickr-day.selected,
+.flatpickr-day.startRange,
+.flatpickr-day.endRange,
+.flatpickr-day.selected.inRange,
+.flatpickr-day.startRange.inRange,
+.flatpickr-day.endRange.inRange,
+.flatpickr-day.selected:focus,
+.flatpickr-day.startRange:focus,
+.flatpickr-day.endRange:focus,
+.flatpickr-day.selected:hover,
+.flatpickr-day.startRange:hover,
+.flatpickr-day.endRange:hover,
+.flatpickr-day.selected.prevMonthDay,
+.flatpickr-day.startRange.prevMonthDay,
+.flatpickr-day.endRange.prevMonthDay,
+.flatpickr-day.selected.nextMonthDay,
+.flatpickr-day.startRange.nextMonthDay,
+.flatpickr-day.endRange.nextMonthDay {
+    background: #3f51b5;
+    border-color: #3f51b5;
+}
+
+.flatpickr-day.selected.startRange + .endRange:not(:nth-child(7n+1)),
+.flatpickr-day.startRange.startRange + .endRange:not(:nth-child(7n+1)),
+.flatpickr-day.endRange.startRange + .endRange:not(:nth-child(7n+1)) {
+    box-shadow: -10px 0 0 #3f51b5;
+}
+
+.flatpickr-day.week.selected {
+    box-shadow: -5px 0 0 #3f51b5, 5px 0 0 #3f51b5;
+}
+
+.flatpickr-current-month .flatpickr-monthDropdown-months:focus,
+.flatpickr-current-month input.cur-year:focus {
+    outline: none;
+}
+
+.flatpickr-months .flatpickr-prev-month:hover svg,
+.flatpickr-months .flatpickr-next-month:hover svg {
+    fill: #3f51b5;
+}
+
+/* Select2 customization */
+.select2-container--bootstrap-5 .select2-selection {
+    border: 1px solid #ced4da;
+    border-radius: 0.25rem;
+}
+
+.select2-container--bootstrap-5.select2-container--focus .select2-selection,
+.select2-container--bootstrap-5.select2-container--open .select2-selection {
+    border-color: rgba(63, 81, 181, 0.5);
+    box-shadow: 0 0 0 0.25rem rgba(63, 81, 181, 0.25);
+}
+
+.select2-container--bootstrap-5 .select2-dropdown {
+    border-color: rgba(63, 81, 181, 0.5);
+    border-radius: 0.25rem;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.select2-container--bootstrap-5 .select2-dropdown .select2-results__option--highlighted[aria-selected] {
+    background-color: #3f51b5;
+    color: white;
+}
+
+/* Autocomplete customization */
+.ui-autocomplete {
+    max-height: 200px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    z-index: 9999;
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    border-radius: 0.25rem;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    padding: 0.5rem 0;
+    background-color: white;
+}
+
+.ui-autocomplete .ui-menu-item {
+    padding: 0;
+}
+
+.ui-autocomplete .ui-menu-item-wrapper {
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+}
+
+.ui-autocomplete .ui-menu-item-wrapper.ui-state-active {
+    background-color: #3f51b5;
+    color: white;
+    border: none;
+    margin: 0;
+}
+
+/* Loading indicators */
+.spinner-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+.spinner-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background-color: white;
+    padding: 2rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+.spinner-text {
+    margin-top: 1rem;
+    font-weight: 500;
+    color: #333;
+}
+
+/* Toast notifications customization */
+.toast-success {
+    background-color: #4caf50;
+}
+
+.toast-error {
+    background-color: #f44336;
+}
+
+.toast-info {
+    background-color: #2196f3;
+}
+
+.toast-warning {
+    background-color: #ff9800;
+}
+
+/* SweetAlert2 customization */
+.swal2-styled.swal2-confirm {
+    background-color: #3f51b5 !important;
+}
+
+.swal2-styled.swal2-cancel {
+    background-color: #f44336 !important;
+}
+
+/* Back to top button hover effect */
+#back-to-top:hover {
+    background-color: #303f9f;
+    transform: translateY(-3px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    transition: all 0.3s ease;
+}
+
+/* Improved focus styles for accessibility */
+a:focus, button:focus, input:focus, select:focus, textarea:focus {
+    outline: 2px solid rgba(63, 81, 181, 0.5);
+    outline-offset: 2px;
+}
+
+/* Skip to content link for accessibility */
+.skip-to-content {
+    position: absolute;
+    top: -40px;
+    left: 0;
+    background-color: #3f51b5;
+    color: white;
+    padding: 8px 16px;
+    z-index: 9999;
+    transition: top 0.3s;
+}
+
+.skip-to-content:focus {
+    top: 0;
+}
+
+/* Improved table styles */
+.table-hover tbody tr:hover {
+    background-color: rgba(63, 81, 181, 0.05);
+}
+
+.table th {
+    background-color: #f8f9fa;
+    border-top: none;
+    border-bottom: 2px solid #dee2e6;
+    font-weight: 600;
+    color: #495057;
+}
+
+.table-striped tbody tr:nth-of-type(odd) {
+    background-color: rgba(0, 0, 0, 0.02);
+}
+
+/* Card hover effects */
+.card-hover {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card-hover:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+
+/* Button hover effects */
+.btn {
+    transition: all 0.3s ease;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Improved breadcrumb */
+.breadcrumb {
+    background-color: transparent;
+    padding: 0.5rem 0;
+    margin-bottom: 1rem;
+}
+
+.breadcrumb-item + .breadcrumb-item::before {
+    content: "›";
+    font-size: 1.2rem;
+    line-height: 1;
+    vertical-align: middle;
+}
+
+.breadcrumb-item.active {
+    color: #6c757d;
+    font-weight: 500;
+}
+
+/* Improved badges */
+.badge {
+    font-weight: 500;
+    padding: 0.4em 0.7em;
+    border-radius: 6px;
+}
+
+/* Tooltip customization */
+.tooltip .tooltip-inner {
+    background-color: #3f51b5;
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.tooltip.bs-tooltip-top .tooltip-arrow::before {
+    border-top-color: #3f51b5;
+}
+
+.tooltip.bs-tooltip-bottom .tooltip-arrow::before {
+    border-bottom-color: #3f51b5;
+}
+
+.tooltip.bs-tooltip-start .tooltip-arrow::before {
+    border-left-color: #3f51b5;
+}
+
+.tooltip.bs-tooltip-end .tooltip-arrow::before {
+    border-right-color: #3f51b5;
+}
+
+/* Popover customization */
+.popover {
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.popover-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #ebebeb;
+    font-weight: 500;
+}
+
+/* Improved dropdown menu */
+.dropdown-menu {
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    padding: 0.5rem 0;
+}
+
+.dropdown-item {
+    padding: 0.5rem 1.5rem;
+    font-weight: 400;
+}
+
+.dropdown-item:hover, .dropdown-item:focus {
+    background-color: rgba(63, 81, 181, 0.1);
+    color: #16181b;
+}
+
+.dropdown-item.active, .dropdown-item:active {
+    background-color: #3f51b5;
+    color: white;
+}
+
+/* Improved pagination */
+.pagination .page-link {
+    color: #3f51b5;
+    padding: 0.5rem 0.75rem;
+    margin: 0 0.25rem;
+    border-radius: 0.25rem;
+    border: 1px solid #dee2e6;
+}
+
+.pagination .page-item.active .page-link {
+    background-color: #3f51b5;
+    border-color: #3f51b5;
+    color: white;
+}
+
+.pagination .page-link:hover {
+    background-color: #e9ecef;
+    border-color: #dee2e6;
+    color: #0056b3;
+}
+
+.pagination .page-link:focus {
+    box-shadow: 0 0 0 0.25rem rgba(63, 81, 181, 0.25);
+}
+
+/* Improved list groups */
+.list-group-item {
+    border: 1px solid rgba(0, 0, 0, 0.125);
+    padding: 0.75rem 1.25rem;
+}
+
+.list-group-item.active {
+    background-color: #3f51b5;
+    border-color: #3f51b5;
+}
+
+.list-group-item-action:hover, .list-group-item-action:focus {
+    background-color: rgba(63, 81, 181, 0.05);
+}
+
+/* Improved alerts */
+.alert {
+    border: none;
+    border-radius: 0.5rem;
+    padding: 1rem 1.5rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.alert-primary {
+    background-color: rgba(63, 81, 181, 0.1);
+    color: #3f51b5;
+}
+
+.alert-success {
+    background-color: rgba(76, 175, 80, 0.1);
+    color: #2e7d32;
+}
+
+.alert-warning {
+    background-color: rgba(255, 152, 0, 0.1);
+    color: #ef6c00;
+}
+
+.alert-danger {
+    background-color: rgba(244, 67, 54, 0.1);
+    color: #c62828;
+}
+
+.alert-info {
+    background-color: rgba(33, 150, 243, 0.1);
+    color: #0277bd;
+}
+
+/* Improved modals */
+.modal-content {
+    border: none;
+    border-radius: 0.5rem;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+.modal-header {
+    border-bottom: 1px solid #dee2e6;
+    padding: 1.5rem;
+}
+
+.modal-footer {
+    border-top: 1px solid #dee2e6;
+    padding: 1.5rem;
+}
+
+.modal-title {
+    font-weight: 600;
+    color: #333;
+}
+
+/* Improved progress bars */
+.progress {
+    height: 0.75rem;
+    border-radius: 0.5rem;
+    background-color: #e9ecef;
+    margin-bottom: 1rem;
+}
+
+.progress-bar {
+    background-color: #3f51b5;
+    border-radius: 0.5rem;
+}
+
+/* Improved tabs */
+.nav-tabs {
+    border-bottom: 1px solid #dee2e6;
+}
+
+.nav-tabs .nav-link {
+    border: none;
+    color: #495057;
+    padding: 0.75rem 1rem;
+    margin-bottom: -1px;
+    background-color: transparent;
+    border-bottom: 2px solid transparent;
+}
+
+.nav-tabs .nav-link:hover, .nav-tabs .nav-link:focus {
+    border-color: transparent;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.nav-tabs .nav-link.active {
+    color: #3f51b5;
+    background-color: transparent;
+    border-bottom: 2px solid #3f51b5;
+}
+
+/* Improved accordion */
+.accordion-button:not(.collapsed) {
+    color: #3f51b5;
+    background-color: rgba(63, 81, 181, 0.05);
+}
+
+.accordion-button:focus {
+    border-color: rgba(63, 81, 181, 0.5);
+    box-shadow: 0 0 0 0.25rem rgba(63, 81, 181, 0.25);
+}
+
+.accordion-button::after {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%233f51b5'%3e%3cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3e%3c/svg%3e");
+}
+
+/* Market display text wrapping (Attempt 2: Increased specificity/priority) */
+.verification-item[data-field="market"] .verification-content .extracted-value {
+  white-space: normal !important; /* Force wrapping */
+  overflow: visible !important; /* Ensure content is not hidden */
+  text-overflow: clip !important; /* Prevent ellipsis (...) */
+  height: auto !important; /* Allow height to adjust */
+  word-break: break-word;
+  line-height: 1.4;
+}

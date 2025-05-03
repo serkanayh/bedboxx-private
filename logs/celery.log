@@ -1,0 +1,89 @@
+[2025-05-02 19:19:35,343: WARNING/MainProcess] No hostname was supplied. Reverting to default 'localhost'
+[2025-05-02 19:19:35,822: INFO/MainProcess] Connected to amqp://guest:**@127.0.0.1:5672//
+[2025-05-02 19:19:35,828: INFO/MainProcess] mingle: searching for neighbors
+[2025-05-02 19:19:35,837: WARNING/MainProcess] No hostname was supplied. Reverting to default 'localhost'
+[2025-05-02 19:19:36,856: INFO/MainProcess] mingle: all alone
+[2025-05-02 19:19:36,871: INFO/MainProcess] celery@MacBook-Pro-2.local ready.
+[2025-05-02 19:31:35,982: WARNING/MainProcess] No hostname was supplied. Reverting to default 'localhost'
+[2025-05-02 19:31:36,711: INFO/MainProcess] Connected to amqp://guest:**@127.0.0.1:5672//
+[2025-05-02 19:31:36,716: INFO/MainProcess] mingle: searching for neighbors
+[2025-05-02 19:31:36,726: WARNING/MainProcess] No hostname was supplied. Reverting to default 'localhost'
+[2025-05-02 19:31:37,743: INFO/MainProcess] mingle: all alone
+[2025-05-02 19:31:37,751: WARNING/MainProcess] /opt/homebrew/lib/python3.11/site-packages/kombu/pidbox.py:72: UserWarning: A node named celery@MacBook-Pro-2.local is already using this process mailbox!
+
+Maybe you forgot to shutdown the other node or did not do so properly?
+Or if you meant to start multiple nodes on the same host please make sure
+you give each node a unique node name!
+
+  warnings.warn(W_PIDBOX_IN_USE.format(node=self))
+
+[2025-05-02 19:31:37,761: INFO/MainProcess] celery@MacBook-Pro-2.local ready.
+[2025-05-02 19:44:47,342: INFO/MainProcess] Task emails.tasks.process_email_attachments_task[07765793-e9c0-4a3c-a414-ddf9dc9703c2] received
+[2025-05-02 19:44:47,344: INFO/MainProcess] Task emails.tasks.match_email_rows_batch_task[0a1a2d62-fa64-47d0-8a5f-b15ee4912718] received
+[2025-05-02 19:44:47,355: INFO/ForkPoolWorker-8] Starting attachment processing task for Attachment ID: 1008
+[2025-05-02 19:44:47,357: INFO/ForkPoolWorker-8] Starting matching task for Email ID: 432, Row IDs: [2338, 2339, 2340, 2341, 2342, 2343, 2344, 2345, 2346, 2347, 2348, 2349, 2350, 2351, 2352, 2353, 2354, 2355]
+[2025-05-02 19:44:47,374: INFO/ForkPoolWorker-8] Processing attachment 'image001.jpg' for Email ID: 432
+[2025-05-02 19:44:47,405: INFO/ForkPoolWorker-8] ClaudeAnalyzer initialized.
+[2025-05-02 19:44:47,405: INFO/ForkPoolWorker-8] Extracting text from attachment: image001.jpg (Attachment ID: 1008, Email ID: 432)
+[2025-05-02 19:44:47,405: ERROR/ForkPoolWorker-8] Failed to extract text from image001.jpg (Attachment ID: 1008, Email ID: 432): Unsupported attachment format: jpg
+[2025-05-02 19:44:47,407: INFO/ForkPoolWorker-8] Attachment processing task finished for Attachment ID: 1008. No new rows created.
+[2025-05-02 19:44:47,407: INFO/ForkPoolWorker-8] Task emails.tasks.process_email_attachments_task[07765793-e9c0-4a3c-a414-ddf9dc9703c2] succeeded in 0.059774333029054105s: False
+[2025-05-02 19:44:47,451: INFO/ForkPoolWorker-8] Matching row 2338: Hotel='Bellis Deluxe Hotel', Room='Camelia (Garden View) 22m² -Camelia Garden View (CGW)'
+[2025-05-02 19:44:47,454: INFO/ForkPoolWorker-8]   [Hotel Match] Row 2338: 'Bellis Deluxe Hotel' -> 'Bellis Deluxe Hotel' (Score: 100.00)
+[2025-05-02 19:44:47,457: INFO/ForkPoolWorker-8]   [RoomTypeMatch] Row 2338: Öğrenilmiş eşleşme bulundu ve uygulandı: [<Room: 1 PAX Camelia (Garden View) (R0280) - Bellis Deluxe Hotel>, <Room: 2/3 PAX Camelia (Garden View) (R0281) - Bellis Deluxe Hotel>]
+[2025-05-02 19:44:47,460: INFO/ForkPoolWorker-8] Matching row 2339: Hotel='Bellis Deluxe Hotel', Room='Camelia (Garden View) 22m² -Camelia Garden View (CGW)'
+[2025-05-02 19:44:47,462: INFO/ForkPoolWorker-8]   [Hotel Match] Row 2339: 'Bellis Deluxe Hotel' -> 'Bellis Deluxe Hotel' (Score: 100.00)
+[2025-05-02 19:44:47,464: INFO/ForkPoolWorker-8]   [RoomTypeMatch] Row 2339: Öğrenilmiş eşleşme bulundu ve uygulandı: [<Room: 1 PAX Camelia (Garden View) (R0280) - Bellis Deluxe Hotel>, <Room: 2/3 PAX Camelia (Garden View) (R0281) - Bellis Deluxe Hotel>]
+[2025-05-02 19:44:47,465: INFO/ForkPoolWorker-8] Matching row 2340: Hotel='Bellis Deluxe Hotel', Room='Camelia (Garden View) 22m² -Camelia Garden View (CGW)'
+[2025-05-02 19:44:47,467: INFO/ForkPoolWorker-8]   [Hotel Match] Row 2340: 'Bellis Deluxe Hotel' -> 'Bellis Deluxe Hotel' (Score: 100.00)
+[2025-05-02 19:44:47,469: INFO/ForkPoolWorker-8]   [RoomTypeMatch] Row 2340: Öğrenilmiş eşleşme bulundu ve uygulandı: [<Room: 1 PAX Camelia (Garden View) (R0280) - Bellis Deluxe Hotel>, <Room: 2/3 PAX Camelia (Garden View) (R0281) - Bellis Deluxe Hotel>]
+[2025-05-02 19:44:47,470: INFO/ForkPoolWorker-8] Matching row 2341: Hotel='Bellis Deluxe Hotel', Room='Family Room 45 m²- Family Oda (Yandan Deniz) 45 m²'
+[2025-05-02 19:44:47,472: INFO/ForkPoolWorker-8]   [Hotel Match] Row 2341: 'Bellis Deluxe Hotel' -> 'Bellis Deluxe Hotel' (Score: 100.00)
+[2025-05-02 19:44:47,473: INFO/ForkPoolWorker-8]   [RoomTypeMatch] Row 2341: Öğrenilmiş eşleşme bulundu ve uygulandı: [<Room: 1/2 PAX Family Room (R0071) - Bellis Deluxe Hotel>, <Room: 3/4 PAX Family Room (R0007) - Bellis Deluxe Hotel>]
+[2025-05-02 19:44:47,475: INFO/ForkPoolWorker-8] Matching row 2342: Hotel='Bellis Deluxe Hotel', Room='Family Room 45 m²- Family Oda (Yandan Deniz) 45 m²'
+[2025-05-02 19:44:47,477: INFO/ForkPoolWorker-8]   [Hotel Match] Row 2342: 'Bellis Deluxe Hotel' -> 'Bellis Deluxe Hotel' (Score: 100.00)
+[2025-05-02 19:44:47,479: INFO/ForkPoolWorker-8]   [RoomTypeMatch] Row 2342: Öğrenilmiş eşleşme bulundu ve uygulandı: [<Room: 1/2 PAX Family Room (R0071) - Bellis Deluxe Hotel>, <Room: 3/4 PAX Family Room (R0007) - Bellis Deluxe Hotel>]
+[2025-05-02 19:44:47,480: INFO/ForkPoolWorker-8] Matching row 2343: Hotel='Bellis Deluxe Hotel', Room='Family Room 45 m²- Family Oda (Yandan Deniz) 45 m²'
+[2025-05-02 19:44:47,482: INFO/ForkPoolWorker-8]   [Hotel Match] Row 2343: 'Bellis Deluxe Hotel' -> 'Bellis Deluxe Hotel' (Score: 100.00)
+[2025-05-02 19:44:47,484: INFO/ForkPoolWorker-8]   [RoomTypeMatch] Row 2343: Öğrenilmiş eşleşme bulundu ve uygulandı: [<Room: 1/2 PAX Family Room (R0071) - Bellis Deluxe Hotel>, <Room: 3/4 PAX Family Room (R0007) - Bellis Deluxe Hotel>]
+[2025-05-02 19:44:47,486: INFO/ForkPoolWorker-8] Matching row 2344: Hotel='Bellis Deluxe Hotel', Room='Camelia (Garden View) 22m² -Camelia Garden (ROH) 22 m²'
+[2025-05-02 19:44:47,488: INFO/ForkPoolWorker-8]   [Hotel Match] Row 2344: 'Bellis Deluxe Hotel' -> 'Bellis Deluxe Hotel' (Score: 100.00)
+[2025-05-02 19:44:47,490: INFO/ForkPoolWorker-8]   [RoomTypeMatch] Row 2344: Öğrenilmiş eşleşme bulundu ve uygulandı: [<Room: 1 PAX Camelia (Garden View) (R0280) - Bellis Deluxe Hotel>, <Room: 2/3 PAX Camelia (Garden View) (R0281) - Bellis Deluxe Hotel>]
+[2025-05-02 19:44:47,491: INFO/ForkPoolWorker-8] Matching row 2345: Hotel='Bellis Deluxe Hotel', Room='Standart (Sea View) 25 m²- Standart (Deniz Manzara) 25 m²'
+[2025-05-02 19:44:47,493: INFO/ForkPoolWorker-8]   [Hotel Match] Row 2345: 'Bellis Deluxe Hotel' -> 'Bellis Deluxe Hotel' (Score: 100.00)
+[2025-05-02 19:44:47,494: INFO/ForkPoolWorker-8]   [RoomTypeMatch] Row 2345: Öğrenilmiş eşleşme bulundu ve uygulandı: [<Room: SNG Standard (Sea View) (R0274) - Bellis Deluxe Hotel>, <Room: Standard (Sea View) (R0275) - Bellis Deluxe Hotel>]
+[2025-05-02 19:44:47,496: INFO/ForkPoolWorker-8] Matching row 2346: Hotel='Bellis Deluxe Hotel', Room='Standart (Garden View/ Land view) 25 m²- Standart (Bahçe Manzara) 25 m²'
+[2025-05-02 19:44:47,498: INFO/ForkPoolWorker-8]   [Hotel Match] Row 2346: 'Bellis Deluxe Hotel' -> 'Bellis Deluxe Hotel' (Score: 100.00)
+[2025-05-02 19:44:47,499: INFO/ForkPoolWorker-8]   [RoomTypeMatch] Row 2346: Öğrenilmiş eşleşme bulundu ve uygulandı: [<Room: SNG Standard (Garden View) (R0270) - Bellis Deluxe Hotel>, <Room: Standard (Garden View) (R0271) - Bellis Deluxe Hotel>]
+[2025-05-02 19:44:47,501: INFO/ForkPoolWorker-8] Matching row 2347: Hotel='Bellis Deluxe Hotel', Room='Family Room 45 m²- Family Oda (Yandan Deniz) 45 m²'
+[2025-05-02 19:44:47,502: INFO/ForkPoolWorker-8]   [Hotel Match] Row 2347: 'Bellis Deluxe Hotel' -> 'Bellis Deluxe Hotel' (Score: 100.00)
+[2025-05-02 19:44:47,504: INFO/ForkPoolWorker-8]   [RoomTypeMatch] Row 2347: Öğrenilmiş eşleşme bulundu ve uygulandı: [<Room: 1/2 PAX Family Room (R0071) - Bellis Deluxe Hotel>, <Room: 3/4 PAX Family Room (R0007) - Bellis Deluxe Hotel>]
+[2025-05-02 19:44:47,505: INFO/ForkPoolWorker-8] Matching row 2348: Hotel='Bellis Deluxe Hotel', Room='Standart (Partly Sea View) 25 m²- Standart Sea Side view- Standart (Yandan Deniz) 25 m²'
+[2025-05-02 19:44:47,507: INFO/ForkPoolWorker-8]   [Hotel Match] Row 2348: 'Bellis Deluxe Hotel' -> 'Bellis Deluxe Hotel' (Score: 100.00)
+[2025-05-02 19:44:47,509: INFO/ForkPoolWorker-8]   [RoomTypeMatch] Row 2348: Öğrenilmiş eşleşme bulundu ve uygulandı: [<Room: SNG Standard (Partly Sea View) (R0272) - Bellis Deluxe Hotel>, <Room: Standard (Partly Sea View) (R0273) - Bellis Deluxe Hotel>]
+[2025-05-02 19:44:47,510: INFO/ForkPoolWorker-8] Matching row 2349: Hotel='Bellis Deluxe Hotel', Room='Junior Suite (Partly Sea View) 35 m²- Junior Suit (Yandan Deniz) 35 m²'
+[2025-05-02 19:44:47,512: INFO/ForkPoolWorker-8]   [Hotel Match] Row 2349: 'Bellis Deluxe Hotel' -> 'Bellis Deluxe Hotel' (Score: 100.00)
+[2025-05-02 19:44:47,513: INFO/ForkPoolWorker-8]   [Room Segment Exact Match] Row 2349: 'Junior Suite (Partly Sea View) 35 m²- Junior Suit (Yandan Deniz) 35 m²' -> ['1 PAX Junior Suite (Partly Sea View) (Score: 83)']
+[2025-05-02 19:44:47,514: INFO/ForkPoolWorker-8] Matching row 2350: Hotel='Bellis Deluxe Hotel', Room='Camelia (Garden View) 22m² -Camelia Garden (ROH) 22 m²'
+[2025-05-02 19:44:47,516: INFO/ForkPoolWorker-8]   [Hotel Match] Row 2350: 'Bellis Deluxe Hotel' -> 'Bellis Deluxe Hotel' (Score: 100.00)
+[2025-05-02 19:44:47,518: INFO/ForkPoolWorker-8]   [RoomTypeMatch] Row 2350: Öğrenilmiş eşleşme bulundu ve uygulandı: [<Room: 1 PAX Camelia (Garden View) (R0280) - Bellis Deluxe Hotel>, <Room: 2/3 PAX Camelia (Garden View) (R0281) - Bellis Deluxe Hotel>]
+[2025-05-02 19:44:47,519: INFO/ForkPoolWorker-8] Matching row 2351: Hotel='Bellis Deluxe Hotel', Room='Standart (Sea View) 25 m²- Standart (Deniz Manzara) 25 m²'
+[2025-05-02 19:44:47,521: INFO/ForkPoolWorker-8]   [Hotel Match] Row 2351: 'Bellis Deluxe Hotel' -> 'Bellis Deluxe Hotel' (Score: 100.00)
+[2025-05-02 19:44:47,522: INFO/ForkPoolWorker-8]   [RoomTypeMatch] Row 2351: Öğrenilmiş eşleşme bulundu ve uygulandı: [<Room: SNG Standard (Sea View) (R0274) - Bellis Deluxe Hotel>, <Room: Standard (Sea View) (R0275) - Bellis Deluxe Hotel>]
+[2025-05-02 19:44:47,523: INFO/ForkPoolWorker-8] Matching row 2352: Hotel='Bellis Deluxe Hotel', Room='Jasmine Lagoon Family (Swim-up) 80m²'
+[2025-05-02 19:44:47,525: INFO/ForkPoolWorker-8]   [Hotel Match] Row 2352: 'Bellis Deluxe Hotel' -> 'Bellis Deluxe Hotel' (Score: 100.00)
+[2025-05-02 19:44:47,527: INFO/ForkPoolWorker-8] Matching row 2353: Hotel='Bellis Deluxe Hotel', Room='Camelia Family Superior 50 m²'
+[2025-05-02 19:44:47,529: INFO/ForkPoolWorker-8]   [Hotel Match] Row 2353: 'Bellis Deluxe Hotel' -> 'Bellis Deluxe Hotel' (Score: 100.00)
+[2025-05-02 19:44:47,530: INFO/ForkPoolWorker-8]   [Room Segment Exact Match] Row 2353: 'Camelia Family Superior 50 m²' -> ['1/2 PAX Camelia Family Superior (Score: 82)', '3/4 PAX Camelia Family Superior (Score: 82)']
+[2025-05-02 19:44:47,531: INFO/ForkPoolWorker-8] Matching row 2354: Hotel='Bellis Deluxe Hotel', Room='Villa Bellis (Dublex, Private Pool) 200 m2'
+[2025-05-02 19:44:47,533: INFO/ForkPoolWorker-8]   [Hotel Match] Row 2354: 'Bellis Deluxe Hotel' -> 'Bellis Deluxe Hotel' (Score: 100.00)
+[2025-05-02 19:44:47,533: WARNING/ForkPoolWorker-8]   [Room Match] Row 2354: Multiple room types detected ('Villa Bellis (Dublex, Private Pool) 200 m2') - matching not fully implemented yet.
+[2025-05-02 19:44:47,534: INFO/ForkPoolWorker-8] Matching row 2355: Hotel='Bellis Deluxe Hotel', Room='Standart (Partly Sea View) 25 m²- Standart Sea Side view- Standart (Yandan Deniz) 25 m²'
+[2025-05-02 19:44:47,536: INFO/ForkPoolWorker-8]   [Hotel Match] Row 2355: 'Bellis Deluxe Hotel' -> 'Bellis Deluxe Hotel' (Score: 100.00)
+[2025-05-02 19:44:47,537: INFO/ForkPoolWorker-8]   [RoomTypeMatch] Row 2355: Öğrenilmiş eşleşme bulundu ve uygulandı: [<Room: SNG Standard (Partly Sea View) (R0272) - Bellis Deluxe Hotel>, <Room: Standard (Partly Sea View) (R0273) - Bellis Deluxe Hotel>]
+[2025-05-02 19:44:47,539: INFO/ForkPoolWorker-8] Matching task finished for Email ID: 432. Processed: 18, Not Found: 2
+[2025-05-02 19:44:47,539: INFO/ForkPoolWorker-8] Task emails.tasks.match_email_rows_batch_task[0a1a2d62-fa64-47d0-8a5f-b15ee4912718] succeeded in 0.18239466601517051s: None
+[2025-05-03 04:13:40,653: INFO/MainProcess] Task celery.backend_cleanup[069e44dc-8ce8-43b3-be63-1c546e956550] received
+[2025-05-03 04:13:40,707: INFO/ForkPoolWorker-8] Task celery.backend_cleanup[069e44dc-8ce8-43b3-be63-1c546e956550] succeeded in 0.012891082908026874s: None
+[2025-05-03 04:15:09,807: INFO/MainProcess] Task celery.backend_cleanup[5f5b425a-ada4-45a4-839c-9e4b0960a414] received
+[2025-05-03 04:15:09,837: INFO/ForkPoolWorker-8] Task celery.backend_cleanup[5f5b425a-ada4-45a4-839c-9e4b0960a414] succeeded in 0.007361375028267503s: None

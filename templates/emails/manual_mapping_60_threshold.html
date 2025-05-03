@@ -1,0 +1,291 @@
+<!-- Manual Mapping Section - Add this after the eşleşme indicators in the extracted data tab -->
+<div class="card mt-4">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="bi bi-tools"></i> Manuel Eşleştirme
+        </h5>
+    </div>
+    <div class="card-body">
+        <p class="text-muted">Eşleşmeyen veya kısmi eşleşen satırlar için manuel eşleştirme yapabilirsiniz.</p>
+        
+        <form id="manualMappingForm">
+            <div class="row mb-3">
+                <label class="col-sm-3 col-form-label">Satır Seçin</label>
+                <div class="col-sm-9">
+                    <select class="form-select" id="rowSelect">
+                        <option value="">Satır seçin...</option>
+                        {% for row in email.rows.all %}
+                            {% if not row.juniper_hotel or not row.juniper_room %}
+                                <option value="{{ row.id }}">Satır {{ forloop.counter }}: {{ row.hotel_name }} ({{ row.start_date|date:"d.m.Y" }} - {{ row.end_date|date:"d.m.Y" }})</option>
+                            {% endif %}
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            
+            <div class="row mb-3">
+                <label class="col-sm-3 col-form-label">Juniper Otel</label>
+                <div class="col-sm-9">
+                    <select class="form-select" id="hotelSelect" disabled>
+                        <option value="">Otel seçin...</option>
+                        <!-- Hotels will be loaded via AJAX -->
+                    </select>
+                </div>
+            </div>
+            
+            <div class="row mb-3">
+                <label class="col-sm-3 col-form-label">Oda Tipleri</label>
+                <div class="col-sm-9">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="allRooms" checked>
+                        <label class="form-check-label" for="allRooms">
+                            Tüm Oda Tipleri
+                        </label>
+                    </div>
+                    <div class="mt-2 ps-4" id="roomTypeContainer">
+                        <!-- Room types will be loaded via AJAX -->
+                    </div>
+                </div>
+            </div>
+            
+            <div class="text-end">
+                <button type="button" class="btn btn-primary" id="applyMappingBtn" disabled>
+                    <i class="bi bi-check2-circle"></i> Eşleştirmeyi Uygula
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Add this to your JavaScript section -->
+<script>
+// Manual mapping functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const rowSelect = document.getElementById('rowSelect');
+    const hotelSelect = document.getElementById('hotelSelect');
+    const allRoomsCheckbox = document.getElementById('allRooms');
+    const roomTypeContainer = document.getElementById('roomTypeContainer');
+    const applyMappingBtn = document.getElementById('applyMappingBtn');
+    
+    // Match score threshold - set to 60%
+    const MATCH_THRESHOLD = 60;
+    
+    // Helper function to get score badge HTML
+    function getScoreBadgeHtml(score) {
+        let badgeClass = '';
+        if (score >= 90) {
+            badgeClass = 'bg-success';
+        } else if (score >= MATCH_THRESHOLD) {
+            badgeClass = 'bg-warning text-dark';
+        } else {
+            badgeClass = 'bg-danger';
+        }
+        
+        return `<span class="badge ${badgeClass} ms-2">${score}%</span>`;
+    }
+    
+    // When a row is selected
+    rowSelect.addEventListener('change', function() {
+        if (this.value) {
+            // Enable hotel select
+            hotelSelect.disabled = false;
+            
+            // Load hotels via AJAX
+            fetch(`/api/hotels/search/?email_row=${this.value}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    hotelSelect.innerHTML = '<option value="">Otel seçin...</option>';
+                    
+                    // Group hotels by match quality
+                    const goodMatches = [];
+                    const fairMatches = [];
+                    const poorMatches = [];
+                    
+                    data.hotels.forEach(hotel => {
+                        const score = Math.round(hotel.match_score * 100);
+                        const hotel_data = {
+                            id: hotel.id,
+                            name: hotel.name,
+                            code: hotel.code,
+                            score: score
+                        };
+                        
+                        if (score >= 90) {
+                            goodMatches.push(hotel_data);
+                        } else if (score >= MATCH_THRESHOLD) {
+                            fairMatches.push(hotel_data);
+                        } else {
+                            poorMatches.push(hotel_data);
+                        }
+                    });
+                    
+                    // Add option groups with matches sorted by score
+                    if (goodMatches.length > 0) {
+                        const goodGroup = document.createElement('optgroup');
+                        goodGroup.label = 'İyi Eşleşmeler (90% ve üzeri)';
+                        goodMatches.sort((a, b) => b.score - a.score).forEach(hotel => {
+                            const option = document.createElement('option');
+                            option.value = hotel.id;
+                            option.innerHTML = `${hotel.name} (${hotel.code}) ${getScoreBadgeHtml(hotel.score)}`;
+                            option.dataset.score = hotel.score;
+                            goodGroup.appendChild(option);
+                        });
+                        hotelSelect.appendChild(goodGroup);
+                    }
+                    
+                    if (fairMatches.length > 0) {
+                        const fairGroup = document.createElement('optgroup');
+                        fairGroup.label = 'Kısmi Eşleşmeler (60% - 89%)';
+                        fairMatches.sort((a, b) => b.score - a.score).forEach(hotel => {
+                            const option = document.createElement('option');
+                            option.value = hotel.id;
+                            option.innerHTML = `${hotel.name} (${hotel.code}) ${getScoreBadgeHtml(hotel.score)}`;
+                            option.dataset.score = hotel.score;
+                            fairGroup.appendChild(option);
+                        });
+                        hotelSelect.appendChild(fairGroup);
+                    }
+                    
+                    if (poorMatches.length > 0) {
+                        const poorGroup = document.createElement('optgroup');
+                        poorGroup.label = 'Düşük Eşleşmeler (60% altı)';
+                        poorMatches.sort((a, b) => b.score - a.score).forEach(hotel => {
+                            const option = document.createElement('option');
+                            option.value = hotel.id;
+                            option.innerHTML = `${hotel.name} (${hotel.code}) ${getScoreBadgeHtml(hotel.score)}`;
+                            option.dataset.score = hotel.score;
+                            poorGroup.appendChild(option);
+                        });
+                        hotelSelect.appendChild(poorGroup);
+                    }
+                    
+                    hotelSelect.innerHTML += '<option value="not_found">Sistemde bulunamadı</option>';
+                })
+                .catch(error => {
+                    console.error('Error loading hotels:', error);
+                    alert('Otel listesi yüklenirken hata oluştu: ' + error.message);
+                });
+        } else {
+            hotelSelect.disabled = true;
+            hotelSelect.innerHTML = '<option value="">Otel seçin...</option>';
+            roomTypeContainer.innerHTML = '';
+            allRoomsCheckbox.checked = true;
+            applyMappingBtn.disabled = true;
+        }
+    });
+    
+    // When a hotel is selected
+    hotelSelect.addEventListener('change', function() {
+        if (this.value && this.value !== 'not_found') {
+            // Enable apply button
+            applyMappingBtn.disabled = false;
+            
+            // Load room types via AJAX
+            fetch(`/api/hotels/${this.value}/room_types/`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    roomTypeContainer.innerHTML = '';
+                    data.room_types.forEach((room, index) => {
+                        const checkboxHtml = `
+                            <div class="form-check">
+                                <input class="form-check-input room-type-checkbox" type="checkbox" id="room${index}" 
+                                    name="room_types" value="${room.id}" ${allRoomsCheckbox.checked ? 'checked disabled' : ''}>
+                                <label class="form-check-label" for="room${index}">
+                                    ${room.name}
+                                </label>
+                            </div>
+                        `;
+                        roomTypeContainer.innerHTML += checkboxHtml;
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading room types:', error);
+                    alert('Oda tipleri yüklenirken hata oluştu: ' + error.message);
+                });
+        } else if (this.value === 'not_found') {
+            roomTypeContainer.innerHTML = '<div class="alert alert-warning">Otel sistemde bulunamadı, oda tipleri yüklenemedi.</div>';
+            applyMappingBtn.disabled = false;
+        } else {
+            roomTypeContainer.innerHTML = '';
+            applyMappingBtn.disabled = true;
+        }
+    });
+    
+    // Toggle all room checkboxes
+    allRoomsCheckbox.addEventListener('change', function() {
+        const roomCheckboxes = document.querySelectorAll('.room-type-checkbox');
+        roomCheckboxes.forEach(checkbox => {
+            checkbox.checked = this.checked;
+            checkbox.disabled = this.checked;
+        });
+    });
+    
+    // Apply mapping
+    applyMappingBtn.addEventListener('click', function() {
+        const rowId = rowSelect.value;
+        const hotelId = hotelSelect.value;
+        
+        // Get selected room types
+        let roomTypes = [];
+        if (allRoomsCheckbox.checked) {
+            roomTypes = ['all'];
+        } else {
+            document.querySelectorAll('.room-type-checkbox:checked').forEach(checkbox => {
+                roomTypes.push(checkbox.value);
+            });
+        }
+        
+        // For debug
+        console.log('Sending data:', {
+            row_id: rowId,
+            hotel_id: hotelId,
+            room_types: roomTypes
+        });
+        
+        // Send mapping data to server
+        fetch('/api/emails/rows/manual_mapping/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}',
+            },
+            body: JSON.stringify({
+                row_id: rowId,
+                hotel_id: hotelId,
+                room_types: roomTypes,
+            }),
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                // Show success message
+                alert('Eşleştirme başarıyla uygulandı. Sayfa yenileniyor...');
+                
+                // Reload the page to reflect changes
+                window.location.reload();
+            } else {
+                alert(`Eşleştirme uygulanırken hata oluştu: ${data.error}`);
+            }
+        })
+        .catch(error => {
+            console.error('Error applying mapping:', error);
+            alert('Eşleştirme uygulanırken bir hata oluştu: ' + error.message);
+        });
+    });
+});
+</script> 

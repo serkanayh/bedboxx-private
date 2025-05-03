@@ -1,0 +1,381 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Email List - StopSale Automation System{% endblock %}
+
+{% block extra_css %}
+<style>
+    .email-subject {
+        color: #555;
+        font-weight: 500;
+    }
+    .email-table tr {
+        transition: all 0.2s ease;
+    }
+    .email-table tr:hover {
+        background-color: rgba(74, 107, 223, 0.05);
+    }
+    .email-table th {
+        background-color: #f1f5ff;
+        border-top: 1px solid #d8e2fd;
+        border-bottom: 1px solid #d8e2fd;
+        color: #516395;
+        font-weight: 600;
+    }
+    .email-card {
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        border: none;
+    }
+    .badge {
+        font-weight: 500;
+        padding: 0.4em 0.7em;
+        border-radius: 6px;
+    }
+    .badge.bg-pending {
+        background-color: #ffb74d;
+        color: #904c00;
+    }
+    .badge.bg-approved {
+        background-color: #66bb6a;
+        color: #1b5e20;
+    }
+    .badge.bg-manual {
+        background-color: #29b6f6;
+        color: #01579b;
+    }
+    .badge.bg-robot-sent {
+        background-color: #7986cb;
+        color: #1a237e;
+    }
+    .badge.bg-robot-processed {
+        background-color: #4db6ac;
+        color: #004d40;
+    }
+    .badge.bg-ignored {
+        background-color: #bdbdbd;
+        color: #424242;
+    }
+    .badge.bg-error {
+        background-color: #ef5350;
+        color: #b71c1c;
+    }
+    .btn-action {
+        border-radius: 6px;
+        font-weight: 500;
+    }
+    .action-icons {
+        font-size: 0.9rem;
+        margin-right: 5px;
+    }
+    .email-meta {
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+    .pagination .page-link {
+        color: #4a6bdf;
+        border-color: #d8e2fd;
+    }
+    .pagination .page-item.active .page-link {
+        background-color: #4a6bdf;
+        border-color: #4a6bdf;
+        color: white;
+    }
+    .unread-indicator {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background-color: #4a6bdf;
+        display: inline-block;
+        margin-right: 6px;
+        vertical-align: middle;
+    }
+    .filter-badge {
+        background-color: #e3f2fd;
+        color: #4a6bdf;
+        padding: 0.5em 0.8em;
+        border-radius: 20px;
+        display: inline-flex;
+        align-items: center;
+        margin-right: 0.5rem;
+        font-size: 0.85rem;
+    }
+    .filter-badge .bi-x {
+        cursor: pointer;
+        margin-left: 5px;
+    }
+    .info-alert {
+        background-color: #e3f2fd;
+        border-color: #bbdefb;
+        color: #0d47a1;
+        border-radius: 8px;
+    }
+    .btn-delete {
+        color: #dc3545; /* Bootstrap danger color */
+        border: none;
+        background: none;
+        padding: 0.25rem 0.5rem;
+        font-size: 0.9rem;
+    }
+    .btn-delete:hover {
+        color: #a71d2a;
+        background-color: rgba(220, 53, 69, 0.1);
+        border-radius: 4px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center mb-4">
+    <h1>Email List</h1>
+    <div class="d-flex">
+        <form method="get" class="d-flex me-2">
+            <div class="input-group">
+                <input type="text" name="search" class="form-control" placeholder="Search emails..." value="{{ request.GET.search|default:'' }}">
+                <button class="btn btn-outline-primary" type="submit">
+                    <i class="bi bi-search"></i>
+                </button>
+            </div>
+        </form>
+        <div class="dropdown">
+            <button class="btn btn-outline-primary dropdown-toggle btn-action" type="button" id="filterDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-funnel action-icons"></i> Filter
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="filterDropdown">
+                <li><h6 class="dropdown-header">Status</h6></li>
+                <li><a class="dropdown-item {% if request.GET.status == 'pending' %}active{% endif %}" href="?status=pending{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">Pending</a></li>
+                <li><a class="dropdown-item {% if request.GET.status == 'approved' %}active{% endif %}" href="?status=approved{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">Approved</a></li>
+                <li><a class="dropdown-item {% if request.GET.status == 'manual_processed' %}active{% endif %}" href="?status=manual_processed{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">Manual Processed</a></li>
+                <li><a class="dropdown-item {% if request.GET.status == 'sent_to_robot' %}active{% endif %}" href="?status=sent_to_robot{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">Sent to Robot</a></li>
+                <li><a class="dropdown-item {% if request.GET.status == 'robot_processed' %}active{% endif %}" href="?status=robot_processed{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">Robot Processed</a></li>
+                <li><a class="dropdown-item {% if request.GET.status == 'ignored' %}active{% endif %}" href="?status=ignored{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">Ignored</a></li>
+                <li><a class="dropdown-item {% if request.GET.status == 'error' %}active{% endif %}" href="?status=error{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">Error</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item {% if not request.GET.status %}active{% endif %}" href="?{% if request.GET.search %}search={{ request.GET.search }}{% endif %}">All</a></li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- Active filters display -->
+<div class="mb-3">
+    {% if request.GET.status or request.GET.search %}
+    <div class="active-filters">
+        {% if request.GET.status %}
+        <span class="filter-badge">
+            Status: {{ request.GET.status|title }}
+            <a href="?{% if request.GET.search %}search={{ request.GET.search }}{% endif %}" class="text-decoration-none">
+                <i class="bi bi-x"></i>
+            </a>
+        </span>
+        {% endif %}
+        
+        {% if request.GET.search %}
+        <span class="filter-badge">
+            Search: "{{ request.GET.search }}"
+            <a href="?{% if request.GET.status %}status={{ request.GET.status }}{% endif %}" class="text-decoration-none">
+                <i class="bi bi-x"></i>
+            </a>
+        </span>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<div class="alert info-alert mb-3" id="autoAnalysisInfo">
+    <i class="bi bi-info-circle-fill me-2"></i>
+    <span>E-postalar listelenirken, analiz edilmemiş e-postalar otomatik olarak AI ile analiz edilmektedir. Her sayfa yüklemesinde en fazla 5 e-posta analiz edilir.</span>
+</div>
+
+<div class="card email-card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0 email-table">
+                <thead>
+                    <tr>
+                        <th style="width: 35%">Subject</th>
+                        <th style="width: 15%">Sender</th>
+                        <th style="width: 15%">Received Date</th>
+                        <th style="width: 10%">Status</th>
+                        <th style="width: 10%">Eşleşme</th>
+                        <th style="width: 5%">Attachments</th>
+                        <th style="width: 10%">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for email in page_obj %}
+                    <tr id="email-row-{{ email.id }}">
+                        <td>
+                            {% if email.status == 'pending' %}<span class="unread-indicator"></span>{% endif %}
+                            <a href="{% url 'emails:email_detail' email.id %}" class="email-subject text-decoration-none">{{ email.subject }}</a>
+                        </td>
+                        <td class="email-meta">{{ email.sender }}</td>
+                        <td class="email-meta">{{ email.received_date|date:"d M Y H:i" }}</td>
+                        <td>
+                            {# Dynamic badge based on status #}
+                            {% if email.status == 'pending' %}
+                                <span class="badge bg-warning">{{ email.get_status_display }}</span>
+                            {% elif email.status == 'approved' %}
+                                <span class="badge bg-success">{{ email.get_status_display }}</span>
+                            {% elif email.status == 'rejected' %}
+                                <span class="badge bg-danger">{{ email.get_status_display }}</span> {# Changed to bg-danger #}
+                            {% elif email.status == 'sent_to_robot' %}
+                                <span class="badge bg-info">{{ email.get_status_display }}</span>
+                            {% elif email.status == 'robot_processed' %}
+                                <span class="badge bg-secondary">{{ email.get_status_display }}</span>
+                             {% elif email.status == 'processing' %} {# ADDED: Handle processing status #}
+                                 <span class="badge bg-primary">{{ email.get_status_display }}</span>
+                             {% elif email.status == 'processed_nodata' %} {# ADDED: Handle processed_nodata #}
+                                 <span class="badge bg-light text-dark">{{ email.get_status_display }}</span>
+                            {% else %}
+                                <span class="badge bg-dark">{{ email.get_status_display|default:email.status }}</span> {# Fallback #}
+                            {% endif %}
+                        </td>
+                        <td class="email-meta">
+                            {% if email.total_count > 0 %}
+                                <span class="badge bg-{{ email.match_status_color }}">
+                                    ({{ email.matched_count }}/{{ email.total_count }})
+                                </span>
+                            {% else %}
+                                <span class="badge bg-secondary">
+                                    (0/0)
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center email-meta">
+                            {% if email.has_attachments %}
+                            <i class="bi bi-paperclip"></i>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{% url 'emails:email_detail' email.id %}" class="btn btn-sm btn-outline-primary me-1 btn-action" title="View Details">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            <!-- Add Delete Button -->
+                            <button class="btn btn-sm btn-delete delete-email-btn" 
+                                    title="Delete Email"
+                                    data-email-id="{{ email.id }}"
+                                    data-email-subject="{{ email.subject|escapejs }}">
+                                <i class="bi bi-trash3"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center p-4">No emails found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Pagination -->
+{% if page_obj.has_other_pages %}
+<nav aria-label="Page navigation" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+        <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}#">Previous</a></li>
+        {% else %}
+        <li class="page-item disabled"><span class="page-link">Previous</span></li>
+        {% endif %}
+
+        {% for i in page_obj.paginator.page_range %}
+            {% if page_obj.number == i %}
+                <li class="page-item active" aria-current="page"><span class="page-link">{{ i }}</span></li>
+            {% elif i > page_obj.number|add:'-3' and i < page_obj.number|add:'3' %}
+                <li class="page-item"><a class="page-link" href="?page={{ i }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}#">{{ i }}</a></li>
+            {% elif page_obj.number > 3 and i == 1 %}
+                <li class="page-item"><a class="page-link" href="?page=1{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}#">1</a></li>
+                {% if page_obj.number > 4 %}<li class="page-item disabled"><span class="page-link">...</span></li>{% endif %}
+            {% elif page_obj.number < page_obj.paginator.num_pages|add:'-2' and i == page_obj.paginator.num_pages %}
+                {% if page_obj.number < page_obj.paginator.num_pages|add:'-3' %}<li class="page-item disabled"><span class="page-link">...</span></li>{% endif %}
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}#">{{ page_obj.paginator.num_pages }}</a></li>
+            {% endif %}
+        {% endfor %}
+
+        {% if page_obj.has_next %}
+        <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}#">Next</a></li>
+        {% else %}
+        <li class="page-item disabled"><span class="page-link">Next</span></li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // Get CSRF token
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                // Does this cookie string begin with the name we want?
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    const csrftoken = getCookie('csrftoken');
+
+    // Add event listeners to all delete buttons
+    const deleteButtons = document.querySelectorAll('.delete-email-btn');
+    deleteButtons.forEach(button => {
+        button.addEventListener('click', function () {
+            const emailId = this.dataset.emailId;
+            const emailSubject = this.dataset.emailSubject;
+            const apiUrl = `/api/emails/${emailId}/`;
+
+            // Confirmation dialog
+            if (confirm(`Are you sure you want to delete the email: "${emailSubject}"? This cannot be undone.`)) {
+                // Send DELETE request
+                fetch(apiUrl, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': csrftoken,
+                        'Content-Type': 'application/json'
+                        // Add any other necessary headers like Authorization if needed
+                    }
+                })
+                .then(response => {
+                    if (response.ok && response.status === 204) {
+                        // Success: Remove the row from the table
+                        const row = document.getElementById(`email-row-${emailId}`);
+                        if (row) {
+                            row.remove();
+                            // Optionally, display a success message
+                            console.log(`Email ${emailId} deleted successfully.`);
+                            // Example: showToast('Email deleted successfully.');
+                        }
+                    } else {
+                        // Handle errors
+                        response.json().then(data => {
+                            console.error('Error deleting email:', response.status, data);
+                            alert(`Error deleting email: ${data.detail || response.statusText}`);
+                        }).catch(() => {
+                            console.error('Error deleting email:', response.status, response.statusText);
+                            alert(`Error deleting email: ${response.statusText}`);
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Network error:', error);
+                    alert('Network error occurred while trying to delete the email.');
+                });
+            }
+        });
+    });
+
+    // Placeholder for a toast notification function (if you use Bootstrap toasts or similar)
+    // function showToast(message) { ... }
+});
+</script>
+{% endblock %}

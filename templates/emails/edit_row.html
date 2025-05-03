@@ -1,0 +1,362 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Satır Düzenle - {{ row.hotel_name }} | StopSale Automation{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'core:dashboard' %}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'emails:email_list' %}">Emails</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'emails:email_detail' row.email.id %}">Email #{{ row.email.id }}</a></li>
+                    <li class="breadcrumb-item active">Satır Düzenle</li>
+                </ol>
+            </nav>
+            
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-pencil-square me-2"></i> Satır Düzenle
+                    </h5>
+                    <a href="{% url 'emails:email_detail' row.email.id %}" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-arrow-left"></i> Emaile Dön
+                    </a>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Email Subject:</label>
+                                <div>{{ row.email.subject }}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Email From:</label>
+                                <div>{{ row.email.sender }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle-fill me-2"></i>
+                        <strong>Önemli:</strong> Bu satırı onaylamak için, hem otel hem de oda tipini geçerli Juniper kayıtlarıyla eşleştirmelisiniz.
+                    </div>
+                    
+                    <form method="post" action="{% url 'emails:edit_row' row.id %}">
+                        {% csrf_token %}
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h6 class="mb-0">Emailden Çıkarılan Veriler</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="mb-3">
+                                            <label class="form-label">Otel Adı:</label>
+                                            <input type="text" class="form-control" value="{{ row.hotel_name }}" readonly>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Oda Tipi:</label>
+                                            <input type="text" class="form-control" value="{{ row.room_type }}" readonly>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Pazar:</label>
+                                            <input type="text" class="form-control" value="{{ row.market }}" readonly>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h6 class="mb-0">Juniper Eşleştirmeleri</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="mb-3">
+                                            <label class="form-label">Juniper Otel:</label>
+                                            <div class="input-group">
+                                                <select class="form-select" name="hotel_id" id="hotel_select" required>
+                                                    <option value="">-- Otel Seç --</option>
+                                                    {% for hotel in hotels %}
+                                                    <option value="{{ hotel.id }}" {% if row.juniper_hotel and row.juniper_hotel.id == hotel.id %}selected{% endif %}>
+                                                        {{ hotel.juniper_hotel_name }} ({{ hotel.juniper_code }})
+                                                    </option>
+                                                    {% endfor %}
+                                                </select>
+                                                <button class="btn btn-outline-secondary" type="button" id="searchHotelBtn" data-bs-toggle="modal" data-bs-target="#hotelSearchModal">
+                                                    <i class="bi bi-search"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="mb-3">
+                                            <label class="form-label">Juniper Oda Tipi:</label>
+                                            <select class="form-select" name="room_id" id="room_select" required {% if not row.juniper_hotel %}disabled{% endif %}>
+                                                <option value="">-- Oda Tipi Seç --</option>
+                                                {% for room in rooms %}
+                                                <option value="{{ room.id }}" {% if row.juniper_room and row.juniper_room.id == room.id %}selected{% endif %}>
+                                                    {{ room.juniper_room_type }} ({{ room.room_code }})
+                                                </option>
+                                                {% endfor %}
+                                            </select>
+                                            {% if not row.juniper_hotel %}
+                                            <div class="form-text text-warning">
+                                                <i class="bi bi-exclamation-triangle-fill"></i>
+                                                Önce bir otel seçin
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                        
+                                        <div class="mb-3">
+                                            <label class="form-label">Juniper Pazarlar:</label>
+                                            <select class="form-select" name="market_ids" id="market_select" multiple>
+                                                {% for market in markets %}
+                                                <option value="{{ market.id }}" {% if market.id in selected_market_ids %}selected{% endif %}>
+                                                    {{ market.name }} {% if market.juniper_code %}({{ market.juniper_code }}){% endif %}
+                                                </option>
+                                                {% endfor %}
+                                            </select>
+                                            <div class="form-text">
+                                                Birden fazla pazar seçmek için Ctrl/Cmd tuşunu basılı tutun
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Başlangıç Tarihi:</label>
+                                <input type="date" class="form-control" name="start_date" value="{{ row.start_date|date:'Y-m-d' }}" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Bitiş Tarihi:</label>
+                                <input type="date" class="form-control" name="end_date" value="{{ row.end_date|date:'Y-m-d' }}" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Satış Durumu:</label>
+                                <select class="form-select" name="sale_type">
+                                    <option value="stop" {% if row.sale_type == 'stop' %}selected{% endif %}>Stop Sale</option>
+                                    <option value="open" {% if row.sale_type == 'open' %}selected{% endif %}>Open Sale</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                            <a href="{% url 'emails:email_detail' row.email.id %}" class="btn btn-outline-secondary">İptal</a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-save"></i> Değişiklikleri Kaydet
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hotel Search Modal -->
+<div class="modal fade" id="hotelSearchModal" tabindex="-1" aria-labelledby="hotelSearchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="hotelSearchModalLabel">Otel Ara</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="hotelSearchInput" placeholder="Otel adını yazın...">
+                        <button class="btn btn-primary" type="button" id="doHotelSearch">
+                            <i class="bi bi-search"></i> Ara
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                    <table class="table table-sm table-hover" id="hotelSearchResults">
+                        <thead>
+                            <tr>
+                                <th>Otel Adı</th>
+                                <th>Kod</th>
+                                <th>İşlem</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Search results will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div id="noResultsMessage" class="text-center py-3 d-none">
+                    <i class="bi bi-search fs-1 text-muted"></i>
+                    <p class="text-muted">Sonuç bulunamadı</p>
+                </div>
+                
+                <div id="initialSearchMessage" class="text-center py-3">
+                    <i class="bi bi-search fs-1 text-muted"></i>
+                    <p class="text-muted">Otel adını yazıp arama yapın</p>
+                </div>
+                
+                <div id="loadingMessage" class="text-center py-3 d-none">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Yükleniyor...</span>
+                    </div>
+                    <p class="text-muted">Aranıyor...</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // Handle hotel change to load room types
+        $('#hotel_select').change(function() {
+            const hotelId = $(this).val();
+            const roomSelect = $('#room_select');
+            
+            if (hotelId) {
+                // Enable room select
+                roomSelect.prop('disabled', false);
+                
+                // Clear current options except the first one
+                roomSelect.find('option:not(:first)').remove();
+                
+                // Show loading indicator
+                roomSelect.after('<div id="roomLoading" class="mt-2"><span class="spinner-border spinner-border-sm" role="status"></span> Oda tipleri yükleniyor...</div>');
+                
+                // Load rooms for selected hotel
+                $.ajax({
+                    url: '/api/hotels/' + hotelId + '/rooms/',
+                    type: 'GET',
+                    success: function(data) {
+                        // Remove loading indicator
+                        $('#roomLoading').remove();
+                        
+                        if (data.length === 0) {
+                            roomSelect.after('<div class="form-text text-warning mt-2">Bu otel için tanımlı oda tipi bulunamadı</div>');
+                        } else {
+                            $.each(data, function(index, room) {
+                                roomSelect.append($('<option></option>')
+                                    .attr('value', room.id)
+                                    .text(room.juniper_room_type + ' (' + room.room_code + ')'));
+                            });
+                        }
+                    },
+                    error: function() {
+                        // Remove loading indicator
+                        $('#roomLoading').remove();
+                        roomSelect.after('<div class="form-text text-danger mt-2">Oda tipleri yüklenirken hata oluştu</div>');
+                    }
+                });
+            } else {
+                // Disable and clear room select if no hotel selected
+                roomSelect.prop('disabled', true);
+                roomSelect.find('option:not(:first)').remove();
+            }
+        });
+        
+        // Hotel search functionality
+        $('#doHotelSearch').click(function() {
+            const searchTerm = $('#hotelSearchInput').val().trim();
+            if (searchTerm.length < 2) {
+                alert('En az 2 karakter girin');
+                return;
+            }
+            
+            // Show loading, hide other messages
+            $('#initialSearchMessage').addClass('d-none');
+            $('#noResultsMessage').addClass('d-none');
+            $('#loadingMessage').removeClass('d-none');
+            $('#hotelSearchResults tbody').empty();
+            
+            // Perform search
+            $.ajax({
+                url: '/api/hotels/?search=' + encodeURIComponent(searchTerm),
+                type: 'GET',
+                success: function(data) {
+                    $('#loadingMessage').addClass('d-none');
+                    
+                    if (data.length === 0) {
+                        $('#noResultsMessage').removeClass('d-none');
+                    } else {
+                        $.each(data, function(index, hotel) {
+                            $('#hotelSearchResults tbody').append(
+                                `<tr>
+                                    <td>${hotel.juniper_hotel_name}</td>
+                                    <td>${hotel.juniper_code}</td>
+                                    <td>
+                                        <button type="button" class="btn btn-sm btn-primary select-hotel" 
+                                            data-hotel-id="${hotel.id}" 
+                                            data-hotel-name="${hotel.juniper_hotel_name}" 
+                                            data-hotel-code="${hotel.juniper_code}">
+                                            Seç
+                                        </button>
+                                    </td>
+                                </tr>`
+                            );
+                        });
+                        
+                        // Attach event to select buttons
+                        $('.select-hotel').click(function() {
+                            const hotelId = $(this).data('hotel-id');
+                            const hotelName = $(this).data('hotel-name');
+                            
+                            // Set the selected hotel in the dropdown
+                            $('#hotel_select').val(hotelId).trigger('change');
+                            
+                            // Close the modal
+                            $('#hotelSearchModal').modal('hide');
+                        });
+                    }
+                },
+                error: function() {
+                    $('#loadingMessage').addClass('d-none');
+                    $('#noResultsMessage').removeClass('d-none').html(
+                        '<i class="bi bi-exclamation-triangle fs-1 text-danger"></i>' +
+                        '<p class="text-danger">Arama sırasında bir hata oluştu</p>'
+                    );
+                }
+            });
+        });
+        
+        // Search when pressing Enter in the search input
+        $('#hotelSearchInput').keypress(function(e) {
+            if (e.which === 13) {
+                e.preventDefault();
+                $('#doHotelSearch').click();
+            }
+        });
+        
+        // Enable proper form validation
+        $('form').submit(function() {
+            const hotelId = $('#hotel_select').val();
+            const roomId = $('#room_select').val();
+            
+            if (!hotelId) {
+                alert('Lütfen Juniper sisteminden bir otel seçin.');
+                return false;
+            }
+            
+            if (!roomId) {
+                alert('Lütfen Juniper sisteminden bir oda tipi seçin.');
+                return false;
+            }
+            
+            return true;
+        });
+    });
+</script>
+{% endblock %} 
