@@ -6,7 +6,8 @@ from datetime import datetime
 import time
 from django.utils import timezone
 from django.conf import settings
-from emails.models import Email, EmailRow, Market, MarketAlias
+from emails.models import Email, EmailRow
+from hotels.models import Market, MarketAlias
 
 try:
     from anthropic import Anthropic
