@@ -90,11 +90,27 @@ We completely restructured the email attachment processing logic:
    - Extracting text from different file types
    - Creating email rows from attachment data
 
+## Bug Fixes and Additional Improvements
+After initial implementation, we encountered and fixed the following issues:
+
+1. Fixed module import paths to ensure proper function availability:
+   - Moved `body_mentions_attachment` function outside the ClaudeAnalyzer class
+   - Ensured proper imports between modules to avoid circular dependencies
+   - Fixed import path for MarketAlias model (from hotels.models instead of emails.models)
+
+2. Improved code organization:
+   - Moved utility functions to a dedicated module
+   - Eliminated duplicated code for text extraction and file type checks
+   - Standardized the API for attachment processing functions
+
+3. Enhanced logging to provide clearer debugging information
+
 ## Result
 The system now correctly:
 1. Processes all email attachments regardless of AI analysis results
 2. Properly handles the sequence of operations to ensure attachment detection
 3. Uses a single, clear implementation for AI analysis
+4. Avoids import and module-level errors that were preventing proper operation
 
 This ensures that important stop sale information in attachments is now properly extracted and processed by the system.
 
