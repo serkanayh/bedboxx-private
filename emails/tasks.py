@@ -3,7 +3,7 @@ from django.core.management import call_command
 from celery import shared_task
 from .models import Email, EmailRow, RoomTypeMatch, RoomTypeReject, EmailHotelMatch
 from hotels.models import Hotel, Room, Market
-from core.ai_analyzer import ClaudeAnalyzer
+from emails.utils import ClaudeAnalyzer, extract_text_from_file, extract_text_from_attachment, is_stop_sale_chart_file
 from difflib import SequenceMatcher
 from thefuzz import fuzz
 import os
@@ -19,76 +19,10 @@ logger = logging.getLogger(__name__)
 def extract_text_from_file(file_path):
     """
     Extracts text from various file types using basic methods
-    
-    Args:
-        file_path: Path to the file
-        
-    Returns:
-        str: Extracted text content or empty string if extraction fails
+    Now delegates to emails.utils.extract_text_from_file
     """
-    file_lower = file_path.lower()
-    
-    try:
-        # PDF files
-        if file_lower.endswith('.pdf'):
-            return extract_text_from_pdf(file_path)
-            
-        # Text files
-        elif file_lower.endswith(('.txt', '.csv', '.json', '.html')):
-            try:
-                with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
-                    return f.read()
-            except Exception as e:
-                logger.error(f"Error reading text file {file_path}: {e}")
-                return ""
-                
-        # Try system utilities as fallback for other formats
-        else:
-            try:
-                # Try using 'strings' command for binary files
-                result = subprocess.run(['strings', file_path], capture_output=True, text=True)
-                return result.stdout
-            except Exception as e:
-                logger.error(f"Error extracting text from {file_path}: {e}")
-                # Last resort: try basic binary reading
-                try:
-                    with open(file_path, 'rb') as f:
-                        binary_content = f.read()
-                    # Filter printable ASCII characters
-                    text = ''.join(chr(b) for b in binary_content if 32 <= b < 127 or b in (9, 10, 13))
-                    return text
-                except:
-                    return ""
-    except Exception as e:
-        logger.error(f"Error extracting text from {file_path}: {e}")
-        return ""
-        
-def extract_text_from_pdf(file_path):
-    """
-    Extract text from PDF files using pdftotext if available,
-    or fallback to strings command
-    
-    Args:
-        file_path: Path to PDF file
-        
-    Returns:
-        str: Extracted text
-    """
-    try:
-        # Try pdftotext (part of poppler-utils)
-        try:
-            result = subprocess.run(['pdftotext', file_path, '-'], capture_output=True, text=True)
-            if result.returncode == 0 and result.stdout:
-                return result.stdout
-        except FileNotFoundError:
-            logger.warning("pdftotext not found, falling back to strings command")
-            
-        # Fallback to strings command
-        result = subprocess.run(['strings', file_path], capture_output=True, text=True)
-        return result.stdout
-    except Exception as e:
-        logger.error(f"Error extracting text from PDF {file_path}: {e}")
-        return ""
+    from emails.utils import extract_text_from_file as utils_extract_text_from_file
+    return utils_extract_text_from_file(file_path)
 
 def parse_date_range(date_range):
     """
@@ -192,7 +126,6 @@ def process_email_attachments_task(email_id):
             logger.info(f"Set has_attachments=True for email {email_id}")
         
         # Initialize the ClaudeAnalyzer
-        from .utils.ai_analyzer import ClaudeAnalyzer
         analyzer = ClaudeAnalyzer()
         
         # Initialize a list to store all rows created from attachments
@@ -209,7 +142,7 @@ def process_email_attachments_task(email_id):
                     continue
                 
                 # Extract text from attachment
-                text = extract_text_from_file(attachment.file.path)
+                text = extract_text_from_attachment(attachment)
                 
                 if not text or text.strip() == "":
                     logger.warning(f"Failed to extract text from attachment {attachment.filename} for email {email_id}")
@@ -262,29 +195,6 @@ def process_email_attachments_task(email_id):
     except Exception as e:
         logger.error(f"Error processing attachments for email {email_id}: {str(e)}", exc_info=True)
         return None
-
-def is_stop_sale_chart_file(filename):
-    """
-    Check if a filename indicates it's a stop sale chart or summary file that should not be processed
-    as it doesn't contain individual stop sale entries but rather a summary.
-    """
-    filename_lower = filename.lower()
-    patterns = [
-        'stop sale chart', 
-        'stopsale chart', 
-        'stop-sale-chart',
-        'chart of stop', 
-        'report of stop',
-        'özet', 'summary',
-        'tüm stop', 'all stop',
-        'genel stop', 'general stop',
-        'chart'  # Eklenen yeni kelime - bu ifadeyi içeren dosyalar işlenmemeli
-    ]
-    
-    for pattern in patterns:
-        if pattern in filename_lower:
-            return True
-    return False
 
 HOTEL_FUZZY_MATCH_THRESHOLD = 75  # 85'den 75'e düşürüldü
 ROOM_FUZZY_MATCH_THRESHOLD = 80   # 90'dan 80'e düşürüldü

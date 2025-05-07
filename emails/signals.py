@@ -7,7 +7,7 @@ from rest_framework.test import APIClient
 from hotels.models import Hotel, Room, Market, MarketAlias
 from .models import Email, AIModel, Prompt, EmailRow
 from users.models import User
-from core.ai_analyzer import ClaudeAnalyzer
+from emails.utils import ClaudeAnalyzer, check_for_attachment_references, body_mentions_attachment
 
 logger = logging.getLogger(__name__)
 
@@ -61,10 +61,6 @@ def auto_analyze_email(sender, instance, created, **kwargs):
 
             # Claude AI ile analiz etmeye başla
             logger.warning(f"AUTO-ANALYZE: Using model 'Claude' and prompt 'Claude_Promt'")
-            from .utils.ai_analyzer import ClaudeAnalyzer
-
-            # Claude AI payloadını hazırla
-            logger.warning(f"AUTO-ANALYZE: Calling API with payload for email {instance.id}")
             analyzer = ClaudeAnalyzer()
             try:
                 rows = analyzer.analyze_email(instance)

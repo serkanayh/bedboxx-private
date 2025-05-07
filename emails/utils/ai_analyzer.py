@@ -57,6 +57,38 @@ IMPORTANT RULES:
 - Return an empty array if no stop sale information can be extracted
 """
 
+# Define a standalone function for checking attachment references
+def body_mentions_attachment(text):
+    """
+    Checks if the email body mentions attachments.
+    
+    Args:
+        text (str): The email body text
+        
+    Returns:
+        bool: True if attachments are mentioned, False otherwise
+    """
+    if not text:
+        return False
+        
+    text = text.lower()
+    
+    # Keywords that might indicate attachments
+    attachment_keywords = [
+        'ekte', 'ekli', 'ekteki', 'ek olarak', 'attachment', 
+        'attached', 'enclosed', 'ek dosya', 'ekli dosya',
+        'ekte belirtilen', 'ekte gönderilen', 'ekte yer alan',
+        'ektedir', 'eklerde', 'eklerde belirtilen',
+        'pdf', 'excel', 'xls', 'xlsx', 'doc', 'docx',
+        'attach', 'ekler', 'the attached', 'in attachment',
+        'please find attached', 'lütfen ekte', 'attached file',
+        'ekli belge', 'ekli doküman', 'detayları ekte', 'details attached',
+        'details in attachment', 'details in the attached'
+    ]
+    
+    # Check if any of the keywords are in the text
+    return any(keyword in text for keyword in attachment_keywords)
+
 class ClaudeAnalyzer:
     """
     Utilizes Claude AI API to analyze email content and extract structured data about stop sales.
@@ -247,35 +279,4 @@ class ClaudeAnalyzer:
                 # Skip this row
         
         logger.info(f"Post-processed {len(processed_rows)} rules from AI.")
-        return processed_rows
-    
-    def body_mentions_attachment(self, text):
-        """
-        Checks if the email body mentions attachments.
-        
-        Args:
-            text (str): The email body text
-            
-        Returns:
-            bool: True if attachments are mentioned, False otherwise
-        """
-        if not text:
-            return False
-            
-        text = text.lower()
-        
-        # Keywords that might indicate attachments
-        attachment_keywords = [
-            'ekte', 'ekli', 'ekteki', 'ek olarak', 'attachment', 
-            'attached', 'enclosed', 'ek dosya', 'ekli dosya',
-            'ekte belirtilen', 'ekte gönderilen', 'ekte yer alan',
-            'ektedir', 'eklerde', 'eklerde belirtilen',
-            'pdf', 'excel', 'xls', 'xlsx', 'doc', 'docx',
-            'attach', 'ekler', 'the attached', 'in attachment',
-            'please find attached', 'lütfen ekte', 'attached file',
-            'ekli belge', 'ekli doküman', 'detayları ekte', 'details attached',
-            'details in attachment', 'details in the attached'
-        ]
-        
-        # Check if any of the keywords are in the text
-        return any(keyword in text for keyword in attachment_keywords) 
+        return processed_rows 

@@ -6,7 +6,6 @@ def check_for_attachment_references(text):
     Utility function to check if email body mentions attachments.
     Delegates to the implementation in ai_analyzer.
     """
-    from emails.utils.ai_analyzer import body_mentions_attachment
     return body_mentions_attachment(text)
 
 # Function to extract text from attachments
