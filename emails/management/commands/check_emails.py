@@ -3,13 +3,16 @@ import email
 import imaplib
 import datetime
 import logging
+import mimetypes
+import uuid
 from email.header import decode_header
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 from django.db import transaction
+from django.core.files.base import ContentFile
 from core.models import EmailConfiguration
 from emails.models import Email, EmailRow, EmailAttachment
-from django.core.files.base import ContentFile
+import time
 
 # --- Import for text extraction ---
 try:
@@ -174,33 +177,79 @@ class Command(BaseCommand):
     
     def process_email(self, email_message):
         """Process an email message and save to database"""
-        message_id = email_message['Message-ID'] or '' # Ensure message_id is defined early
+        message_id = email_message.get('Message-ID', '').strip()
+        if not message_id:
+            # Generate a fallback unique identifier if message_id is missing
+            message_id = f"generated-{uuid.uuid4()}"
+            logger.warning(f"[WARNING] Email missing Message-ID. Generated fallback ID: {message_id}")
+
+        # İlk olarak, bu message_id'ye sahip bir e-posta olup olmadığını kontrol et
+        if Email.objects.filter(message_id=message_id).exists():
+            self.stdout.write(f"[SKIP] Duplicate email detected: {message_id}")
+            logger.info(f"[SKIP] Duplicate email detected: {message_id}")
+            return False  # Indicate that the email was not processed
+
         try:
-            # Extract headers
+            # Temel e-posta bilgilerini hazırla
             subject = self.decode_email_header(email_message['Subject'])
             sender = self.decode_email_header(email_message['From'])
             recipient = self.decode_email_header(email_message['To'])
-            
-            # Extract date
+
+            # Tarihi ayarla
             date_str = email_message['Date']
             if date_str:
                 try:
-                    # Parse the date
                     received_date = email.utils.parsedate_to_datetime(date_str)
                 except Exception:
                     received_date = timezone.now()
             else:
                 received_date = timezone.now()
-            
-            # Check if email already exists
-            if Email.objects.filter(message_id=message_id).exists():
-                self.stdout.write(f"Email already exists: {subject}")
-                return
-            
-            # Extract body
+
+            # E-posta gövdesini çıkar
             body_text, body_html = self.get_email_body(email_message)
+
+            # Ekleri İŞLEME - Önce ekleri hazırlayıp sonra e-postayı oluşturacağız
+            attachment_data = []  # attachment verilerini depolayacak liste
+            has_attachments = False
             
-            # Create email object
+            if email_message.is_multipart():
+                for part in email_message.walk():
+                    content_disposition = str(part.get("Content-Disposition"))
+                    
+                    # Sadece ekleri işle
+                    if "attachment" not in content_disposition:
+                        continue
+                        
+                    # Dosya adını çıkar
+                    filename = part.get_filename()
+                    if not filename:
+                        # Dosya adı yoksa, üret
+                        ext = mimetypes.guess_extension(part.get_content_type())
+                        if not ext:
+                            ext = '.bin'  # Varsayılan uzantı
+                        filename = f'attachment-{uuid.uuid4().hex}{ext}'
+                    
+                    # Dosya adını temizle
+                    filename = os.path.basename(filename)
+                    
+                    # İçeriği al
+                    payload = part.get_payload(decode=True)
+                    if not payload:
+                        logger.warning(f"Empty attachment payload for {filename} in email: {message_id}")
+                        continue
+                    
+                    # Ek verilerini listeye ekle
+                    attachment_data.append({
+                        'filename': filename,
+                        'content_type': part.get_content_type(),
+                        'size': len(payload) if payload else 0,
+                        'payload': payload
+                    })
+                    
+                    has_attachments = True
+            
+            # ÖNEMLİ DEĞİŞİKLİK: İşlem sırasını değiştirdik - önce email objesi oluştur, sonra attachments, sonra da güncelle
+            # E-posta nesnesini oluştur ama sinyaller tetiklenmemesi için has_attachments=False ile başlat
             email_obj = Email.objects.create(
                 subject=subject,
                 sender=sender,
@@ -210,247 +259,138 @@ class Command(BaseCommand):
                 body_text=body_text,
                 body_html=body_html,
                 status='pending',
-                has_attachments=False  # Will be updated if attachments are found
+                has_attachments=False  # Başlangıçta FALSE olarak ayarla, böylece auto_analyze_email sinyali tetiklenmez
             )
             
-            # Process attachments
-            attachments = []
-            for part in email_message.walk():
-                if part.get_content_maintype() == 'multipart':
-                    continue
-                
-                if part.get('Content-Disposition') is None:
-                    continue
-                
-                filename = part.get_filename()
-                if not filename:
-                    continue
-                
-                # Decode filename if needed
-                filename = self.decode_email_header(filename)
-                
-                # Save attachment to database
-                content_type = part.get_content_type() or 'application/octet-stream'
-                content = part.get_payload(decode=True)
-                
-                if content:
-                    attachment = EmailAttachment(
-                        email=email_obj,
-                        filename=filename,
-                        content_type=content_type,
-                        size=len(content),
-                        extracted_text=None # Initialize extracted_text
-                    )
-                    
-                    # Save the actual file using ContentFile
+            # Ekleri oluştur ve kaydet
+            attachment_count = 0
+            with transaction.atomic():
+                for attach_data in attachment_data:
                     try:
-                        content_file = ContentFile(content, name=filename)
-                        attachment.file.save(filename, content_file, save=False)
-                        attachment.save()
-
-                        # --- Trigger attachment processing task (on commit) ---
-                        try:
-                            from emails.tasks import process_email_attachments_task
-                            # Wrap the task scheduling in transaction.on_commit
-                            transaction.on_commit(lambda: (
-                                process_email_attachments_task.delay(attachment.id),
-                                logger.info(f"Scheduled attachment processing task for attachment ID: {attachment.id}"),
-                                self.stdout.write(f"Scheduled processing for attachment: {filename}")
-                            ))
-                        except ImportError:
-                            # Log import error immediately, it won't run on commit
-                            logger.error("Could not import process_email_attachments_task. Task not scheduled.")
-                            self.stdout.write(self.style.ERROR("Could not import attachment processing task."))
-                        except Exception as task_error:
-                            # Log scheduling error immediately
-                            logger.error(f"Error preparing attachment task scheduling for ID {attachment.id}: {task_error}", exc_info=True)
-                            self.stdout.write(self.style.ERROR(f"Error preparing task scheduling for attachment: {filename}"))
-                        # --- End Trigger ---
-
-                        attachments.append(attachment)
-                        email_obj.has_attachments = True # Mark email as having attachments
-                    except Exception as file_save_error:
-                        logger.error(f"Error saving attachment file {filename} for email {email_obj.id}: {file_save_error}", exc_info=True)
-                        self.stdout.write(self.style.ERROR(f"Error saving attachment file: {filename}"))
-            
-            # Update has_attachments flag if any were saved
-            if email_obj.has_attachments:
-                email_obj.save(update_fields=['has_attachments'])
-
-            self.stdout.write(f"Saved email: {subject} with {len(attachments)} attachment(s)")
-            
-            # AI processing is handled by signal. 
-            # The signal should now find the extracted_text in attachments if it needs it.
-            
-            # --- Check if Attachment Analysis is Needed (After Signal) --- 
-            try:
-                # Re-fetch the object to get the latest status potentially updated by the signal
-                email_obj.refresh_from_db() 
-                
-                # --- Check for statuses indicating attachment check is needed --- 
-                if email_obj.status in ['needs_attachment_check', 'needs_review_check_attachments'] and email_obj.has_attachments:
-                    self.stdout.write(self.style.WARNING(f"Email {email_obj.id} (Status: {email_obj.status}) needs attachment check. Processing attachments..."))
-                    logger.info(f"Email {email_obj.id} (Status: {email_obj.status}) needs attachment check. Processing attachments in command.")
-                    
-                    # Import here or at the top of the file
-                    from emails.views import process_email_attachments 
-                    from users.models import User # Import User model
-                    
-                    # Find a user to associate the log with (e.g., first superuser)
-                    log_user = User.objects.filter(is_superuser=True).first()
-                    
-                    attachment_success = process_email_attachments(email_obj, log_user)
-                    
-                    if attachment_success:
-                        self.stdout.write(self.style.SUCCESS(f"Attachment analysis succeeded for email {email_obj.id}."))
-                        # Status should be updated within the function to 'processed'
-                        # If status was 'needs_review_check_attachments', it should now be 'processed'
-                        # (Assuming process_email_attachments sets status to 'processed' on success)
-                    else:
-                        self.stdout.write(self.style.WARNING(f"Attachment analysis failed or found no data for email {email_obj.id}."))
-                        # If initial status was 'needs_review_check_attachments', keep it as 'needs_review' (user needs to review fallback + failed attach)
-                        # If initial status was 'needs_attachment_check', mark as 'error'
-                        if email_obj.status == 'needs_attachment_check':
-                             email_obj.status = 'error'
-                             email_obj.save(update_fields=['status', 'updated_at'])
-                             logger.info(f"Attachment analysis failed for email {email_obj.id}. Status set to error.")
-                        else: # Was 'needs_review_check_attachments'
-                             # Keep status as needs_review - already set by signal
-                             logger.info(f"Attachment analysis failed for email {email_obj.id}. Status remains needs_review.")
+                        # Ek nesnesini oluştur
+                        attachment = EmailAttachment(
+                            email=email_obj,
+                            filename=attach_data['filename'],
+                            content_type=attach_data['content_type'],
+                            size=attach_data['size']
+                        )
                         
-            except Email.DoesNotExist:
-                 logger.error(f"Email {email_obj.id} not found after saving, cannot check for attachment processing.")
-            except ImportError:
-                 logger.error("Could not import process_email_attachments or User model in check_emails command.")
-            except Exception as attach_check_error:
-                logger.error(f"Error checking/processing attachments for email {email_obj.id} in command: {attach_check_error}", exc_info=True)
-                # Optionally mark as error if this check fails
-                try:
-                    email_obj.status = 'error'
-                    email_obj.save(update_fields=['status', 'updated_at'])
-                except: pass # Ignore errors during error marking
-            # --- End Attachment Check --- 
+                        # Dosyayı kaydet
+                        content_file = ContentFile(attach_data['payload'])
+                        attachment.file.save(attach_data['filename'], content_file, save=True)
+                        
+                        # Başarıyı logla
+                        logger.info(f"Saved attachment: {attach_data['filename']} for email: {message_id}")
+                        attachment_count += 1
+                        
+                    except Exception as attach_err:
+                        logger.error(f"Error saving attachment {attach_data['filename']}: {str(attach_err)}", exc_info=True)
             
-        except Exception as process_error:
-            self.stdout.write(self.style.ERROR(f"Error processing email: {str(process_error)}"))
-            logger.exception(f"[check_emails] Error processing email {message_id}") # Added message_id
+            # Tüm ekler kaydedildikten sonra email.has_attachments'i güncelle
+            if attachment_count > 0:
+                email_obj.has_attachments = True
+                email_obj.save(update_fields=['has_attachments', 'updated_at'])
+                self.stdout.write(f"Saved {attachment_count} attachment(s) for email: {subject}")
+                
+                # Veritabanına değişikliklerin yazılması için commit'i zorla
+                transaction.commit()
+                
+                # Kısa bir bekleme ekle (opsiyonel)
+                time.sleep(0.5)
+
+            # Son olarak, AI analizi tetiklemek için status'u güncelleyerek auto_analyze_email sinyalini zorlayalım
+            # Bu noktada has_attachments değeri doğru ve ekler tam kaydedilmiş durumda
+            email_obj.refresh_from_db()  # Güncel verileri al
+            logger.info(f"FINAL EMAIL STATE: Email {email_obj.id} has has_attachments={email_obj.has_attachments}, real attachment count={email_obj.attachments.count()}")
+            
+            # AI analizi için bir sinyal tetikle
+            # (has_attachments doğru olduğunda, auto_analyze_email ekleri doğru işleyecek)
+            if email_obj.status == 'pending':  # Sadece ilk kez için
+                email_obj.status = 'pending_analysis'  # Farklı bir durum belirterek güncelleme yapalım
+                email_obj.save(update_fields=['status', 'updated_at'])
+                logger.info(f"Triggered AI analysis for email {email_obj.id} with has_attachments={email_obj.has_attachments}")
+            
+            # E-posta nesnesini döndür
+            logger.info("Email processing logic completed successfully.")
+            return email_obj
+            
+        except Exception as e:
+            logger.error(f"An error occurred: {e}", exc_info=True)
+            self.stdout.write(self.style.ERROR(f"Error during email processing: {str(e)}"))
+            return None
+    
+    def decode_email_header(self, header):
+        """Decode email header"""
+        if not header:
+            return ""
+        
+        decoded_header = ""
+        try:
+            decoded_chunks = email.header.decode_header(header)
+            for chunk, encoding in decoded_chunks:
+                if isinstance(chunk, bytes):
+                    if encoding:
+                        decoded_chunk = chunk.decode(encoding)
+                    else:
+                        decoded_chunk = chunk.decode('utf-8', errors='replace')
+                else:
+                    decoded_chunk = str(chunk)
+                decoded_header += decoded_chunk
+            return decoded_header
+        except Exception as e:
+            logger.warning(f"Error decoding header: {str(e)}")
+            return str(header)
     
     def get_email_body(self, email_message):
-        """Extract text and HTML body from an email message"""
+        """Extract body text and HTML from email message"""
         body_text = ""
-        body_html = ""
+        body_html = None
         
         if email_message.is_multipart():
             for part in email_message.walk():
                 content_type = part.get_content_type()
                 content_disposition = str(part.get("Content-Disposition"))
                 
-                if "attachment" not in content_disposition:
+                # Skip attachments
+                if "attachment" in content_disposition:
+                    continue
+                
+                # Get the payload
+                payload = part.get_payload(decode=True)
+                if payload is None:
+                    continue
+                
+                # Decode payload
+                charset = part.get_content_charset()
+                if charset:
                     try:
-                        body = part.get_payload(decode=True)
-                        if body:
-                            charset = part.get_content_charset()
-                            if charset is None:
-                                charset = 'utf-8'
-                            
-                            body = body.decode(charset, errors='replace')
-                            
-                            if content_type == "text/plain":
-                                body_text += body
-                            elif content_type == "text/html":
-                                body_html += body
-                    except Exception as e:
-                        self.stdout.write(self.style.WARNING(f"Error extracting body: {str(e)}"))
+                        payload = payload.decode(charset)
+                    except:
+                        payload = payload.decode('utf-8', errors='replace')
+                else:
+                    payload = payload.decode('utf-8', errors='replace')
+                
+                # Capture text and html parts
+                if content_type == "text/plain":
+                    body_text += payload
+                elif content_type == "text/html":
+                    body_html = payload
         else:
-            # Not multipart - get the payload directly
-            try:
-                body = email_message.get_payload(decode=True)
-                if body:
-                    charset = email_message.get_content_charset()
-                    if charset is None:
-                        charset = 'utf-8'
-                    
-                    body = body.decode(charset, errors='replace')
-                    
-                    if email_message.get_content_type() == "text/plain":
-                        body_text = body
-                    elif email_message.get_content_type() == "text/html":
-                        body_html = body
-                    else:
-                        # Default to text
-                        body_text = body
-            except Exception as e:
-                self.stdout.write(self.style.WARNING(f"Error extracting body: {str(e)}"))
+            # Not multipart - get the content
+            payload = email_message.get_payload(decode=True)
+            if payload:
+                charset = email_message.get_content_charset()
+                if charset:
+                    try:
+                        payload = payload.decode(charset)
+                    except:
+                        payload = payload.decode('utf-8', errors='replace')
+                else:
+                    payload = payload.decode('utf-8', errors='replace')
+                
+                if email_message.get_content_type() == "text/html":
+                    body_html = payload
+                else:
+                    body_text = payload
         
         return body_text, body_html
-    
-    def decode_email_header(self, header):
-        """Decode email header"""
-        if not header:
-            return ""
-            
-        try:
-            decoded_header = decode_header(header)
-            result = ""
-            
-            for content, encoding in decoded_header:
-                if isinstance(content, bytes):
-                    if encoding:
-                        result += content.decode(encoding, errors='replace')
-                    else:
-                        result += content.decode('utf-8', errors='replace')
-                else:
-                    result += str(content)
-            
-            return result
-        except Exception as e:
-            self.stdout.write(self.style.WARNING(f"Error decoding header: {str(e)}"))
-            return str(header)
-
-    def extract_attachment_text(self, file_path, filename):
-        """Extracts text from supported attachment types."""
-        logger.debug(f"[extract_attachment_text] Called for: {filename} at path: {file_path}")
-        extracted_text = ""
-        _, file_extension = os.path.splitext(filename)
-        file_extension = file_extension.lower()
-
-        if file_extension == '.pdf':
-            logger.debug(f"[extract_attachment_text] Processing PDF: {filename}")
-            if not PYPDF_AVAILABLE:
-                logger.error("[extract_attachment_text] Cannot extract text from PDF: pypdf library not installed.")
-                return None
-            try:
-                with open(file_path, 'rb') as f:
-                    reader = PdfReader(f)
-                    logger.debug(f"[extract_attachment_text] PDF {filename} opened. Pages: {len(reader.pages)}")
-                    for i, page in enumerate(reader.pages):
-                        try:
-                           page_text = page.extract_text()
-                           if page_text:
-                               extracted_text += page_text + "\n"
-                           # logger.debug(f"[extract_attachment_text] Extracted text from page {i+1} of {filename}") # Too verbose potentially
-                        except Exception as page_extract_error:
-                             logger.warning(f"[extract_attachment_text] Error extracting text from page {i+1} in PDF {filename}: {page_extract_error}")
-                final_text = extracted_text.strip()
-                logger.info(f"[extract_attachment_text] Finished PDF processing for {filename}. Extracted length: {len(final_text)}")
-                return final_text if final_text else None
-            except Exception as pdf_error:
-                logger.error(f"[extract_attachment_text] Error reading PDF file {filename}: {pdf_error}", exc_info=True)
-                return None
-        
-        elif file_extension in ['.txt', '.csv', '.html', '.xml']: 
-             logger.debug(f"[extract_attachment_text] Processing text file: {filename}")
-             try:
-                 with open(file_path, 'r', encoding='utf-8', errors='ignore') as f: 
-                     content = f.read()
-                     logger.info(f"[extract_attachment_text] Finished text file processing for {filename}. Extracted length: {len(content)}")
-                     return content
-             except Exception as txt_error:
-                 logger.error(f"[extract_attachment_text] Error reading text file {filename}: {txt_error}", exc_info=True)
-                 return None
-
-        # TODO: Add support for other formats like DOCX using python-docx
-        
-        else:
-            logger.info(f"[extract_attachment_text] Text extraction not supported for file type: {file_extension} ({filename})")
-            return None 

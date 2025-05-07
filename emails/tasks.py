@@ -1,18 +1,94 @@
-from celery import shared_task
-from django.core.management import call_command
-import logging
-import os
-from datetime import datetime, timedelta
 from django.utils import timezone
-from .models import Email, EmailRow, EmailAttachment, AIModel, Prompt, RoomTypeMatch, RoomTypeReject
-from hotels.models import Hotel, Room, Market, JuniperContractMarket
+from django.core.management import call_command
+from celery import shared_task
+from .models import Email, EmailRow, RoomTypeMatch, RoomTypeReject, EmailHotelMatch
+from hotels.models import Hotel, Room, Market
+from core.ai_analyzer import ClaudeAnalyzer
 from difflib import SequenceMatcher
 from thefuzz import fuzz
-from core.ai_analyzer import ClaudeAnalyzer
-from django.db import transaction
-import unicodedata
+import os
+import logging
+import json
+from datetime import datetime, timedelta
+import subprocess
+import io
+import time
 
 logger = logging.getLogger(__name__)
+
+def extract_text_from_file(file_path):
+    """
+    Extracts text from various file types using basic methods
+    
+    Args:
+        file_path: Path to the file
+        
+    Returns:
+        str: Extracted text content or empty string if extraction fails
+    """
+    file_lower = file_path.lower()
+    
+    try:
+        # PDF files
+        if file_lower.endswith('.pdf'):
+            return extract_text_from_pdf(file_path)
+            
+        # Text files
+        elif file_lower.endswith(('.txt', '.csv', '.json', '.html')):
+            try:
+                with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                    return f.read()
+            except Exception as e:
+                logger.error(f"Error reading text file {file_path}: {e}")
+                return ""
+                
+        # Try system utilities as fallback for other formats
+        else:
+            try:
+                # Try using 'strings' command for binary files
+                result = subprocess.run(['strings', file_path], capture_output=True, text=True)
+                return result.stdout
+            except Exception as e:
+                logger.error(f"Error extracting text from {file_path}: {e}")
+                # Last resort: try basic binary reading
+                try:
+                    with open(file_path, 'rb') as f:
+                        binary_content = f.read()
+                    # Filter printable ASCII characters
+                    text = ''.join(chr(b) for b in binary_content if 32 <= b < 127 or b in (9, 10, 13))
+                    return text
+                except:
+                    return ""
+    except Exception as e:
+        logger.error(f"Error extracting text from {file_path}: {e}")
+        return ""
+        
+def extract_text_from_pdf(file_path):
+    """
+    Extract text from PDF files using pdftotext if available,
+    or fallback to strings command
+    
+    Args:
+        file_path: Path to PDF file
+        
+    Returns:
+        str: Extracted text
+    """
+    try:
+        # Try pdftotext (part of poppler-utils)
+        try:
+            result = subprocess.run(['pdftotext', file_path, '-'], capture_output=True, text=True)
+            if result.returncode == 0 and result.stdout:
+                return result.stdout
+        except FileNotFoundError:
+            logger.warning("pdftotext not found, falling back to strings command")
+            
+        # Fallback to strings command
+        result = subprocess.run(['strings', file_path], capture_output=True, text=True)
+        return result.stdout
+    except Exception as e:
+        logger.error(f"Error extracting text from PDF {file_path}: {e}")
+        return ""
 
 def parse_date_range(date_range):
     """
@@ -67,7 +143,10 @@ def word_overlap_score(email_name, juniper_name):
 
 @shared_task(name="emails.tasks.check_emails_task")
 def check_emails_task():
-    """Celery task to run the check_emails management command."""
+    """
+    Scheduled task to check for new emails.
+    """
+    logger.info("Running check_emails management command via Celery task.")
     try:
         logger.info("Running check_emails management command via Celery task.")
         call_command('check_emails')
@@ -78,231 +157,134 @@ def check_emails_task():
         # raise 
 
 @shared_task(name="emails.tasks.process_email_attachments_task")
-def process_email_attachments_task(attachment_id):
+def process_email_attachments_task(email_id):
     """
-    Celery task to process a specific email attachment using the unified ClaudeAnalyzer.
+    Celery task to process all attachments of an email using the unified ClaudeAnalyzer.
     Arg:
-        attachment_id: The primary key of the EmailAttachment to process.
+        email_id: The primary key of the Email to process attachments for.
     """
-    logger.info(f"Starting attachment processing task for Attachment ID: {attachment_id}")
+    logger.info(f"====== ATTACHMENT PROCESSING STARTED: Processing attachments for Email ID: {email_id} ======")
     try:
-        # Correctly fetch the EmailAttachment object
-        attachment = EmailAttachment.objects.get(pk=attachment_id)
-        email = attachment.email # Access the related Email object
-
-        logger.info(f"Processing attachment '{attachment.filename}' for Email ID: {email.id}")
-
-        # --- YENİ: E-posta gövdesinden zaten veri çıkarılmış mı kontrol et ---
-        existing_rows = EmailRow.objects.filter(email=email, extracted_from_attachment=False, ai_extracted=True).exists()
-        if existing_rows:
-            logger.info(f"E-posta {email.id} için gövdeden başarılı veri çıkarılmış. Ek analizi iptal ediliyor.")
-            return True
-        # --- YENİ SON ---
-
-        # --- Fetch Active AI Model --- 
-        active_model = AIModel.objects.filter(active=True).first()
-        if not active_model or not active_model.api_key:
-             logger.error(f"No active AI model with API key found. Cannot perform AI attachment analysis for attachment {attachment_id} (Email {email.id}).")
-             # Update EMAIL status, not attachment
-             email.status = 'error' 
-             email.save(update_fields=['status', 'updated_at'])
-             return False
-             
-        # --- Initialize the UNIFIED Analyzer --- 
-        analyzer = ClaudeAnalyzer(api_key=active_model.api_key)
-        if not analyzer.claude_client: # Check if client initialized
-             logger.error(f"Failed to initialize ClaudeAnalyzer for attachment {attachment_id} (Email {email.id}). Aborting attachment task.")
-             email.status = 'error'
-             email.save(update_fields=['status', 'updated_at'])
-             return False
-        # --- End Initialize --- 
+        # Fetch the Email object
+        email = Email.objects.get(pk=email_id)
         
+        # EKLERI KONTROL ET - doğrudan attachment sayısı ile
+        attachment_count = email.attachments.count()
+        logger.info(f"ATTACHMENT COUNT CHECK: Email {email_id} has {attachment_count} attachment(s) directly in database")
+        
+        # Ek bulunamadı ise uyarı ver
+        if attachment_count == 0:
+            logger.warning(f"No attachments found in database for email {email_id}. Marking has_attachments=False.")
+            if email.has_attachments:
+                email.has_attachments = False
+                email.save(update_fields=['has_attachments', 'updated_at'])
+                logger.info(f"Fixed has_attachments flag for email {email_id}")
+            return None  # İşlemi sonlandır
+
+        # Continue only if there are attachments
+        attachment_list = list(email.attachments.values_list('filename', flat=True))
+        logger.info(f"Processing {attachment_count} attachment(s) for email {email_id}: {', '.join(attachment_list)}")
+        
+        # Ensure the has_attachments flag is set correctly
+        if not email.has_attachments:
+            email.has_attachments = True
+            email.save(update_fields=['has_attachments', 'updated_at'])
+            logger.info(f"Set has_attachments=True for email {email_id}")
+        
+        # Initialize the ClaudeAnalyzer
+        from .utils.ai_analyzer import ClaudeAnalyzer
+        analyzer = ClaudeAnalyzer()
+        
+        # Initialize a list to store all rows created from attachments
         created_row_ids = []
-        analysis_results_store = email.attachment_analysis_results or {} # Load existing results
         
-        # Process the single attachment passed to the task
-        logger.info(f"Extracting text from attachment: {attachment.filename} (Attachment ID: {attachment.id}, Email ID: {email.id})")
-        # 1. Extract Text using the method from ClaudeAnalyzer
-        if not attachment.file or not os.path.exists(attachment.file.path):
-            error_msg = f"Attachment file not found or path is invalid for Attachment ID {attachment.id}"
-            logger.error(error_msg)
-            analysis_results_store[str(attachment.id)] = {'error': error_msg}
-            # Update results on email and return False
-            email.attachment_analysis_results = analysis_results_store
-            email.save(update_fields=['attachment_analysis_results', 'updated_at'])
-            return False
-
-        extracted_text, error_msg = analyzer.extract_text_from_attachment(attachment.file.path)
-            
-        # --- SAVE extracted text to the attachment model --- 
-        if extracted_text and not error_msg:
+        # Process each attachment
+        for attachment in email.attachments.all():
             try:
-                attachment.extracted_text = extracted_text
-                attachment.save(update_fields=['extracted_text']) # Only update this field
-                logger.info(f"Saved extracted text ({len(extracted_text)} chars) to Attachment ID {attachment.id}")
-            except Exception as save_error:
-                 logger.error(f"Error saving extracted text to attachment {attachment.id}: {save_error}", exc_info=True)
-        # --- END SAVE --- 
+                logger.info(f"Processing attachment: {attachment.filename} (ID: {attachment.id}) for email {email_id}")
+                
+                # Skip processing if filename contains 'chart' (as per requirements)
+                if is_stop_sale_chart_file(attachment.filename):
+                    logger.info(f"Skipping chart file: {attachment.filename}")
+                    continue
+                
+                # Extract text from attachment
+                text = extract_text_from_file(attachment.file.path)
+                
+                if not text or text.strip() == "":
+                    logger.warning(f"Failed to extract text from attachment {attachment.filename} for email {email_id}")
+                    continue
+                
+                # Analyze the attachment text
+                logger.info(f"Analyzing text from attachment {attachment.filename} for email {email_id}")
+                rows = analyzer.analyze_attachment(email, text, attachment.filename)
+                
+                if not rows:
+                    logger.warning(f"No data extracted from attachment {attachment.filename} for email {email_id}")
+                    continue
+                
+                logger.info(f"Successfully extracted {len(rows)} row(s) from attachment {attachment.filename} for email {email_id}")
+                
+                # Create EmailRow objects for each extracted row
+                for row_data in rows:
+                    try:
+                        # Create EmailRow object and add to created_row_ids
+                        row = create_email_row_from_data(email, row_data, is_from_attachment=True)
+                        if row:
+                            created_row_ids.append(row.id)
+                            logger.info(f"Created EmailRow {row.id} from attachment {attachment.filename} for email {email_id}")
+                    except Exception as row_err:
+                        logger.error(f"Error creating EmailRow from attachment data: {str(row_err)}", exc_info=True)
+                
+            except Exception as att_err:
+                logger.error(f"Error processing attachment {attachment.filename}: {str(att_err)}", exc_info=True)
         
-        if error_msg:
-            logger.error(f"Failed to extract text from {attachment.filename} (Attachment ID: {attachment.id}, Email ID: {email.id}): {error_msg}")
-            analysis_results_store[str(attachment.id)] = {'error': error_msg}
-        
-        elif not extracted_text:
-            logger.warning(f"No text extracted from {attachment.filename} (Attachment ID: {attachment.id}, Email ID: {email.id}). Skipping analysis.")
-            analysis_results_store[str(attachment.id)] = {'error': 'No text content extracted'}
-        
-        else:
-            # 2. Analyze Extracted Text with AI
-            logger.info(f"Analyzing extracted text from {attachment.filename} (Attachment ID: {attachment.id}, Email ID: {email.id})")
-            analysis_result = analyzer.analyze_content(extracted_text)
-            analysis_results_store[str(attachment.id)] = analysis_result # Store raw result
-            
-            if analysis_result.get('error'):
-                logger.error(f"AI analysis failed for extracted text from {attachment.filename} (Attachment ID: {attachment.id}, Email ID: {email.id}): {analysis_result['error']}")
-            else:
-                # 3. Process Rows from Successful Analysis
-                rows_data = analysis_result.get('rows', [])
-                if rows_data:
-                    logger.info(f"AI analysis for {attachment.filename} yielded {len(rows_data)} rows.")
-                    initial_row_count = len(created_row_ids) # Store count before loop
-                    
-                    # --- YENİ: E-posta tarihini al ---
-                    mail_date = email.received_date.date()
-                    # --- YENİ SON ---
-                    
-                    for row_data in rows_data:
-                        start_date_str = row_data.get('start_date')
-                        end_date_str = row_data.get('end_date')
-                        
-                        if not (isinstance(start_date_str, str) and isinstance(end_date_str, str)):
-                             logger.error(f"Invalid date format received after post-processing for row {row_data} from attachment {attachment.id}. Skipping row.")
-                             continue
-                        
-                        # --- YENİ: Tarih analizi ve aynı gün kontrolü ---
-                        try:
-                            # Farklı formattaki tarihleri dene
-                            try:
-                                start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
-                            except ValueError:
-                                try:
-                                    start_date = datetime.strptime(start_date_str, '%d.%m.%Y').date()
-                                except ValueError:
-                                    start_date = None
-                                    
-                            try:
-                                end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
-                            except ValueError:
-                                try:
-                                    end_date = datetime.strptime(end_date_str, '%d.%m.%Y').date()
-                                except ValueError:
-                                    end_date = None
-                                    
-                            # E-posta tarihi ile aynı tarihleri kontrol et ve atla
-                            if (start_date == mail_date and end_date == mail_date) or (start_date == mail_date and end_date is None):
-                                logger.warning(f"Skipping row with same date as email: {mail_date}. Start: {start_date}, End: {end_date}")
-                                continue
-                        except Exception as date_err:
-                            logger.error(f"Error checking dates: {date_err}. Using original dates.")
-                        # --- YENİ SON ---
-                             
-                        try:
-                            email_row = EmailRow.objects.create(
-                                email=email,
-                                hotel_name=row_data.get('hotel_name', 'Unknown'),
-                                room_type=row_data.get('room_type', 'Unknown'),
-                                start_date=start_date_str,
-                                end_date=end_date_str,
-                                sale_type=row_data.get('sale_type', 'stop'),
-                                status='matching', 
-                                ai_extracted=False,
-                                extracted_from_attachment=True,
-                                source_attachment=attachment
-                            )
-                            created_row_ids.append(email_row.id)
-                            logger.info(f"Created EmailRow {email_row.id} from attachment {attachment.filename} (ID: {attachment.id}) for email {email.id}")
-
-                            market_names_from_ai = row_data.get('markets', [])
-                            market_objects = []
-                            if market_names_from_ai:
-                                for market_name in market_names_from_ai:
-                                    market_name_clean = market_name.strip()
-                                    try:
-                                        market_obj = Market.objects.get(name__iexact=market_name_clean)
-                                        market_objects.append(market_obj)
-                                    except Market.DoesNotExist:
-                                        logger.warning(f"Market name '{market_name_clean}' from AI analysis (Attachment {attachment.id}) not found in DB. Skipping for row {email_row.id}.")
-                                
-                                if market_objects:
-                                    email_row.markets.set(market_objects)
-                                    logger.debug(f"Set markets {market_objects} for EmailRow {email_row.id}")
-                            else:
-                                 logger.warning(f"No market names provided by AI for row {email_row.id} (Attachment {attachment.id}). Leaving markets empty.")
-
-                        except Exception as e:
-                            logger.error(f"Error creating EmailRow or setting markets from attachment AI data {row_data} (Attachment ID: {attachment.id}, Email ID: {email.id}): {e}", exc_info=True)
-
-                    if len(created_row_ids) > initial_row_count: 
-                        logger.info(f"Attachment {attachment_id} processing yielded {len(created_row_ids) - initial_row_count} new rows. Deleting any existing rows for email {email.id} not extracted from an attachment.")
-                        try:
-                            with transaction.atomic():
-                                deleted_count, deleted_details = EmailRow.objects.filter(
-                                    email=email,
-                                    extracted_from_attachment=False
-                                ).delete()
-                            if deleted_count > 0:
-                                logger.info(f"Deleted {deleted_count} rows previously extracted from the email body: {deleted_details}")
-                            else:
-                                logger.info(f"No body-extracted rows found to delete for email {email.id}.")
-                        except Exception as delete_error:
-                             logger.error(f"Error deleting body-extracted rows for email {email.id}: {delete_error}", exc_info=True)
-                else:
-                     logger.warning(f"AI analysis for {attachment.filename} (Attachment ID: {attachment.id}) successful but returned no rows after processing.")
-                        
-        if analysis_results_store:
-             email.attachment_analysis_results = analysis_results_store
-             logger.debug(f"Stored/Updated attachment analysis results for email {email.id}")
-             email.save(update_fields=['attachment_analysis_results', 'updated_at'])
-
+        # Schedule matching task for all created rows if any
         if created_row_ids:
-            logger.info(f"Attachment analysis for attachment {attachment_id} finished. Scheduling BATCH matching for {len(created_row_ids)} newly created rows for email {email.id}.")
-            try:
-                from .tasks import match_email_rows_batch_task 
-                match_email_rows_batch_task.delay(email.id, created_row_ids)
-                if email.status not in ['processing', 'processed', 'error']:
-                    email.status = 'processing'
-                    email.save(update_fields=['status', 'updated_at'])
-            except Exception as task_error:
-                 logger.error(f"CRITICAL: Error scheduling matching task for email {email.id} (from attachment {attachment_id}): {task_error}", exc_info=True)
-                 email.status = 'error'
-                 email.save(update_fields=['status', 'updated_at'])
-            logger.info(f"Attachment processing task finished successfully for Attachment ID: {attachment_id}. {len(created_row_ids)} rows created and matching scheduled.")
-            return True
+            from .tasks import match_email_rows_batch_task
+            logger.info(f"Scheduling matching task for {len(created_row_ids)} rows from attachments for email {email_id}")
+            match_email_rows_batch_task.delay(email_id, created_row_ids)
+            
+            # Update email status if needed
+            if email.status in ['pending', 'pending_analysis', 'processing_attachments']:
+                email.status = 'processing'
+                email.save(update_fields=['status', 'updated_at'])
+                logger.info(f"Updated email {email_id} status to 'processing'")
         else:
-            logger.info(f"Attachment processing task finished for Attachment ID: {attachment_id}. No new rows created.")
-            return False
-
-    except EmailAttachment.DoesNotExist:
-        logger.error(f"Attachment processing task failed: EmailAttachment ID {attachment_id} not found.")
-        return False
+            logger.warning(f"No rows were created from attachments for email {email_id}")
+        
+        logger.info(f"====== ATTACHMENT PROCESSING COMPLETED: Email {email_id} attachments processed successfully ======")
+        return created_row_ids
+    
     except Email.DoesNotExist:
-        logger.error(f"Attachment processing task failed: Associated Email not found for EmailAttachment ID {attachment_id}.")
-        return False
+        logger.error(f"Email with ID {email_id} does not exist")
+        return None
     except Exception as e:
-        logger.error(f"Attachment processing task failed unexpectedly for Attachment ID: {attachment_id}. Error: {str(e)}", exc_info=True)
-        try:
-            attachment = EmailAttachment.objects.get(pk=attachment_id)
-            email = attachment.email
-            email.status = 'error'
-            email.save(update_fields=['status', 'updated_at'])
-            logger.info(f"Marked associated email {email.id} as error due to attachment task failure for attachment {attachment_id}.")
-        except EmailAttachment.DoesNotExist:
-            logger.warning(f"Could not mark email as error: Attachment {attachment_id} not found during error handling.")
-        except Email.DoesNotExist:
-             logger.warning(f"Could not mark email as error: Associated Email not found for attachment {attachment_id} during error handling.")
-        except Exception as save_error:
-            logger.error(f"Failed to mark email as error after attachment task failure (Attachment ID: {attachment_id}): {save_error}", exc_info=True)
-        return False
+        logger.error(f"Error processing attachments for email {email_id}: {str(e)}", exc_info=True)
+        return None
+
+def is_stop_sale_chart_file(filename):
+    """
+    Check if a filename indicates it's a stop sale chart or summary file that should not be processed
+    as it doesn't contain individual stop sale entries but rather a summary.
+    """
+    filename_lower = filename.lower()
+    patterns = [
+        'stop sale chart', 
+        'stopsale chart', 
+        'stop-sale-chart',
+        'chart of stop', 
+        'report of stop',
+        'özet', 'summary',
+        'tüm stop', 'all stop',
+        'genel stop', 'general stop',
+        'chart'  # Eklenen yeni kelime - bu ifadeyi içeren dosyalar işlenmemeli
+    ]
+    
+    for pattern in patterns:
+        if pattern in filename_lower:
+            return True
+    return False
 
 HOTEL_FUZZY_MATCH_THRESHOLD = 75  # 85'den 75'e düşürüldü
 ROOM_FUZZY_MATCH_THRESHOLD = 80   # 90'dan 80'e düşürüldü
@@ -334,7 +316,6 @@ def match_email_rows_batch_task(email_id, row_ids):
             sender_email = sender_email.strip()
             
         # Check for learned mappings with a lower threshold
-        from .models import EmailHotelMatch
         try:
             # Find mapping with highest confidence score
             learned_match = EmailHotelMatch.objects.filter(
@@ -560,3 +541,95 @@ def match_email_rows_batch_task(email_id, row_ids):
         logger.error(f"Matching task failed: Email ID {email_id} not found.")
     except Exception as e:
         logger.error(f"Matching task failed for Email ID: {email_id}, Row IDs: {row_ids}. Error: {str(e)}", exc_info=True)
+        logger.error(f"Matching task failed for Email ID: {email_id}, Row IDs: {row_ids}. Error: {str(e)}", exc_info=True)
+
+def create_email_row_from_data(email, row_data, is_from_attachment=False):
+    """
+    Creates an EmailRow object from parsed data.
+    Args:
+        email: The Email object to associate the row with
+        row_data: Dictionary containing extracted data
+        is_from_attachment: Boolean indicating if data came from an attachment
+    Returns:
+        EmailRow object if created successfully, None otherwise
+    """
+    try:
+        # Parse dates
+        start_date_str = row_data.get('start_date', '')
+        end_date_str = row_data.get('end_date', '')
+        
+        # Skip rows with uncertain dates
+        if start_date_str == "UNCERTAIN" or end_date_str == "UNCERTAIN":
+            logger.warning(f"Skipping row with uncertain dates from {'attachment' if is_from_attachment else 'email body'}")
+            return None
+            
+        # Parse start date
+        try:
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+        except ValueError:
+            try:
+                start_date = datetime.strptime(start_date_str, '%d.%m.%Y').date()
+            except ValueError:
+                logger.warning(f"Invalid start date format: {start_date_str}")
+                return None
+                
+        # Parse end date
+        try:
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+        except ValueError:
+            try:
+                end_date = datetime.strptime(end_date_str, '%d.%m.%Y').date()
+            except ValueError:
+                logger.info(f"Using start date as fallback for end date: {start_date}")
+                end_date = start_date  # Use start_date as fallback
+        
+        # Get other fields
+        sale_type = row_data.get('sale_status', row_data.get('sale_type', 'stop'))
+        hotel_name_raw = row_data.get('hotel_name', 'Unknown Hotel')
+        room_type_raw = row_data.get('room_type', 'All Room Types')
+        
+        # Create the EmailRow
+        row = EmailRow.objects.create(
+            email=email,
+            hotel_name=hotel_name_raw,
+            room_type=room_type_raw,
+            start_date=start_date,
+            end_date=end_date,
+            sale_type=sale_type,
+            status='needs_review' if is_from_attachment else 'matching',
+            ai_extracted=True,
+            notes=f"Extracted from {'attachment' if is_from_attachment else 'email body'}"
+        )
+        
+        # Process markets
+        markets_data = row_data.get('markets', ['ALL'])
+        if not isinstance(markets_data, list):
+            markets_data = ['ALL']
+            
+        # Set markets
+        resolved_markets = []
+        for market_name in markets_data:
+            market = Market.objects.filter(name__iexact=market_name.strip()).first()
+            if market:
+                resolved_markets.append(market)
+            else:
+                # Try to find by alias
+                alias = MarketAlias.objects.filter(alias__iexact=market_name.strip()).first()
+                if alias and alias.markets.exists():
+                    resolved_markets.extend(alias.markets.all())
+                    
+        # Default to ALL if no markets resolved
+        if not resolved_markets:
+            all_market = Market.objects.filter(name__iexact='ALL').first()
+            if all_market:
+                resolved_markets.append(all_market)
+                
+        if resolved_markets:
+            row.markets.set(resolved_markets)
+            logger.info(f"Set markets for row {row.id}: {[m.name for m in resolved_markets]}")
+            
+        return row
+        
+    except Exception as e:
+        logger.error(f"Error creating EmailRow: {str(e)}", exc_info=True)
+        return None

@@ -57,4 +57,45 @@ Bu başarısız testler, bulanık eşleştirme algoritmasının bazı kenar duru
 3.  Tüm testler başarıyla geçene kadar test ve düzeltme döngüsüne devam etmek.
 4.  Tüm testler geçtikten sonra son proje paketini hazırlamak ve kullanıcıya sunmak.
 
+# Attachment Processing Fix
+
+## Problem
+The system was not properly analyzing email attachments under certain conditions:
+1. Claude AI would fabricate dates (like "2023-04-01" to "2023-04-30") even when no dates were in the email body
+2. Attachment processing was skipped when the email body didn't explicitly reference attachments with terms like "ekte"
+3. Race conditions in the email processing flow prevented proper attachment detection
+
+## Solution
+We completely restructured the email attachment processing logic:
+
+1. Created a new module `emails/utils/ai_analyzer.py` with a clean implementation of Claude AI integration
+2. Fixed the processing sequence in `check_emails.py` to:
+   - First create the email with `has_attachments=False` to prevent premature signal triggering
+   - Then attach and save any attachments
+   - After attachments are saved, update `has_attachments=True` and commit to database
+   - Finally update email status to `pending_analysis` to trigger analysis
+
+3. Updated the signal handler in `signals.py` to:
+   - Detect both email creation and status changes to `pending_analysis`
+   - Check attachment status directly against the database
+   - Fix inconsistencies between `has_attachments` flag and actual attachments in database
+
+4. Rebuilt the attachment processing task in `tasks.py` to:
+   - Add better error handling and logging
+   - Include detailed attachment analysis logic
+   - Process extracted text with Claude AI
+
+5. Created utility functions in `emails/utils/__init__.py` for:
+   - Detecting attachment references in email bodies
+   - Extracting text from different file types
+   - Creating email rows from attachment data
+
+## Result
+The system now correctly:
+1. Processes all email attachments regardless of AI analysis results
+2. Properly handles the sequence of operations to ensure attachment detection
+3. Uses a single, clear implementation for AI analysis
+
+This ensures that important stop sale information in attachments is now properly extracted and processed by the system.
+
 
