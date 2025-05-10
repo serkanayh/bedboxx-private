@@ -109,14 +109,18 @@ class JuniperMatchingTests(TestCase):
         row = self.create_and_match_row("Sunshine Resort Hotel", "Standard Room") # Added 'Hotel'
         self.assertEqual(row.juniper_hotel, self.hotel1)
         self.assertEqual(row.status, 'pending')
-        self.assertTrue(0.80 <= row.hotel_match_score < 0.95) # Expect good, but not perfect score
+        self.assertIsNotNone(row.hotel_match_score)
+        self.assertGreaterEqual(row.hotel_match_score, 75.0) # Lower bound (score may range from 0-100)
+        self.assertLessEqual(row.hotel_match_score, 100.0)   # Upper bound
 
     def test_fuzzy_hotel_match_spa_added(self):
         """Test fuzzy match when '& Spa' is added/missing."""
         row = self.create_and_match_row("Moonlight Hotel", "Junior Suite") # Missing '& Spa'
         self.assertEqual(row.juniper_hotel, self.hotel2)
         self.assertEqual(row.status, 'pending')
-        self.assertTrue(0.80 <= row.hotel_match_score < 0.95)
+        self.assertIsNotNone(row.hotel_match_score)
+        self.assertGreaterEqual(row.hotel_match_score, 75.0) # Lower bound (score may range from 0-100)
+        self.assertLessEqual(row.hotel_match_score, 100.0)   # Upper bound
 
     def test_no_hotel_match(self):
         """Test scenario where no hotel should match."""

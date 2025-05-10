@@ -56,7 +56,7 @@ class EmailListViewTest(TestCase):
         self.assertTemplateUsed(response, 'emails/email_list.html')
         
         # Check that the emails are in the context
-        self.assertEqual(len(response.context['emails']), 2)
+        self.assertEqual(len(response.context['page_obj']), 2)
     
     def test_email_list_view_with_status_filter(self):
         """Test that the email list view filters by status"""
@@ -65,8 +65,8 @@ class EmailListViewTest(TestCase):
         self.assertEqual(response.status_code, 200)
         
         # Check that only pending emails are in the context
-        self.assertEqual(len(response.context['emails']), 1)
-        self.assertEqual(response.context['emails'][0].status, 'pending')
+        self.assertEqual(len(response.context['page_obj']), 1)
+        self.assertEqual(response.context['page_obj'][0].status, 'pending')
     
     def test_email_list_view_with_search(self):
         """Test that the email list view searches correctly"""
@@ -75,8 +75,8 @@ class EmailListViewTest(TestCase):
         self.assertEqual(response.status_code, 200)
         
         # Check that only matching emails are in the context
-        self.assertEqual(len(response.context['emails']), 1)
-        self.assertEqual(response.context['emails'][0].sender, 'sender1@example.com')
+        self.assertEqual(len(response.context['page_obj']), 1)
+        self.assertEqual(response.context['page_obj'][0].sender, 'sender1@example.com')
 
 
 class EmailDetailViewTest(TestCase):
@@ -105,9 +105,8 @@ class EmailDetailViewTest(TestCase):
         
         # Create a test market
         self.market = Market.objects.create(
-            juniper_market_name='All Markets',
-            mail_market_name='ALL',
-            market_code='ALL'
+            name='All Markets',
+            juniper_code='ALL'
         )
         
         # Create a test email
@@ -126,13 +125,14 @@ class EmailDetailViewTest(TestCase):
             email=self.email,
             hotel_name='Test Hotel',
             room_type='Standard Room',
-            market='ALL',
             start_date=datetime.date.today(),
             end_date=datetime.date.today() + datetime.timedelta(days=5),
             sale_type='stop',
             status='pending',
             ai_extracted=True
         )
+        # Add market to email_row
+        self.email_row.markets.add(self.market)
         
         # Create a client
         self.client = Client()
@@ -160,8 +160,8 @@ class EmailDetailViewTest(TestCase):
         """Test approving a row"""
         # First, set the juniper hotel and room
         self.email_row.juniper_hotel = self.hotel
-        self.email_row.juniper_room = self.room
         self.email_row.save()
+        self.email_row.juniper_rooms.add(self.room)
         
         self.client.login(username='testuser', password='testpassword')
         response = self.client.get(reverse('emails:approve_row', args=[self.email_row.id]))

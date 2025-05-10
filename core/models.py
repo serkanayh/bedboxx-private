@@ -111,6 +111,10 @@ class EmailConfiguration(models.Model):
     imap_password = models.CharField(max_length=255, blank=True)
     imap_folder = models.CharField(max_length=50, default='INBOX')
     imap_check_interval = models.IntegerField(default=300, help_text='Check interval in seconds')
+    imap_label = models.CharField(max_length=50, default='stop_sale', blank=True, 
+                                  help_text='Gmail/IMAP label or folder to filter emails by. If specified, the system will only process '
+                                           'emails from this label/folder instead of the inbox. For Gmail, create a label named "stop_sale" '
+                                           'and apply it to relevant emails.')
     
     # Local Email Folder Settings
     use_local_folder = models.BooleanField(default=False, help_text='Use local folder for emails instead of IMAP')

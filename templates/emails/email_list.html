@@ -127,11 +127,11 @@
 
 {% block content %}
 <div class="page-header d-flex justify-content-between align-items-center mb-4">
-    <h1>Email List</h1>
+    <h1>E-posta Listesi</h1>
     <div class="d-flex">
         <form method="get" class="d-flex me-2">
             <div class="input-group">
-                <input type="text" name="search" class="form-control" placeholder="Search emails..." value="{{ request.GET.search|default:'' }}">
+                <input type="text" name="search" class="form-control" placeholder="E-posta ara..." value="{{ request.GET.search|default:'' }}">
                 <button class="btn btn-outline-primary" type="submit">
                     <i class="bi bi-search"></i>
                 </button>
@@ -139,32 +139,80 @@
         </form>
         <div class="dropdown">
             <button class="btn btn-outline-primary dropdown-toggle btn-action" type="button" id="filterDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                <i class="bi bi-funnel action-icons"></i> Filter
+                <i class="bi bi-funnel action-icons"></i> Filtrele
             </button>
             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="filterDropdown">
                 <li><h6 class="dropdown-header">Status</h6></li>
-                <li><a class="dropdown-item {% if request.GET.status == 'pending' %}active{% endif %}" href="?status=pending{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">Pending</a></li>
-                <li><a class="dropdown-item {% if request.GET.status == 'approved' %}active{% endif %}" href="?status=approved{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">Approved</a></li>
-                <li><a class="dropdown-item {% if request.GET.status == 'manual_processed' %}active{% endif %}" href="?status=manual_processed{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">Manual Processed</a></li>
-                <li><a class="dropdown-item {% if request.GET.status == 'sent_to_robot' %}active{% endif %}" href="?status=sent_to_robot{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">Sent to Robot</a></li>
-                <li><a class="dropdown-item {% if request.GET.status == 'robot_processed' %}active{% endif %}" href="?status=robot_processed{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">Robot Processed</a></li>
-                <li><a class="dropdown-item {% if request.GET.status == 'ignored' %}active{% endif %}" href="?status=ignored{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">Ignored</a></li>
-                <li><a class="dropdown-item {% if request.GET.status == 'error' %}active{% endif %}" href="?status=error{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">Error</a></li>
+                <li><a class="dropdown-item {% if request.GET.status == 'pending' %}active{% endif %}" href="?status=pending{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.hotel %}&hotel={{ request.GET.hotel }}{% endif %}{% if request.GET.start_date %}&start_date={{ request.GET.start_date }}{% endif %}{% if request.GET.end_date %}&end_date={{ request.GET.end_date }}{% endif %}">Bekliyor</a></li>
+                <li><a class="dropdown-item {% if request.GET.status == 'processing' %}active{% endif %}" href="?status=processing{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.hotel %}&hotel={{ request.GET.hotel }}{% endif %}{% if request.GET.start_date %}&start_date={{ request.GET.start_date }}{% endif %}{% if request.GET.end_date %}&end_date={{ request.GET.end_date }}{% endif %}">İşleniyor</a></li>
+                <li><a class="dropdown-item {% if request.GET.status == 'approved' %}active{% endif %}" href="?status=approved{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.hotel %}&hotel={{ request.GET.hotel }}{% endif %}{% if request.GET.start_date %}&start_date={{ request.GET.start_date }}{% endif %}{% if request.GET.end_date %}&end_date={{ request.GET.end_date }}{% endif %}">Onaylandı</a></li>
+                <li><a class="dropdown-item {% if request.GET.status == 'rejected' %}active{% endif %}" href="?status=rejected{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.hotel %}&hotel={{ request.GET.hotel }}{% endif %}{% if request.GET.start_date %}&start_date={{ request.GET.start_date }}{% endif %}{% if request.GET.end_date %}&end_date={{ request.GET.end_date }}{% endif %}">Reddedildi</a></li>
+                <li><a class="dropdown-item {% if request.GET.status == 'rejected_hotel_not_found' %}active{% endif %}" href="?status=rejected_hotel_not_found{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.hotel %}&hotel={{ request.GET.hotel }}{% endif %}{% if request.GET.start_date %}&start_date={{ request.GET.start_date }}{% endif %}{% if request.GET.end_date %}&end_date={{ request.GET.end_date }}{% endif %}">JP Otel Yok</a></li>
+                <li><a class="dropdown-item {% if request.GET.status == 'rejected_room_not_found' %}active{% endif %}" href="?status=rejected_room_not_found{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.hotel %}&hotel={{ request.GET.hotel }}{% endif %}{% if request.GET.start_date %}&start_date={{ request.GET.start_date }}{% endif %}{% if request.GET.end_date %}&end_date={{ request.GET.end_date }}{% endif %}">JP Oda Yok</a></li>
+                <li><a class="dropdown-item {% if request.GET.status == 'sent_to_robot' %}active{% endif %}" href="?status=sent_to_robot{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.hotel %}&hotel={{ request.GET.hotel }}{% endif %}{% if request.GET.start_date %}&start_date={{ request.GET.start_date }}{% endif %}{% if request.GET.end_date %}&end_date={{ request.GET.end_date }}{% endif %}">Robota Gönderildi</a></li>
+                <li><a class="dropdown-item {% if request.GET.status == 'robot_processed' %}active{% endif %}" href="?status=robot_processed{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.hotel %}&hotel={{ request.GET.hotel }}{% endif %}{% if request.GET.start_date %}&start_date={{ request.GET.start_date }}{% endif %}{% if request.GET.end_date %}&end_date={{ request.GET.end_date }}{% endif %}">Robot İşledi</a></li>
+                <li><a class="dropdown-item {% if request.GET.status == 'processed_nodata' %}active{% endif %}" href="?status=processed_nodata{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.hotel %}&hotel={{ request.GET.hotel }}{% endif %}{% if request.GET.start_date %}&start_date={{ request.GET.start_date }}{% endif %}{% if request.GET.end_date %}&end_date={{ request.GET.end_date }}{% endif %}">Veri Bulunamadı</a></li>
+                <li><a class="dropdown-item {% if request.GET.status == 'ignored' %}active{% endif %}" href="?status=ignored{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.hotel %}&hotel={{ request.GET.hotel }}{% endif %}{% if request.GET.start_date %}&start_date={{ request.GET.start_date }}{% endif %}{% if request.GET.end_date %}&end_date={{ request.GET.end_date }}{% endif %}">Yoksayıldı</a></li>
+                <li><a class="dropdown-item {% if request.GET.status == 'error' %}active{% endif %}" href="?status=error{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.hotel %}&hotel={{ request.GET.hotel }}{% endif %}{% if request.GET.start_date %}&start_date={{ request.GET.start_date }}{% endif %}{% if request.GET.end_date %}&end_date={{ request.GET.end_date }}{% endif %}">Hata</a></li>
                 <li><hr class="dropdown-divider"></li>
-                <li><a class="dropdown-item {% if not request.GET.status %}active{% endif %}" href="?{% if request.GET.search %}search={{ request.GET.search }}{% endif %}">All</a></li>
+                <li><a class="dropdown-item {% if not request.GET.status %}active{% endif %}" href="?{% if request.GET.search %}search={{ request.GET.search }}{% endif %}{% if request.GET.hotel %}&hotel={{ request.GET.hotel }}{% endif %}{% if request.GET.start_date %}&start_date={{ request.GET.start_date }}{% endif %}{% if request.GET.end_date %}&end_date={{ request.GET.end_date }}{% endif %}">Tümü</a></li>
             </ul>
         </div>
+        <button class="btn btn-outline-primary ms-2" type="button" data-bs-toggle="modal" data-bs-target="#advancedFilterModal">
+            <i class="bi bi-sliders"></i> Gelişmiş Filtre
+        </button>
     </div>
 </div>
 
 <!-- Active filters display -->
 <div class="mb-3">
-    {% if request.GET.status or request.GET.search %}
+    {% if request.GET.status or request.GET.search or request.GET.hotel or request.GET.start_date or request.GET.end_date or request.GET.sender or request.GET.rejection_reason or request.GET.match_status or request.GET.has_attachments or request.GET.sort %}
     <div class="active-filters">
         {% if request.GET.status %}
         <span class="filter-badge">
-            Status: {{ request.GET.status|title }}
-            <a href="?{% if request.GET.search %}search={{ request.GET.search }}{% endif %}" class="text-decoration-none">
+            Durum: 
+            {% if request.GET.status == 'pending' %}
+                Bekliyor
+            {% elif request.GET.status == 'approved' %}
+                Onaylandı
+            {% elif request.GET.status == 'rejected' %}
+                Reddedildi
+            {% elif request.GET.status == 'rejected_hotel_not_found' %}
+                JP Otel Yok
+            {% elif request.GET.status == 'rejected_room_not_found' %}
+                JP Oda Yok
+            {% elif request.GET.status == 'processing' %}
+                İşleniyor
+            {% elif request.GET.status == 'sent_to_robot' %}
+                Robota Gönderildi
+            {% elif request.GET.status == 'robot_processed' %}
+                Robot İşledi
+            {% elif request.GET.status == 'processed_nodata' %}
+                Veri Bulunamadı
+            {% elif request.GET.status == 'ignored' %}
+                Yoksayıldı
+            {% elif request.GET.status == 'error' %}
+                Hata
+            {% else %}
+                {{ request.GET.status|title }}
+            {% endif %}
+            <a href="?{% if request.GET.search %}search={{ request.GET.search }}{% endif %}{% if request.GET.hotel %}&hotel={{ request.GET.hotel }}{% endif %}{% if request.GET.start_date %}&start_date={{ request.GET.start_date }}{% endif %}{% if request.GET.end_date %}&end_date={{ request.GET.end_date }}{% endif %}{% if request.GET.sender %}&sender={{ request.GET.sender }}{% endif %}{% if request.GET.rejection_reason %}&rejection_reason={{ request.GET.rejection_reason }}{% endif %}{% if request.GET.match_status %}&match_status={{ request.GET.match_status }}{% endif %}{% if request.GET.has_attachments %}&has_attachments={{ request.GET.has_attachments }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}" class="text-decoration-none">
+                <i class="bi bi-x"></i>
+            </a>
+        </span>
+        {% endif %}
+        
+        {% if request.GET.sort %}
+        <span class="filter-badge">
+            Sıralama: 
+            {% if request.GET.sort == 'asc' %}
+                Eskiden Yeniye
+                <i class="bi bi-sort-down-alt ms-1"></i>
+            {% elif request.GET.sort == 'desc' %}
+                Yeniden Eskiye
+                <i class="bi bi-sort-down ms-1"></i>
+            {% endif %}
+            <a href="?{% if request.GET.status %}status={{ request.GET.status }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.hotel %}&hotel={{ request.GET.hotel }}{% endif %}{% if request.GET.start_date %}&start_date={{ request.GET.start_date }}{% endif %}{% if request.GET.end_date %}&end_date={{ request.GET.end_date }}{% endif %}{% if request.GET.sender %}&sender={{ request.GET.sender }}{% endif %}{% if request.GET.rejection_reason %}&rejection_reason={{ request.GET.rejection_reason }}{% endif %}{% if request.GET.match_status %}&match_status={{ request.GET.match_status }}{% endif %}{% if request.GET.has_attachments %}&has_attachments={{ request.GET.has_attachments }}{% endif %}" class="text-decoration-none">
                 <i class="bi bi-x"></i>
             </a>
         </span>
@@ -172,12 +220,107 @@
         
         {% if request.GET.search %}
         <span class="filter-badge">
-            Search: "{{ request.GET.search }}"
-            <a href="?{% if request.GET.status %}status={{ request.GET.status }}{% endif %}" class="text-decoration-none">
+            Arama: "{{ request.GET.search }}"
+            <a href="?{% if request.GET.status %}status={{ request.GET.status }}{% endif %}{% if request.GET.hotel %}&hotel={{ request.GET.hotel }}{% endif %}{% if request.GET.start_date %}&start_date={{ request.GET.start_date }}{% endif %}{% if request.GET.end_date %}&end_date={{ request.GET.end_date }}{% endif %}{% if request.GET.sender %}&sender={{ request.GET.sender }}{% endif %}{% if request.GET.rejection_reason %}&rejection_reason={{ request.GET.rejection_reason }}{% endif %}{% if request.GET.match_status %}&match_status={{ request.GET.match_status }}{% endif %}{% if request.GET.has_attachments %}&has_attachments={{ request.GET.has_attachments }}{% endif %}" class="text-decoration-none">
                 <i class="bi bi-x"></i>
             </a>
         </span>
         {% endif %}
+        
+        {% if request.GET.sender %}
+        <span class="filter-badge">
+            Gönderici: "{{ request.GET.sender }}"
+            <a href="?{% if request.GET.status %}status={{ request.GET.status }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.hotel %}&hotel={{ request.GET.hotel }}{% endif %}{% if request.GET.start_date %}&start_date={{ request.GET.start_date }}{% endif %}{% if request.GET.end_date %}&end_date={{ request.GET.end_date }}{% endif %}{% if request.GET.rejection_reason %}&rejection_reason={{ request.GET.rejection_reason }}{% endif %}{% if request.GET.match_status %}&match_status={{ request.GET.match_status }}{% endif %}{% if request.GET.has_attachments %}&has_attachments={{ request.GET.has_attachments }}{% endif %}" class="text-decoration-none">
+                <i class="bi bi-x"></i>
+            </a>
+        </span>
+        {% endif %}
+        
+        {% if request.GET.hotel %}
+        <span class="filter-badge">
+            Otel: "{{ request.GET.hotel }}"
+            <a href="?{% if request.GET.status %}status={{ request.GET.status }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.start_date %}&start_date={{ request.GET.start_date }}{% endif %}{% if request.GET.end_date %}&end_date={{ request.GET.end_date }}{% endif %}{% if request.GET.sender %}&sender={{ request.GET.sender }}{% endif %}{% if request.GET.rejection_reason %}&rejection_reason={{ request.GET.rejection_reason }}{% endif %}{% if request.GET.match_status %}&match_status={{ request.GET.match_status }}{% endif %}{% if request.GET.has_attachments %}&has_attachments={{ request.GET.has_attachments }}{% endif %}" class="text-decoration-none">
+                <i class="bi bi-x"></i>
+            </a>
+        </span>
+        {% endif %}
+        
+        {% if request.GET.start_date and request.GET.end_date %}
+        <span class="filter-badge">
+            Tarih: {{ request.GET.start_date }} - {{ request.GET.end_date }}
+            <a href="?{% if request.GET.status %}status={{ request.GET.status }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.hotel %}&hotel={{ request.GET.hotel }}{% endif %}{% if request.GET.sender %}&sender={{ request.GET.sender }}{% endif %}{% if request.GET.rejection_reason %}&rejection_reason={{ request.GET.rejection_reason }}{% endif %}{% if request.GET.match_status %}&match_status={{ request.GET.match_status }}{% endif %}{% if request.GET.has_attachments %}&has_attachments={{ request.GET.has_attachments }}{% endif %}" class="text-decoration-none">
+                <i class="bi bi-x"></i>
+            </a>
+        </span>
+        {% elif request.GET.start_date %}
+        <span class="filter-badge">
+            Başlangıç: {{ request.GET.start_date }}
+            <a href="?{% if request.GET.status %}status={{ request.GET.status }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.hotel %}&hotel={{ request.GET.hotel }}{% endif %}{% if request.GET.end_date %}&end_date={{ request.GET.end_date }}{% endif %}{% if request.GET.sender %}&sender={{ request.GET.sender }}{% endif %}{% if request.GET.rejection_reason %}&rejection_reason={{ request.GET.rejection_reason }}{% endif %}{% if request.GET.match_status %}&match_status={{ request.GET.match_status }}{% endif %}{% if request.GET.has_attachments %}&has_attachments={{ request.GET.has_attachments }}{% endif %}" class="text-decoration-none">
+                <i class="bi bi-x"></i>
+            </a>
+        </span>
+        {% elif request.GET.end_date %}
+        <span class="filter-badge">
+            Bitiş: {{ request.GET.end_date }}
+            <a href="?{% if request.GET.status %}status={{ request.GET.status }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.hotel %}&hotel={{ request.GET.hotel }}{% endif %}{% if request.GET.start_date %}&start_date={{ request.GET.start_date }}{% endif %}{% if request.GET.sender %}&sender={{ request.GET.sender }}{% endif %}{% if request.GET.rejection_reason %}&rejection_reason={{ request.GET.rejection_reason }}{% endif %}{% if request.GET.match_status %}&match_status={{ request.GET.match_status }}{% endif %}{% if request.GET.has_attachments %}&has_attachments={{ request.GET.has_attachments }}{% endif %}" class="text-decoration-none">
+                <i class="bi bi-x"></i>
+            </a>
+        </span>
+        {% endif %}
+        
+        {% if request.GET.rejection_reason %}
+        <span class="filter-badge">
+            Ret Nedeni: 
+            {% if request.GET.rejection_reason == 'rejected' %}
+                Genel Red
+            {% elif request.GET.rejection_reason == 'rejected_hotel_not_found' %}
+                JP Otel Yok
+            {% elif request.GET.rejection_reason == 'rejected_room_not_found' %}
+                JP Oda Yok
+            {% else %}
+                {{ request.GET.rejection_reason|title }}
+            {% endif %}
+            <a href="?{% if request.GET.status %}status={{ request.GET.status }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.hotel %}&hotel={{ request.GET.hotel }}{% endif %}{% if request.GET.start_date %}&start_date={{ request.GET.start_date }}{% endif %}{% if request.GET.end_date %}&end_date={{ request.GET.end_date }}{% endif %}{% if request.GET.sender %}&sender={{ request.GET.sender }}{% endif %}{% if request.GET.match_status %}&match_status={{ request.GET.match_status }}{% endif %}{% if request.GET.has_attachments %}&has_attachments={{ request.GET.has_attachments }}{% endif %}" class="text-decoration-none">
+                <i class="bi bi-x"></i>
+            </a>
+        </span>
+        {% endif %}
+        
+        {% if request.GET.match_status %}
+        <span class="filter-badge">
+            Eşleşme: 
+            {% if request.GET.match_status == 'full' %}
+                Tam Eşleşme
+            {% elif request.GET.match_status == 'partial' %}
+                Kısmi Eşleşme
+            {% elif request.GET.match_status == 'none' %}
+                Eşleşme Yok
+            {% else %}
+                {{ request.GET.match_status|title }}
+            {% endif %}
+            <a href="?{% if request.GET.status %}status={{ request.GET.status }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.hotel %}&hotel={{ request.GET.hotel }}{% endif %}{% if request.GET.start_date %}&start_date={{ request.GET.start_date }}{% endif %}{% if request.GET.end_date %}&end_date={{ request.GET.end_date }}{% endif %}{% if request.GET.sender %}&sender={{ request.GET.sender }}{% endif %}{% if request.GET.rejection_reason %}&rejection_reason={{ request.GET.rejection_reason }}{% endif %}{% if request.GET.has_attachments %}&has_attachments={{ request.GET.has_attachments }}{% endif %}" class="text-decoration-none">
+                <i class="bi bi-x"></i>
+            </a>
+        </span>
+        {% endif %}
+        
+        {% if request.GET.has_attachments %}
+        <span class="filter-badge">
+            Ekler: 
+            {% if request.GET.has_attachments == 'yes' %}
+                Eki Olanlar
+            {% elif request.GET.has_attachments == 'no' %}
+                Eki Olmayanlar
+            {% else %}
+                {{ request.GET.has_attachments|title }}
+            {% endif %}
+            <a href="?{% if request.GET.status %}status={{ request.GET.status }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.hotel %}&hotel={{ request.GET.hotel }}{% endif %}{% if request.GET.start_date %}&start_date={{ request.GET.start_date }}{% endif %}{% if request.GET.end_date %}&end_date={{ request.GET.end_date }}{% endif %}{% if request.GET.sender %}&sender={{ request.GET.sender }}{% endif %}{% if request.GET.rejection_reason %}&rejection_reason={{ request.GET.rejection_reason }}{% endif %}{% if request.GET.match_status %}&match_status={{ request.GET.match_status }}{% endif %}" class="text-decoration-none">
+                <i class="bi bi-x"></i>
+            </a>
+        </span>
+        {% endif %}
+        
+        <a href="?" class="btn btn-sm btn-outline-secondary">Tüm Filtreleri Temizle</a>
     </div>
     {% endif %}
 </div>
@@ -195,7 +338,21 @@
                     <tr>
                         <th style="width: 35%">Subject</th>
                         <th style="width: 15%">Sender</th>
-                        <th style="width: 15%">Received Date</th>
+                        <th style="width: 15%" class="text-nowrap">
+                            Received Date
+                            <div class="btn-group btn-group-sm ms-2" role="group" aria-label="Date sorting">
+                                <a href="?sort=asc{% for key, value in request.GET.items %}{% if key != 'sort' and key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" 
+                                   class="btn btn-outline-primary btn-sm{% if sort_order == 'asc' %} active{% endif %}" 
+                                   title="Oldest first">
+                                    <i class="bi bi-sort-down-alt"></i>
+                                </a>
+                                <a href="?sort=desc{% for key, value in request.GET.items %}{% if key != 'sort' and key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" 
+                                   class="btn btn-outline-primary btn-sm{% if sort_order == 'desc' %} active{% endif %}" 
+                                   title="Newest first">
+                                    <i class="bi bi-sort-down"></i>
+                                </a>
+                            </div>
+                        </th>
                         <th style="width: 10%">Status</th>
                         <th style="width: 10%">Eşleşme</th>
                         <th style="width: 5%">Attachments</th>
@@ -217,8 +374,16 @@
                                 <span class="badge bg-warning">{{ email.get_status_display }}</span>
                             {% elif email.status == 'approved' %}
                                 <span class="badge bg-success">{{ email.get_status_display }}</span>
-                            {% elif email.status == 'rejected' %}
-                                <span class="badge bg-danger">{{ email.get_status_display }}</span> {# Changed to bg-danger #}
+                            {% elif email.status == 'rejected' or email.status == 'rejected_hotel_not_found' or email.status == 'rejected_room_not_found' %}
+                                <span class="badge bg-danger">
+                                    {% if email.status == 'rejected_hotel_not_found' %}
+                                        JP Otel Yok
+                                    {% elif email.status == 'rejected_room_not_found' %}
+                                        JP Oda Yok
+                                    {% else %}
+                                        Rejected
+                                    {% endif %}
+                                </span>
                             {% elif email.status == 'sent_to_robot' %}
                                 <span class="badge bg-info">{{ email.get_status_display }}</span>
                             {% elif email.status == 'robot_processed' %}
@@ -227,6 +392,16 @@
                                  <span class="badge bg-primary">{{ email.get_status_display }}</span>
                              {% elif email.status == 'processed_nodata' %} {# ADDED: Handle processed_nodata #}
                                  <span class="badge bg-light text-dark">{{ email.get_status_display }}</span>
+                            {% elif email.status == 'manual_processed' %}
+                                <span class="badge bg-success">{{ email.get_status_display }}</span>
+                            {% elif email.status == 'juniper_manual' %} {# ADDED: Handle Juniper(M) status #}
+                                <span class="badge bg-info">
+                                    <i class="bi bi-person-check"></i> {{ email.get_status_display }}
+                                </span>
+                            {% elif email.status == 'juniper_robot' %} {# ADDED: Handle Juniper(R) status #}
+                                <span class="badge bg-info">
+                                    <i class="bi bi-robot"></i> {{ email.get_status_display }}
+                                </span>
                             {% else %}
                                 <span class="badge bg-dark">{{ email.get_status_display|default:email.status }}</span> {# Fallback #}
                             {% endif %}
@@ -303,11 +478,155 @@
     </ul>
 </nav>
 {% endif %}
+
+<!-- Advanced Filter Modal -->
+<div class="modal fade" id="advancedFilterModal" tabindex="-1" aria-labelledby="advancedFilterModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="advancedFilterModalLabel">Gelişmiş E-posta Filtreleme</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="advancedFilterForm" method="get">
+                    <!-- Keep existing filters if any -->
+                    {% if request.GET.status %}
+                    <input type="hidden" name="status" value="{{ request.GET.status }}">
+                    {% endif %}
+                    {% if request.GET.search %}
+                    <input type="hidden" name="search" value="{{ request.GET.search }}">
+                    {% endif %}
+                    
+                    <!-- Sender Filter -->
+                    <div class="mb-3">
+                        <label for="senderFilter" class="form-label">Gönderici</label>
+                        <input type="text" class="form-control" id="senderFilter" name="sender" 
+                               placeholder="Gönderici e-posta adresini girin" value="{{ request.GET.sender|default:'' }}">
+                        <div class="form-text">Belirli bir göndericiden gelen e-postaları filtreler</div>
+                    </div>
+                    
+                    <!-- Hotel Filter -->
+                    <div class="mb-3">
+                        <label for="hotelFilter" class="form-label">Otel Adı</label>
+                        <input type="text" class="form-control" id="hotelFilter" name="hotel" 
+                               placeholder="Otel adını girin" value="{{ request.GET.hotel|default:'' }}">
+                        <div class="form-text">Belirli bir otel adı içeren e-postaları filtreler</div>
+                    </div>
+                    
+                    <!-- Date Range Filter -->
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="startDateFilter" class="form-label">Başlangıç Tarihi</label>
+                            <input type="date" class="form-control" id="startDateFilter" name="start_date"
+                                   value="{{ request.GET.start_date|default:'' }}">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="endDateFilter" class="form-label">Bitiş Tarihi</label>
+                            <input type="date" class="form-control" id="endDateFilter" name="end_date"
+                                   value="{{ request.GET.end_date|default:'' }}">
+                        </div>
+                    </div>
+                    
+                    <!-- Date Sort Order -->
+                    <div class="mb-3">
+                        <label class="form-label">Tarih Sıralaması</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="sort" id="sortAsc" 
+                                   value="asc" {% if sort_order == 'asc' %}checked{% endif %}>
+                            <label class="form-check-label" for="sortAsc">Eskiden Yeniye (En eski en üstte)</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="sort" id="sortDesc" 
+                                   value="desc" {% if sort_order == 'desc' %}checked{% endif %}>
+                            <label class="form-check-label" for="sortDesc">Yeniden Eskiye (En yeni en üstte)</label>
+                        </div>
+                    </div>
+                    
+                    <!-- Rejection Reason Filter -->
+                    <div class="mb-3">
+                        <label class="form-label">Ret Nedeni</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="rejection_reason" id="rejectAll" 
+                                   value="" {% if not request.GET.rejection_reason %}checked{% endif %}>
+                            <label class="form-check-label" for="rejectAll">Tümü</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="rejection_reason" id="rejectGeneral" 
+                                   value="rejected" {% if request.GET.rejection_reason == 'rejected' %}checked{% endif %}>
+                            <label class="form-check-label" for="rejectGeneral">Genel Red</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="rejection_reason" id="rejectHotelNotFound" 
+                                   value="rejected_hotel_not_found" {% if request.GET.rejection_reason == 'rejected_hotel_not_found' %}checked{% endif %}>
+                            <label class="form-check-label" for="rejectHotelNotFound">JP Otel Yok</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="rejection_reason" id="rejectRoomNotFound" 
+                                   value="rejected_room_not_found" {% if request.GET.rejection_reason == 'rejected_room_not_found' %}checked{% endif %}>
+                            <label class="form-check-label" for="rejectRoomNotFound">JP Oda Yok</label>
+                        </div>
+                    </div>
+                    
+                    <!-- Match Status Filter -->
+                    <div class="mb-3">
+                        <label class="form-label">Eşleşme Durumu</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="match_status" id="matchAll" 
+                                   value="" {% if not request.GET.match_status %}checked{% endif %}>
+                            <label class="form-check-label" for="matchAll">Tümü</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="match_status" id="matchFull" 
+                                   value="full" {% if request.GET.match_status == 'full' %}checked{% endif %}>
+                            <label class="form-check-label" for="matchFull">Tam Eşleşme</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="match_status" id="matchPartial" 
+                                   value="partial" {% if request.GET.match_status == 'partial' %}checked{% endif %}>
+                            <label class="form-check-label" for="matchPartial">Kısmi Eşleşme</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="match_status" id="matchNone" 
+                                   value="none" {% if request.GET.match_status == 'none' %}checked{% endif %}>
+                            <label class="form-check-label" for="matchNone">Eşleşme Yok</label>
+                        </div>
+                    </div>
+                    
+                    <!-- Attachment Filter -->
+                    <div class="mb-3">
+                        <label class="form-label">Ekler</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="has_attachments" id="attachAll" 
+                                   value="" {% if not request.GET.has_attachments %}checked{% endif %}>
+                            <label class="form-check-label" for="attachAll">Tümü</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="has_attachments" id="attachYes" 
+                                   value="yes" {% if request.GET.has_attachments == 'yes' %}checked{% endif %}>
+                            <label class="form-check-label" for="attachYes">Eki Olanlar</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="has_attachments" id="attachNo" 
+                                   value="no" {% if request.GET.has_attachments == 'no' %}checked{% endif %}>
+                            <label class="form-check-label" for="attachNo">Eki Olmayanlar</label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+                <button type="button" class="btn btn-primary" onclick="document.getElementById('advancedFilterForm').submit();">Filtreleri Uygula</button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    console.log("DOM fully loaded, initializing email list functions...");
+    
     // Get CSRF token
     function getCookie(name) {
         let cookieValue = null;
@@ -325,6 +644,100 @@ document.addEventListener('DOMContentLoaded', function () {
         return cookieValue;
     }
     const csrftoken = getCookie('csrftoken');
+
+    // Tüm e-postaların durumlarını kontrol et
+    console.log("Checking status for all emails...");
+    
+    // Her e-posta satırı için ID'yi ve satırı logla
+    const emailRows = document.querySelectorAll('tr[id^="email-row-"]');
+    console.log(`Found ${emailRows.length} email rows to process`);
+    
+    emailRows.forEach(row => {
+        const emailId = row.id.replace('email-row-', '');
+        console.log(`Processing row for email ID: ${emailId}`);
+        
+        // E-posta durumu badge'ini bul
+        const statusBadge = row.querySelector('td:nth-child(4) .badge'); // Status column (4th column) -> badge
+        
+        if (emailId && statusBadge) {
+            console.log(`Found status badge for email ${emailId}, current text: ${statusBadge.textContent.trim()}`);
+            // Email durumunu API'den sorgula ve güncelle
+            checkEmailStatus(emailId, statusBadge);
+        } else {
+            console.warn(`Could not find status badge for email ${emailId}`);
+        }
+    });
+
+    // Email durumunu API'den kontrol eden fonksiyon
+    function checkEmailStatus(emailId, badge) {
+        console.log(`Fetching status for email ${emailId}...`);
+        fetch(`/api/emails/${emailId}/status/`)
+            .then(response => response.json())
+            .then(data => {
+                console.log('Email status response:', data);
+                // API'den gelen durum ile UI'daki durum farklıysa güncelle
+                updateBadge(badge, data.status, emailId);
+            })
+            .catch(error => {
+                console.error('Error fetching email status:', error);
+            });
+    }
+
+    // Badge'i güncelle
+    function updateBadge(badge, status, emailId) {
+        console.log(`Updating badge for email ${emailId} with status: ${status}`);
+        
+        // Önce tüm sınıfları kaldır
+        badge.classList.remove('bg-warning', 'bg-success', 'bg-danger', 'bg-info', 'bg-secondary', 'bg-primary', 'bg-light', 'bg-dark');
+        
+        // Duruma göre sınıf ve metin içeriğini ayarla
+        let badgeText = '';
+        let badgeClass = '';
+        
+        if (status === 'pending') {
+            badgeClass = 'bg-warning';
+            badgeText = 'Pending';
+        } else if (status === 'approved') {
+            badgeClass = 'bg-success';
+            badgeText = 'Approved';
+        } else if (status === 'rejected_hotel_not_found') {
+            badgeClass = 'bg-danger';
+            badgeText = 'JP Otel Yok';
+        } else if (status === 'rejected_room_not_found') {
+            badgeClass = 'bg-danger';
+            badgeText = 'JP Oda Yok';
+        } else if (status === 'rejected') {
+            badgeClass = 'bg-danger';
+            badgeText = 'Rejected';
+        } else if (status === 'processing') {
+            badgeClass = 'bg-primary';
+            badgeText = 'Processing';
+        } else if (status === 'manual_processed') {
+            badgeClass = 'bg-info';
+            badgeText = 'Manual Processed';
+        } else if (status === 'sent_to_robot') {
+            badgeClass = 'bg-info';
+            badgeText = 'Sent to Robot';
+        } else if (status === 'robot_processed') {
+            badgeClass = 'bg-success';
+            badgeText = 'Robot Processed';
+        } else if (status === 'processed_nodata') {
+            badgeClass = 'bg-secondary';
+            badgeText = 'No Data Found';
+        } else {
+            badgeClass = 'bg-secondary';
+            badgeText = status.replace('_', ' ');
+        }
+        
+        // Sınıf ekle
+        badge.classList.add(badgeClass);
+        
+        // İçeriği ayarla
+        badge.textContent = badgeText;
+        
+        // Log olarak yazalım
+        console.log(`Email ID ${emailId} status updated: ${status} → ${badgeText} (class: ${badgeClass})`);
+    }
 
     // Add event listeners to all delete buttons
     const deleteButtons = document.querySelectorAll('.delete-email-btn');
@@ -374,8 +787,153 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    // Placeholder for a toast notification function (if you use Bootstrap toasts or similar)
-    // function showToast(message) { ... }
+    // Initialize Email Notification System with auto-refresh for this page
+    if (typeof EmailNotificationSystem !== 'undefined') {
+        const emailList = document.querySelector('.email-table tbody');
+        
+        // Reset notification count when on this page
+        if (window.notificationSystem) {
+            window.notificationSystem.resetUnreadCount();
+        } else {
+            // If not already initialized in base template, initialize it here
+            window.notificationSystem = new EmailNotificationSystem({
+                checkInterval: 20000, // 20 seconds
+                enableSound: true,
+                autoRefresh: false, // We'll handle updates manually
+                onNewEmail: function(email) {
+                    // Add the new email to the table
+                    addNewEmailToTable(email);
+                }
+            });
+            window.notificationSystem.startPolling();
+        }
+        
+        // Function to add a new email to the table
+        function addNewEmailToTable(email) {
+            // Skip if already exists
+            if (document.getElementById(`email-row-${email.id}`)) {
+                return;
+            }
+            
+            const row = document.createElement('tr');
+            row.id = `email-row-${email.id}`;
+            row.classList.add('new-email-highlight');
+            
+            // Create the row HTML structure
+            row.innerHTML = `
+                <td>
+                    <span class="unread-indicator"></span>
+                    <a href="${email.url}" class="email-subject text-decoration-none">${email.subject}</a>
+                </td>
+                <td class="email-meta">${email.sender}</td>
+                <td class="email-meta">${formatDate(email.received_date)}</td>
+                <td>
+                    <span class="badge bg-warning">Pending</span>
+                </td>
+                <td class="email-meta">
+                    <span class="badge bg-secondary">(0/0)</span>
+                </td>
+                <td class="text-center email-meta">
+                    ${email.has_attachments ? '<i class="bi bi-paperclip"></i>' : ''}
+                </td>
+                <td>
+                    <a href="${email.url}" class="btn btn-sm btn-outline-primary me-1 btn-action" title="View Details">
+                        <i class="bi bi-eye"></i>
+                    </a>
+                    <button class="btn btn-sm btn-delete delete-email-btn" 
+                            title="Delete Email"
+                            data-email-id="${email.id}"
+                            data-email-subject="${email.subject}">
+                        <i class="bi bi-trash3"></i>
+                    </button>
+                </td>
+            `;
+            
+            // Get the current sort order from URL parameters
+            const urlParams = new URLSearchParams(window.location.search);
+            const sortOrder = urlParams.get('sort') || 'asc';  // Default to asc if not specified
+            
+            // Add to the appropriate position in the table based on sort order
+            if (sortOrder === 'desc') {
+                // For newest first (desc), add to the top
+                const firstRow = emailList.querySelector('tr');
+                if (firstRow) {
+                    emailList.insertBefore(row, firstRow);
+                } else {
+                    emailList.appendChild(row);
+                }
+            } else {
+                // For oldest first (asc), add to the bottom
+                emailList.appendChild(row);
+            }
+            
+            // Add event listener to the new delete button
+            const deleteButton = row.querySelector('.delete-email-btn');
+            deleteButton.addEventListener('click', function () {
+                const emailId = this.dataset.emailId;
+                const emailSubject = this.dataset.emailSubject;
+                const apiUrl = `/api/emails/${emailId}/`;
+
+                if (confirm(`Are you sure you want to delete the email: "${emailSubject}"? This cannot be undone.`)) {
+                    fetch(apiUrl, {
+                        method: 'DELETE',
+                        headers: {
+                            'X-CSRFToken': csrftoken,
+                            'Content-Type': 'application/json'
+                        }
+                    })
+                    .then(response => {
+                        if (response.ok && response.status === 204) {
+                            const row = document.getElementById(`email-row-${emailId}`);
+                            if (row) {
+                                row.remove();
+                            }
+                        } else {
+                            response.json().then(data => {
+                                alert(`Error deleting email: ${data.detail || response.statusText}`);
+                            }).catch(() => {
+                                alert(`Error deleting email: ${response.statusText}`);
+                            });
+                        }
+                    })
+                    .catch(error => {
+                        alert('Network error occurred while trying to delete the email.');
+                    });
+                }
+            });
+            
+            // Add highlight animation
+            setTimeout(() => {
+                row.classList.add('highlight-active');
+            }, 100);
+            
+            // Remove highlight after 5 seconds
+            setTimeout(() => {
+                row.classList.remove('highlight-active');
+                row.classList.remove('new-email-highlight');
+            }, 5000);
+        }
+        
+        // Helper function to format a date
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString() + ' ' + 
+                   date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+        
+        // Add CSS for the highlighting effect
+        const style = document.createElement('style');
+        style.textContent = `
+            .new-email-highlight {
+                background-color: rgba(74, 107, 223, 0.05);
+                transition: background-color 0.5s ease;
+            }
+            .highlight-active {
+                background-color: rgba(74, 107, 223, 0.2);
+            }
+        `;
+        document.head.appendChild(style);
+    }
 });
 </script>
 {% endblock %}

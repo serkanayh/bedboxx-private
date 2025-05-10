@@ -189,6 +189,13 @@
                                         {{ email_content|safe }}
                                     </div>
                                 </div>
+                                
+                                {% if pdf_url %}
+                                <div class="pdf-content mt-3">
+                                    <h3>PDF Content</h3>
+                                    <canvas id="pdf-canvas"></canvas>
+                                </div>
+                                {% endif %}
                             {% else %}
                                 <div class="email-preview-header">
                                     <span class="badge bg-secondary">Plain Text Email</span>
@@ -224,6 +231,13 @@
                                     
                                     <pre style="white-space: pre-wrap; word-break: break-word; max-height: 450px; overflow: auto;">{{ email_content|text_to_html|safe }}</pre>
                                 </div>
+                                
+                                {% if pdf_url %}
+                                <div class="pdf-content mt-3">
+                                    <h3>PDF Content</h3>
+                                    <canvas id="pdf-canvas"></canvas>
+                                </div>
+                                {% endif %}
                             {% endif %}
                         </div>
                     </div>
@@ -418,6 +432,30 @@
                 document.querySelector('.table-responsive').scrollIntoView({ behavior: 'smooth' });
             }, 500);
         }
+
+        // Render PDF content if available
+        const pdfUrl = "{{ pdf_url }}";
+        if (pdfUrl) {
+            const canvas = document.getElementById("pdf-canvas");
+            const context = canvas.getContext("2d");
+
+            const loadingTask = pdfjsLib.getDocument(pdfUrl);
+            loadingTask.promise.then(function(pdf) {
+                pdf.getPage(1).then(function(page) {
+                    const viewport = page.getViewport({ scale: 1.5 });
+                    canvas.height = viewport.height;
+                    canvas.width = viewport.width;
+
+                    const renderContext = {
+                        canvasContext: context,
+                        viewport: viewport
+                    };
+                    page.render(renderContext);
+                });
+            }).catch(function(error) {
+                console.error("Error loading PDF:", error);
+            });
+        }
     });
 </script>
 {% endblock %}
@@ -461,4 +499,4 @@ register_filter('split', function(value, arg) {
     return value.split(arg);
 });
 </script>
-{% endblock %} 
+{% endblock %}

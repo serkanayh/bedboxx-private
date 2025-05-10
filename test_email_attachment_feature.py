@@ -100,159 +100,153 @@ class TestEmailAttachmentFeature(unittest.TestCase):
     
     def test_process_email_attachments(self):
         """Test processing email attachments."""
-        # Create a mock email with attachments
-        email = MockEmail()
+        email = Mock(spec=Email)
+        email.id = 1
+        user = Mock(spec=User)
+        user.id = 1
         
-        # Create a temporary text file with stop sale information
-        content = """
-        STOP SALE NOTIFICATION
+        # Mock a list of attachments
+        attachment1 = Mock(spec=EmailAttachment)
+        attachment1.id = 1
+        attachment1.file.path = 'test.pdf'
+        attachment1.filename = 'test.pdf'
         
-        Hotel: Grand Plaza Resort
-        Room Type: Deluxe Suite
-        Period: 15/06/2024 - 30/06/2024
-        Market: UK, DE
+        email.attachments.all.return_value = [attachment1]
         
-        Please stop sales for the above period.
-        """
-        
-        file_path = self.create_temp_file(content, 'txt')
-        
-        # Create a mock attachment
-        attachment = MockAttachment(file_path=file_path)
-        email.attachments.append(attachment)
-        
-        # Mock the EmailRow.objects.create method
-        with patch('project.emails.views.EmailRow.objects.create', return_value=MockEmailRow()) as mock_create:
-            # Import the process_email_attachments function
-            from emails.views import process_email_attachments
+        # Mock the AttachmentAnalyzer
+        with patch('Bedboxx_stopsale.emails.views.AttachmentAnalyzer') as mock_analyzer_class:
+            mock_analyzer = Mock()
+            mock_analyzer_class.return_value = mock_analyzer
+            mock_analyzer.analyze_attachment.return_value = {
+                'extracted_text': 'Test text',
+                'extracted_data': [
+                    {
+                        'hotel_name': 'Test Hotel',
+                        'room_type': 'Standard Room',
+                        'market': 'ALL',
+                        'start_date': '2023-01-01',
+                        'end_date': '2023-01-10',
+                        'sale_type': 'stop'
+                    }
+                ]
+            }
             
+            # Mock EmailRow.objects.create
+            with patch('Bedboxx_stopsale.emails.views.EmailRow.objects.create', return_value=MockEmailRow()) as mock_create:
             # Call the function
-            result = process_email_attachments(email, None)
+                from emails.views import process_email_attachments
+                result = process_email_attachments(email, user)
             
-            # Check that the function returned True
-            self.assertTrue(result)
+                # Verify that the analyzer was called
+                mock_analyzer.analyze_attachment.assert_called_once_with(attachment1.file.path)
             
-            # Check that EmailRow.objects.create was called
-            mock_create.assert_called()
+                # Verify that EmailRow was created
+                mock_create.assert_called_once()
             
-            # Check that the email status was updated
-            self.assertEqual(email.status, "processed")
+                # Verify the result
+                self.assertTrue(result)
     
     def test_confirm_attachment_analysis(self):
         """Test confirming attachment analysis results."""
-        # Create a mock email with attachment rows
-        email = MockEmail()
-        
-        # Create mock attachment rows
-        row1 = MockEmailRow(id=1, email=email)
-        row2 = MockEmailRow(id=2, email=email)
-        email.rows.append(row1)
-        email.rows.append(row2)
-        
-        # Mock the request object
-        request = MagicMock()
+        # Mock request
+        request = Mock()
         request.method = 'POST'
-        request.POST.getlist.return_value = [1]  # Only select row1
-        request.user = MagicMock()
-        request.META.get.return_value = '127.0.0.1'
+        request.POST = {'confirm': True}
         
-        # Mock the get_object_or_404 function
-        with patch('django.shortcuts.get_object_or_404', return_value=email) as mock_get:
-            # Mock the EmailRow.objects.filter method
-            with patch('project.emails.views.EmailRow.objects.filter') as mock_filter:
-                # Mock the filter().exclude().delete() chain
-                mock_filter.return_value.exclude.return_value.delete.return_value = None
-                
-                # Mock the filter(id__in=[1]) to return a queryset with row1
-                mock_queryset = MagicMock()
-                mock_queryset.__iter__.return_value = [row1]
-                mock_filter.return_value.filter.return_value = mock_queryset
-                
-                # Mock the UserLog.objects.create method
-                with patch('project.emails.views.UserLog.objects.create') as mock_log:
-                    # Import the confirm_attachment_analysis function
+        # Mock email
+        email = Mock(spec=Email)
+        email.id = 1
+        email.attachment_analysis_results = {
+            '1': {
+                'extracted_text': 'Test text',
+                'extracted_data': [
+                    {
+                        'hotel_name': 'Test Hotel',
+                        'room_type': 'Standard Room',
+                        'market': 'ALL',
+                        'start_date': '2023-01-01',
+                        'end_date': '2023-01-10',
+                        'sale_type': 'stop'
+                    }
+                ]
+            }
+        }
+        
+        with patch('Bedboxx_stopsale.emails.views.EmailRow.objects.filter') as mock_filter:
+            mock_filter.return_value.exists.return_value = False
+            
+            # Mock get_object_or_404
+            with patch('Bedboxx_stopsale.emails.views.get_object_or_404', return_value=email):
+                # Mock EmailRow.objects.create
+                with patch('Bedboxx_stopsale.emails.views.EmailRow.objects.create', return_value=MockEmailRow()) as mock_create:
+                    # Mock messages
+                    with patch('Bedboxx_stopsale.emails.views.messages') as mock_messages:
+                        # Mock redirect
+                        with patch('Bedboxx_stopsale.emails.views.redirect') as mock_redirect:
+                            # Call the function
                     from emails.views import confirm_attachment_analysis
+                            confirm_attachment_analysis(request, email.id)
                     
-                    # Call the function
-                    response = confirm_attachment_analysis(request, email.id)
+                            # Verify that EmailRow was created
+                            mock_create.assert_called_once()
                     
-                    # Check that get_object_or_404 was called with the correct arguments
-                    mock_get.assert_called_with(email.__class__, id=email.id)
+                            # Verify that messages.success was called
+                            mock_messages.success.assert_called_once()
                     
-                    # Check that EmailRow.objects.filter was called
-                    mock_filter.assert_called()
-                    
-                    # Check that UserLog.objects.create was called
-                    mock_log.assert_called()
-                    
-                    # Check that the row status was updated
-                    self.assertEqual(row1.status, "pending")
-                    
-                    # Check that the email status was updated
-                    self.assertEqual(email.status, "processed")
+                            # Verify that redirect was called with the correct args
+                            mock_redirect.assert_called_once()
     
     def test_manual_mapping(self):
         """Test manually mapping email row data."""
-        # Create a mock email
-        email = MockEmail()
-        
-        # Create a mock row
-        row = MockEmailRow(id=1, email=email)
-        
-        # Create a mock hotel and room
-        hotel = MockHotel()
-        room = MockRoom(hotel=hotel)
-        
-        # Mock the request object
-        request = MagicMock()
+        # Mock request
+        request = Mock()
         request.method = 'POST'
-        request.POST.get.side_effect = lambda key, default=None: {
-            'hotel_id': hotel.id,
-            'market_id': 1,
-            'start_date': '2024-06-15',
-            'end_date': '2024-06-30',
-            'sale_type': 'stop',
-        }.get(key, default)
-        request.POST.getlist.return_value = [room.id]
-        request.user = MagicMock()
-        request.META.get.return_value = '127.0.0.1'
+        request.POST = {
+            'hotel_id': '1',
+            'room_ids': ['2'],
+            'start_date': '2023-01-01',
+            'end_date': '2023-01-10',
+            'market': 'ALL',
+            'sale_type': 'stop'
+        }
         
-        # Mock the get_object_or_404 function to return the row
-        with patch('django.shortcuts.get_object_or_404', side_effect=[row]) as mock_get:
-            # Mock the Hotel.objects.get method to return the hotel
-            with patch('project.emails.views.Hotel.objects.get', return_value=hotel) as mock_hotel_get:
-                # Mock the Market.objects.get method
-                with patch('project.emails.views.Market.objects.get', return_value=MagicMock()) as mock_market_get:
-                    # Mock the Room.objects.get method to return the room
-                    with patch('project.emails.views.Room.objects.get', return_value=room) as mock_room_get:
-                        # Mock the UserLog.objects.create method
-                        with patch('project.emails.views.UserLog.objects.create') as mock_log:
-                            # Import the manual_mapping function
-                            from emails.views import manual_mapping
-                            
+        # Mock email row
+        row = Mock(spec=EmailRow)
+        row.id = 1
+        row.email_id = 2
+        
+        # Mock hotel and room
+        hotel = Mock(spec=Hotel)
+        hotel.id = 1
+        hotel.juniper_hotel_name = 'Test Hotel'
+        
+        room = Mock(spec=Room)
+        room.id = 2
+        room.juniper_room_type = 'Standard Room'
+        
+        with patch('Bedboxx_stopsale.emails.views.Hotel.objects.get', return_value=hotel) as mock_hotel_get:
+            with patch('Bedboxx_stopsale.emails.views.Room.objects.filter') as mock_room_filter:
+                mock_room_filter.return_value = [room]
+                
+                # Mock get_object_or_404
+                with patch('Bedboxx_stopsale.emails.views.get_object_or_404', return_value=row):
+                    # Mock messages
+                    with patch('Bedboxx_stopsale.emails.views.messages') as mock_messages:
+                        # Mock redirect
+                        with patch('Bedboxx_stopsale.emails.views.redirect') as mock_redirect:
                             # Call the function
-                            response = manual_mapping(request, row.id)
+                            from emails.views import manual_mapping
+                            manual_mapping(request, row.id)
                             
-                            # Check that get_object_or_404 was called with the correct arguments
-                            mock_get.assert_called_with(row.__class__, id=row.id)
-                            
-                            # Check that Hotel.objects.get was called
-                            mock_hotel_get.assert_called()
-                            
-                            # Check that Market.objects.get was called
-                            mock_market_get.assert_called()
-                            
-                            # Check that Room.objects.get was called
-                            mock_room_get.assert_called()
-                            
-                            # Check that UserLog.objects.create was called
-                            mock_log.assert_called()
-                            
-                            # Check that the row was updated
+                            # Verify that the hotel and room were set
                             self.assertEqual(row.juniper_hotel, hotel)
-                            self.assertEqual(row.juniper_room, room)
-                            self.assertEqual(row.hotel_name, hotel.juniper_hotel_name)
-                            self.assertEqual(row.room_type, room.juniper_room_type)
+                            self.assertEqual(list(row.juniper_rooms.add.call_args)[0][0], room)
+                            
+                            # Verify that messages.success was called
+                            mock_messages.success.assert_called_once()
+                            
+                            # Verify that redirect was called with the correct args
+                            mock_redirect.assert_called_once()
 
 if __name__ == '__main__':
     unittest.main()

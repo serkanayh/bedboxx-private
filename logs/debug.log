@@ -1,0 +1,40 @@
+2025-05-04 01:55:55,456 - root - INFO - Global logging configuration set up.
+2025-05-04 01:55:55,972 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2025-05-04 01:55:55,977 - emails.views - ERROR - Failed to import ClaudeAnalyzer: cannot import name 'Prompt' from 'core.models' (/Users/serkanayhan/projects/github_Project01/Bedboxx_stopsale/core/models.py)
+2025-05-04 01:55:56,159 - api.views - ERROR - Failed to import ClaudeAnalyzer: No module named 'admin'
+2025-05-04 04:58:59,440 - root - INFO - Global logging configuration set up.
+2025-05-04 01:58:59,956 - root - INFO - Global logging configuration set up.
+2025-05-04 01:59:00,226 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2025-05-04 01:59:00,234 - emails.views - INFO - ClaudeAnalyzer successfully imported
+2025-05-04 01:59:00,415 - api.views - ERROR - Failed to import ClaudeAnalyzer: No module named 'admin'
+2025-05-04 05:03:07,889 - root - INFO - Global logging configuration set up.
+2025-05-04 02:03:08,433 - root - INFO - Global logging configuration set up.
+2025-05-04 02:03:08,719 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2025-05-04 02:03:08,725 - emails.views - INFO - ClaudeAnalyzer successfully imported
+2025-05-04 02:03:09,217 - api.views - INFO - ClaudeAnalyzer successfully imported
+2025-05-04 02:06:55,252 - django.utils.autoreload - INFO - /Users/serkanayhan/projects/github_Project01/Bedboxx_stopsale/ai/analyzer.py changed, reloading.
+2025-05-04 02:06:55,511 - root - INFO - Global logging configuration set up.
+2025-05-04 02:06:56,040 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2025-05-04 02:06:56,047 - emails.views - INFO - ClaudeAnalyzer successfully imported
+2025-05-04 02:06:56,462 - api.views - INFO - ClaudeAnalyzer successfully imported
+2025-05-04 02:07:47,777 - django.utils.autoreload - INFO - /Users/serkanayhan/projects/github_Project01/Bedboxx_stopsale/api/views.py changed, reloading.
+2025-05-04 05:08:21,454 - root - INFO - Global logging configuration set up.
+2025-05-04 02:08:21,974 - root - INFO - Global logging configuration set up.
+2025-05-04 02:08:22,241 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2025-05-04 02:08:22,246 - emails.views - INFO - ClaudeAnalyzer successfully imported
+2025-05-04 02:08:22,655 - api.views - INFO - ClaudeAnalyzer successfully imported
+2025-05-04 02:11:38,009 - django.request - WARNING - Not Found: /api/analyze_email/
+2025-05-04 02:11:57,022 - django.utils.autoreload - INFO - /Users/serkanayhan/projects/github_Project01/Bedboxx_stopsale/api/urls.py changed, reloading.
+2025-05-04 02:11:57,262 - root - INFO - Global logging configuration set up.
+2025-05-04 02:11:57,755 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2025-05-04 02:11:57,760 - emails.views - INFO - ClaudeAnalyzer successfully imported
+2025-05-04 02:11:58,180 - api.views - INFO - ClaudeAnalyzer successfully imported
+2025-05-04 02:12:57,603 - django.request - WARNING - Forbidden: /api/analyze_email/
+2025-05-04 02:15:36,353 - django.utils.autoreload - INFO - /Users/serkanayhan/projects/github_Project01/Bedboxx_stopsale/ai/analyzer.py changed, reloading.
+2025-05-04 02:15:36,643 - root - INFO - Global logging configuration set up.
+2025-05-04 02:15:37,225 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2025-05-04 02:15:37,234 - emails.views - ERROR - Failed to import ClaudeAnalyzer: cannot import name 'AIModel' from 'core.models' (/Users/serkanayhan/projects/github_Project01/Bedboxx_stopsale/core/models.py)
+2025-05-04 02:15:37,730 - api.views - INFO - ClaudeAnalyzer successfully imported
+2025-05-04 02:16:31,777 - django.request - WARNING - Forbidden: /api/analyze_email/
+2025-05-04 02:19:42,538 - django.request - WARNING - Forbidden: /api/analyze_email/
+2025-05-04 02:20:27,351 - django.utils.autoreload - INFO - /Users/serkanayhan/projects/github_Project01/Bedboxx_stopsale/api/views.py changed, reloading.

@@ -25,6 +25,9 @@
     <!-- Custom UX Improvements CSS -->
     <link rel="stylesheet" href="{% static 'css/ux-improvements.css' %}">
     
+    <!-- Email Notification System CSS -->
+    <link rel="stylesheet" href="{% static 'css/notification-styles.css' %}">
+    
     {% block extra_css %}{% endblock %}
     <style>
         :root {
@@ -306,6 +309,7 @@
                         <li class="nav-item">
                             <a class="nav-link {% if request.resolver_match.app_name == 'emails' and request.resolver_match.url_name == 'email_list' %}active{% endif %}" href="{% url 'emails:email_list' %}">
                                 <i class="bi bi-envelope"></i> <span>Emails</span>
+                                <span id="unread-email-badge" class="position-relative" style="display: none;"></span>
                             </a>
                         </li>
                         {% if user.is_admin or user.is_supervisor %}
@@ -407,6 +411,9 @@
     <!-- Custom UX Improvements JavaScript -->
     <script src="{% static 'js/ux-improvements.js' %}"></script>
     
+    <!-- Email Notification System -->
+    <script src="{% static 'js/email-notifications.js' %}"></script>
+    
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             // Check if sidebar state is saved in localStorage
@@ -460,6 +467,20 @@
             tooltipTriggerList.map(function (tooltipTriggerEl) {
                 return new bootstrap.Tooltip(tooltipTriggerEl);
             });
+            // Initialize Email Notification System for authenticated users
+            {% if user.is_authenticated %}
+            const notificationSystem = new EmailNotificationSystem({
+                checkInterval: 30000, // Check every 30 seconds
+                enableSound: true,
+                autoRefresh: false // Don't auto refresh by default
+            });
+            notificationSystem.startPolling();
+            
+            // Reset unread count when visiting the email list page
+            if (window.location.pathname === '{% url "emails:email_list" %}') {
+                notificationSystem.resetUnreadCount();
+            }
+            {% endif %}
             
             // Initial call and event listener
             handleResize();

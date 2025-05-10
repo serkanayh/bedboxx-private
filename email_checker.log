@@ -1,0 +1,1888 @@
+2025-05-09 06:53:02,346 [INFO] Starting email checking daemon
+2025-05-09 06:53:02,348 [INFO] Running email check
+2025-05-09 06:53:05,302 [INFO] Auto-analyzing email: 1030 - TURAN PRINCE HOTELS INDIRIM HK.
+2025-05-09 06:53:05,312 [INFO] ClaudeAnalyzer successfully imported
+2025-05-09 06:53:05,693 [INFO] ClaudeAnalyzer successfully imported
+2025-05-09 06:53:05,714 [INFO] ClaudeAnalyzer initialized.
+2025-05-09 06:53:05,718 [INFO] Found table with date information
+2025-05-09 06:53:05,718 [INFO] Found table with date information
+2025-05-09 06:53:05,718 [INFO] Added 2 structured tables to content
+2025-05-09 06:53:10,084 [INFO] HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2025-05-09 06:53:10,092 [INFO] [RAW AI RESPONSE DUMP] Subject: TURAN PRINCE HOTELS INDIRIM HK.:
+[
+  {
+    "hotel_name": "CLUB HOTEL TURAN PRINCE WORLD",
+    "room_type": "All Room",
+    "markets": ["ALL"],
+    "start_date": "2025-05-01",
+    "end_date": "2025-05-31",
+    "sale_status": "open"
+  },
+  {
+    "hotel_name": "CLUB HOTEL TURAN PRINCE WORLD",
+    "room_type": "All Room",
+    "markets": ["ALL"],
+    "start_date": "2025-06-01",
+    "end_date": "2025-09-30",
+    "sale_status": "open"
+  },
+  {
+    "hotel_name": "CLUB HOTEL TURAN PRINCE WORLD",
+    "room_type": "All Room",
+    "markets": ["ALL"],
+    "start_date": "2025-10-01",
+    "end_date": "2025-11-30",
+    "sale_status": "open"
+  },
+  {
+    "hotel_name": "HOTEL TURAN PRINCE",
+    "room_type": "All Room",
+    "markets": ["ALL"],
+    "start_date": "2025-05-01",
+    "end_date": "2025-05-31",
+    "sale_status": "open"
+  },
+  {
+    "hotel_name": "HOTEL TURAN PRINCE",
+    "room_type": "All Room",
+    "markets": ["ALL"],
+    "start_date": "2025-06-01",
+    "end_date": "2025-09-30",
+    "sale_status": "open"
+  },
+  {
+    "hotel_
+2025-05-09 06:53:10,094 [INFO] Post-processed 6 rules from AI.
+2025-05-09 06:53:10,094 [INFO] AI analysis successful. Extracted 6 processed rows.
+2025-05-09 06:53:10,095 [INFO] Successfully auto-analyzed email 1030 using AI.
+2025-05-09 06:53:10,097 [INFO] [Signal] Resolved markets for rule in email 1030: ['All']
+2025-05-09 06:53:10,099 [INFO] [Signal] EmailRow 3934 created with status 'matching'. Triggering individual match task.
+2025-05-09 06:53:10,101 [INFO] [Signal] Created EmailRow 3934 from AI data for email 1030 with markets: ['All'].
+2025-05-09 06:53:10,102 [INFO] [Signal] Resolved markets for rule in email 1030: ['All']
+2025-05-09 06:53:10,103 [INFO] [Signal] EmailRow 3935 created with status 'matching'. Triggering individual match task.
+2025-05-09 06:53:10,104 [INFO] [Signal] Created EmailRow 3935 from AI data for email 1030 with markets: ['All'].
+2025-05-09 06:53:10,104 [INFO] [Signal] Resolved markets for rule in email 1030: ['All']
+2025-05-09 06:53:10,105 [INFO] [Signal] EmailRow 3936 created with status 'matching'. Triggering individual match task.
+2025-05-09 06:53:10,106 [INFO] [Signal] Created EmailRow 3936 from AI data for email 1030 with markets: ['All'].
+2025-05-09 06:53:10,106 [INFO] [Signal] Resolved markets for rule in email 1030: ['All']
+2025-05-09 06:53:10,107 [INFO] [Signal] EmailRow 3937 created with status 'matching'. Triggering individual match task.
+2025-05-09 06:53:10,108 [INFO] [Signal] Created EmailRow 3937 from AI data for email 1030 with markets: ['All'].
+2025-05-09 06:53:10,108 [INFO] [Signal] Resolved markets for rule in email 1030: ['All']
+2025-05-09 06:53:10,108 [INFO] [Signal] EmailRow 3938 created with status 'matching'. Triggering individual match task.
+2025-05-09 06:53:10,109 [INFO] [Signal] Created EmailRow 3938 from AI data for email 1030 with markets: ['All'].
+2025-05-09 06:53:10,109 [INFO] [Signal] Resolved markets for rule in email 1030: ['All']
+2025-05-09 06:53:10,110 [INFO] [Signal] EmailRow 3939 created with status 'matching'. Triggering individual match task.
+2025-05-09 06:53:10,110 [INFO] [Signal] Created EmailRow 3939 from AI data for email 1030 with markets: ['All'].
+2025-05-09 06:53:10,111 [INFO] Scheduling BATCH matching task for email 1030 with 6 rows.
+2025-05-09 06:53:10,168 [INFO] Matching task scheduled successfully for email 1030.
+2025-05-09 06:53:10,168 [INFO] Successfully extracted data from email body for 1030. Skipping attachments.
+2025-05-09 06:53:10,169 [INFO] Email 1030 status set to 'processing'.
+2025-05-09 06:53:10,169 [INFO] Processing logic completed.
+2025-05-09 06:53:10,725 [INFO] Auto-analyzing email: 1031 - 09.05.2025 - Club Hotel Letoonia Stop Sale Bildirimi
+2025-05-09 06:53:10,732 [INFO] ClaudeAnalyzer initialized.
+2025-05-09 06:53:12,112 [INFO] HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2025-05-09 06:53:12,113 [INFO] [RAW AI RESPONSE DUMP] Subject: 09.05.2025 - Club Hotel Letoonia Stop Sale Bildirimi:
+[
+  {
+    "hotel_name": "Club Hotel Letoonia",
+    "room_type": "All Room",
+    "markets": ["ALL"],
+    "start_date": "2025-05-27",
+    "end_date": "2025-05-27",
+    "sale_status": "stop"
+  }
+]
+2025-05-09 06:53:12,113 [INFO] Post-processed 1 rules from AI.
+2025-05-09 06:53:12,113 [INFO] AI analysis successful. Extracted 1 processed rows.
+2025-05-09 06:53:12,113 [INFO] Successfully auto-analyzed email 1031 using AI.
+2025-05-09 06:53:12,114 [INFO] [Signal] Resolved markets for rule in email 1031: ['All']
+2025-05-09 06:53:12,115 [INFO] [Signal] EmailRow 3940 created with status 'matching'. Triggering individual match task.
+2025-05-09 06:53:12,115 [INFO] [Signal] Created EmailRow 3940 from AI data for email 1031 with markets: ['All'].
+2025-05-09 06:53:12,115 [INFO] Scheduling BATCH matching task for email 1031 with 1 rows.
+2025-05-09 06:53:12,116 [INFO] Matching task scheduled successfully for email 1031.
+2025-05-09 06:53:12,116 [INFO] Successfully extracted data from email body for 1031. Skipping attachments.
+2025-05-09 06:53:12,116 [INFO] Email 1031 status set to 'processing'.
+2025-05-09 06:53:12,116 [INFO] Processing logic completed.
+2025-05-09 06:53:13,085 [INFO] Auto-analyzing email: 1032 - TURAN PRINCE HOTELS INDIRIM HK.
+2025-05-09 06:53:13,092 [INFO] ClaudeAnalyzer initialized.
+2025-05-09 06:53:13,096 [INFO] Found table with date information
+2025-05-09 06:53:13,097 [INFO] Found table with date information
+2025-05-09 06:53:13,097 [INFO] Added 2 structured tables to content
+2025-05-09 06:53:18,102 [INFO] HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2025-05-09 06:53:18,104 [INFO] [RAW AI RESPONSE DUMP] Subject: TURAN PRINCE HOTELS INDIRIM HK.:
+[
+  {
+    "hotel_name": "CLUB HOTEL TURAN PRINCE WORLD",
+    "room_type": "All Room",
+    "markets": ["ALL"],
+    "start_date": "2025-05-01",
+    "end_date": "2025-05-31",
+    "sale_status": "open"
+  },
+  {
+    "hotel_name": "CLUB HOTEL TURAN PRINCE WORLD",
+    "room_type": "All Room",
+    "markets": ["ALL"],
+    "start_date": "2025-06-01",
+    "end_date": "2025-09-30",
+    "sale_status": "open"
+  },
+  {
+    "hotel_name": "CLUB HOTEL TURAN PRINCE WORLD",
+    "room_type": "All Room",
+    "markets": ["ALL"],
+    "start_date": "2025-10-01",
+    "end_date": "2025-11-30",
+    "sale_status": "open"
+  },
+  {
+    "hotel_name": "HOTEL TURAN PRINCE",
+    "room_type": "All Room",
+    "markets": ["ALL"],
+    "start_date": "2025-05-01",
+    "end_date": "2025-05-31",
+    "sale_status": "open"
+  },
+  {
+    "hotel_name": "HOTEL TURAN PRINCE",
+    "room_type": "All Room",
+    "markets": ["ALL"],
+    "start_date": "2025-06-01",
+    "end_date": "2025-09-30",
+    "sale_status": "open"
+  },
+  {
+    "hotel_
+2025-05-09 06:53:18,105 [INFO] Post-processed 6 rules from AI.
+2025-05-09 06:53:18,105 [INFO] AI analysis successful. Extracted 6 processed rows.
+2025-05-09 06:53:18,106 [INFO] Successfully auto-analyzed email 1032 using AI.
+2025-05-09 06:53:18,107 [INFO] [Signal] Resolved markets for rule in email 1032: ['All']
+2025-05-09 06:53:18,109 [INFO] [Signal] EmailRow 3941 created with status 'matching'. Triggering individual match task.
+2025-05-09 06:53:18,111 [INFO] [Signal] Created EmailRow 3941 from AI data for email 1032 with markets: ['All'].
+2025-05-09 06:53:18,112 [INFO] [Signal] Resolved markets for rule in email 1032: ['All']
+2025-05-09 06:53:18,114 [INFO] [Signal] EmailRow 3942 created with status 'matching'. Triggering individual match task.
+2025-05-09 06:53:18,116 [INFO] [Signal] Created EmailRow 3942 from AI data for email 1032 with markets: ['All'].
+2025-05-09 06:53:18,117 [INFO] [Signal] Resolved markets for rule in email 1032: ['All']
+2025-05-09 06:53:18,118 [INFO] [Signal] EmailRow 3943 created with status 'matching'. Triggering individual match task.
+2025-05-09 06:53:18,120 [INFO] [Signal] Created EmailRow 3943 from AI data for email 1032 with markets: ['All'].
+2025-05-09 06:53:18,120 [INFO] [Signal] Resolved markets for rule in email 1032: ['All']
+2025-05-09 06:53:18,121 [INFO] [Signal] EmailRow 3944 created with status 'matching'. Triggering individual match task.
+2025-05-09 06:53:18,122 [INFO] [Signal] Created EmailRow 3944 from AI data for email 1032 with markets: ['All'].
+2025-05-09 06:53:18,122 [INFO] [Signal] Resolved markets for rule in email 1032: ['All']
+2025-05-09 06:53:18,123 [INFO] [Signal] EmailRow 3945 created with status 'matching'. Triggering individual match task.
+2025-05-09 06:53:18,124 [INFO] [Signal] Created EmailRow 3945 from AI data for email 1032 with markets: ['All'].
+2025-05-09 06:53:18,124 [INFO] [Signal] Resolved markets for rule in email 1032: ['All']
+2025-05-09 06:53:18,125 [INFO] [Signal] EmailRow 3946 created with status 'matching'. Triggering individual match task.
+2025-05-09 06:53:18,126 [INFO] [Signal] Created EmailRow 3946 from AI data for email 1032 with markets: ['All'].
+2025-05-09 06:53:18,126 [INFO] Scheduling BATCH matching task for email 1032 with 6 rows.
+2025-05-09 06:53:18,131 [INFO] Matching task scheduled successfully for email 1032.
+2025-05-09 06:53:18,131 [INFO] Successfully extracted data from email body for 1032. Skipping attachments.
+2025-05-09 06:53:18,132 [INFO] Email 1032 status set to 'processing'.
+2025-05-09 06:53:18,133 [INFO] Processing logic completed.
+2025-05-09 06:53:18,639 [INFO] Auto-analyzing email: 1033 - TURAN PRINCE HOTELS INDIRIM HK.
+2025-05-09 06:53:18,646 [INFO] ClaudeAnalyzer initialized.
+2025-05-09 06:53:18,650 [INFO] Found table with date information
+2025-05-09 06:53:18,650 [INFO] Found table with date information
+2025-05-09 06:53:18,651 [INFO] Added 2 structured tables to content
+2025-05-09 06:53:22,582 [INFO] HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2025-05-09 06:53:22,583 [INFO] [RAW AI RESPONSE DUMP] Subject: TURAN PRINCE HOTELS INDIRIM HK.:
+[
+  {
+    "hotel_name": "CLUB HOTEL TURAN PRINCE WORLD",
+    "room_type": "All Room",
+    "markets": ["ALL"],
+    "start_date": "2025-05-01",
+    "end_date": "2025-05-31",
+    "sale_status": "open"
+  },
+  {
+    "hotel_name": "CLUB HOTEL TURAN PRINCE WORLD",
+    "room_type": "All Room",
+    "markets": ["ALL"],
+    "start_date": "2025-06-01",
+    "end_date": "2025-09-30",
+    "sale_status": "open"
+  },
+  {
+    "hotel_name": "CLUB HOTEL TURAN PRINCE WORLD",
+    "room_type": "All Room",
+    "markets": ["ALL"],
+    "start_date": "2025-10-01",
+    "end_date": "2025-11-30",
+    "sale_status": "open"
+  },
+  {
+    "hotel_name": "HOTEL TURAN PRINCE",
+    "room_type": "All Room",
+    "markets": ["ALL"],
+    "start_date": "2025-05-01",
+    "end_date": "2025-05-31",
+    "sale_status": "open"
+  },
+  {
+    "hotel_name": "HOTEL TURAN PRINCE",
+    "room_type": "All Room",
+    "markets": ["ALL"],
+    "start_date": "2025-06-01",
+    "end_date": "2025-09-30",
+    "sale_status": "open"
+  },
+  {
+    "hotel_
+2025-05-09 06:53:22,584 [INFO] Post-processed 6 rules from AI.
+2025-05-09 06:53:22,584 [INFO] AI analysis successful. Extracted 6 processed rows.
+2025-05-09 06:53:22,584 [INFO] Successfully auto-analyzed email 1033 using AI.
+2025-05-09 06:53:22,585 [INFO] [Signal] Resolved markets for rule in email 1033: ['All']
+2025-05-09 06:53:22,586 [INFO] [Signal] EmailRow 3947 created with status 'matching'. Triggering individual match task.
+2025-05-09 06:53:22,587 [INFO] [Signal] Created EmailRow 3947 from AI data for email 1033 with markets: ['All'].
+2025-05-09 06:53:22,587 [INFO] [Signal] Resolved markets for rule in email 1033: ['All']
+2025-05-09 06:53:22,588 [INFO] [Signal] EmailRow 3948 created with status 'matching'. Triggering individual match task.
+2025-05-09 06:53:22,588 [INFO] [Signal] Created EmailRow 3948 from AI data for email 1033 with markets: ['All'].
+2025-05-09 06:53:22,589 [INFO] [Signal] Resolved markets for rule in email 1033: ['All']
+2025-05-09 06:53:22,589 [INFO] [Signal] EmailRow 3949 created with status 'matching'. Triggering individual match task.
+2025-05-09 06:53:22,590 [INFO] [Signal] Created EmailRow 3949 from AI data for email 1033 with markets: ['All'].
+2025-05-09 06:53:22,590 [INFO] [Signal] Resolved markets for rule in email 1033: ['All']
+2025-05-09 06:53:22,590 [INFO] [Signal] EmailRow 3950 created with status 'matching'. Triggering individual match task.
+2025-05-09 06:53:22,591 [INFO] [Signal] Created EmailRow 3950 from AI data for email 1033 with markets: ['All'].
+2025-05-09 06:53:22,591 [INFO] [Signal] Resolved markets for rule in email 1033: ['All']
+2025-05-09 06:53:22,592 [INFO] [Signal] EmailRow 3951 created with status 'matching'. Triggering individual match task.
+2025-05-09 06:53:22,593 [INFO] [Signal] Created EmailRow 3951 from AI data for email 1033 with markets: ['All'].
+2025-05-09 06:53:22,593 [INFO] [Signal] Resolved markets for rule in email 1033: ['All']
+2025-05-09 06:53:22,594 [INFO] [Signal] EmailRow 3952 created with status 'matching'. Triggering individual match task.
+2025-05-09 06:53:22,594 [INFO] [Signal] Created EmailRow 3952 from AI data for email 1033 with markets: ['All'].
+2025-05-09 06:53:22,594 [INFO] Scheduling BATCH matching task for email 1033 with 6 rows.
+2025-05-09 06:53:22,595 [INFO] Matching task scheduled successfully for email 1033.
+2025-05-09 06:53:22,595 [INFO] Successfully extracted data from email body for 1033. Skipping attachments.
+2025-05-09 06:53:22,596 [INFO] Email 1033 status set to 'processing'.
+2025-05-09 06:53:22,596 [INFO] Processing logic completed.
+2025-05-09 06:53:22,918 [INFO] Waiting 99.5 seconds until next check
+2025-05-09 06:55:02,466 [INFO] Running email check
+2025-05-09 06:55:03,586 [INFO] Waiting 118.9 seconds until next check
+2025-05-09 06:57:02,572 [INFO] Running email check
+2025-05-09 06:57:05,093 [INFO] Auto-analyzing email: 1034 - FW: CLUB HOTEL LETOONIA STOP SALE
+2025-05-09 06:57:05,110 [INFO] ClaudeAnalyzer initialized.
+2025-05-09 06:57:05,113 [INFO] Original method found 5 markers
+2025-05-09 06:57:05,113 [INFO] Found first marker element: span
+2025-05-09 06:57:05,113 [WARNING] No content before marker, using full email
+2025-05-09 06:57:06,503 [INFO] HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2025-05-09 06:57:06,506 [INFO] [RAW AI RESPONSE DUMP] Subject: FW: CLUB HOTEL LETOONIA STOP SALE:
+[
+  {
+    "hotel_name": "Club Hotel Letoonia",
+    "room_type": "All Room Types",
+    "markets": ["ALL"],
+    "start_date": "2025-05-27",
+    "end_date": "2025-05-27",
+    "sale_status": "stop"
+  }
+]
+2025-05-09 06:57:06,507 [INFO] Post-processed 1 rules from AI.
+2025-05-09 06:57:06,508 [INFO] AI analysis successful. Extracted 1 processed rows.
+2025-05-09 06:57:06,508 [INFO] Successfully auto-analyzed email 1034 using AI.
+2025-05-09 06:57:06,510 [INFO] [Signal] Resolved markets for rule in email 1034: ['All']
+2025-05-09 06:57:06,513 [INFO] [Signal] EmailRow 3953 created with status 'matching'. Triggering individual match task.
+2025-05-09 06:57:06,516 [INFO] [Signal] Created EmailRow 3953 from AI data for email 1034 with markets: ['All'].
+2025-05-09 06:57:06,516 [INFO] Scheduling BATCH matching task for email 1034 with 1 rows.
+2025-05-09 06:57:06,520 [INFO] Matching task scheduled successfully for email 1034.
+2025-05-09 06:57:06,520 [INFO] Successfully extracted data from email body for 1034. Skipping attachments.
+2025-05-09 06:57:06,521 [INFO] Email 1034 status set to 'processing'.
+2025-05-09 06:57:06,521 [INFO] Processing logic completed.
+2025-05-09 06:57:07,223 [INFO] Waiting 115.4 seconds until next check
+2025-05-09 06:59:02,666 [INFO] Running email check
+2025-05-09 06:59:05,144 [INFO] Auto-analyzing email: 1035 - SUENO HOTESL SPO REVİZE  - UZATMASI HAKKINDA
+2025-05-09 06:59:05,168 [INFO] ClaudeAnalyzer initialized.
+2025-05-09 06:59:08,041 [INFO] HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2025-05-09 06:59:08,043 [INFO] [RAW AI RESPONSE DUMP] Subject: SUENO HOTESL SPO REVİZE  - UZATMASI HAKKINDA:
+[
+  {
+    "hotel_name": "Sueno Hotels Beach Side",
+    "room_type": "All Room",
+    "markets": ["West Europe Market", "UK Market", "Scandinavian Market", "Baltic Market", "Balkan Market"],
+    "start_date": "2025-05-05",
+    "end_date": "2025-10-31",
+    "sale_status": "open"
+  },
+  {
+    "hotel_name": "Sueno Hotels Deluxe Belek",
+    "room_type": "All Room",
+    "markets": ["West Europe Market", "UK Market", "Scandinavian Market", "Baltic Market", "Balkan Market"],
+    "start_date": "2025-05-05",
+    "end_date": "2025-10-31",
+    "sale_status": "open"
+  },
+  {
+    "hotel_name": "Sueno Hotels Golf Belek",
+    "room_type": "All Room",
+    "markets": ["West Europe Market", "UK Market", "Scandinavian Market", "Baltic Market", "Balkan Market"],
+    "start_date": "2025-05-20",
+    "end_date": "2025-10-31",
+    "sale_status": "open"
+  }
+]
+2025-05-09 06:59:08,045 [WARNING] Rule #0: Market/Alias 'Scandinavian Market' not found in DB. Adding as is (uppercase).
+2025-05-09 06:59:08,046 [WARNING] Rule #1: Market/Alias 'Scandinavian Market' not found in DB. Adding as is (uppercase).
+2025-05-09 06:59:08,046 [WARNING] Rule #2: Market/Alias 'Scandinavian Market' not found in DB. Adding as is (uppercase).
+2025-05-09 06:59:08,046 [INFO] Post-processed 3 rules from AI.
+2025-05-09 06:59:08,046 [INFO] AI analysis successful. Extracted 3 processed rows.
+2025-05-09 06:59:08,047 [INFO] Successfully auto-analyzed email 1035 using AI.
+2025-05-09 06:59:08,049 [WARNING] [Signal] Could not find direct match or alias for market name 'SCANDINAVIAN MARKET' from AI for email 1035.
+2025-05-09 06:59:08,050 [INFO] [Signal] Resolved markets for rule in email 1035: ['West Europe Market', 'Balkan Market', 'Baltic Market', 'UK Market']
+2025-05-09 06:59:08,052 [INFO] [Signal] EmailRow 3959 created with status 'matching'. Triggering individual match task.
+2025-05-09 06:59:08,054 [INFO] [Signal] Created EmailRow 3959 from AI data for email 1035 with markets: ['West Europe Market', 'Balkan Market', 'Baltic Market', 'UK Market'].
+2025-05-09 06:59:08,054 [WARNING] [Signal] Could not find direct match or alias for market name 'SCANDINAVIAN MARKET' from AI for email 1035.
+2025-05-09 06:59:08,055 [INFO] [Signal] Resolved markets for rule in email 1035: ['West Europe Market', 'Balkan Market', 'Baltic Market', 'UK Market']
+2025-05-09 06:59:08,056 [INFO] [Signal] EmailRow 3960 created with status 'matching'. Triggering individual match task.
+2025-05-09 06:59:08,056 [INFO] [Signal] Created EmailRow 3960 from AI data for email 1035 with markets: ['West Europe Market', 'Balkan Market', 'Baltic Market', 'UK Market'].
+2025-05-09 06:59:08,057 [WARNING] [Signal] Could not find direct match or alias for market name 'SCANDINAVIAN MARKET' from AI for email 1035.
+2025-05-09 06:59:08,058 [INFO] [Signal] Resolved markets for rule in email 1035: ['West Europe Market', 'Balkan Market', 'Baltic Market', 'UK Market']
+2025-05-09 06:59:08,060 [INFO] [Signal] EmailRow 3961 created with status 'matching'. Triggering individual match task.
+2025-05-09 06:59:08,061 [INFO] [Signal] Created EmailRow 3961 from AI data for email 1035 with markets: ['West Europe Market', 'Balkan Market', 'Baltic Market', 'UK Market'].
+2025-05-09 06:59:08,061 [INFO] Scheduling BATCH matching task for email 1035 with 3 rows.
+2025-05-09 06:59:08,081 [INFO] Matching task scheduled successfully for email 1035.
+2025-05-09 06:59:08,081 [INFO] Successfully extracted data from email body for 1035. Skipping attachments.
+2025-05-09 06:59:08,082 [INFO] Email 1035 status set to 'processing'.
+2025-05-09 06:59:08,083 [INFO] Processing logic completed.
+2025-05-09 06:59:08,983 [INFO] Auto-analyzing email: 1036 - Fwd: Megasaray Resort Side Stop Sale Bildirimi 09.05.2025 ALL AGENCIES ALL MARKETS STOP SALE
+2025-05-09 06:59:08,997 [INFO] ClaudeAnalyzer initialized.
+2025-05-09 06:59:08,997 [INFO] Email from ecctur.com domain detected, skipping cleaning: Emrecan Kurnaz <emrecan.kurnaz@ecctur.com>
+2025-05-09 06:59:12,273 [INFO] HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2025-05-09 06:59:12,275 [INFO] [RAW AI RESPONSE DUMP] Subject: Fwd: Megasaray Resort Side Stop Sale Bildirimi 09.05.2025 ALL AGENCIES ALL MARKETS STOP SALE:
+[
+  {
+    "hotel_name": "Megasaray Resort Side",
+    "room_type": "Junior Family Room",
+    "markets": ["ALL"],
+    "start_date": "2025-06-05",
+    "end_date": "2025-06-06",
+    "sale_status": "stop"
+  },
+  {
+    "hotel_name": "Megasaray Resort Side",
+    "room_type": "Comfort Standard Room",
+    "markets": ["ALL"],
+    "start_date": "2025-06-07",
+    "end_date": "2025-06-09",
+    "sale_status": "stop"
+  },
+  {
+    "hotel_name": "Megasaray Resort Side",
+    "room_type": "Terrace Family Room",
+    "markets": ["ALL"],
+    "start_date": "2025-07-05",
+    "end_date": "2025-07-05",
+    "sale_status": "stop"
+  }
+]
+2025-05-09 06:59:12,277 [INFO] Post-processed 3 rules from AI.
+2025-05-09 06:59:12,277 [INFO] AI analysis successful. Extracted 3 processed rows.
+2025-05-09 06:59:12,277 [INFO] Successfully auto-analyzed email 1036 using AI.
+2025-05-09 06:59:12,278 [INFO] [Signal] Resolved markets for rule in email 1036: ['All']
+2025-05-09 06:59:12,281 [INFO] [Signal] EmailRow 3962 created with status 'matching'. Triggering individual match task.
+2025-05-09 06:59:12,284 [INFO] [Signal] Created EmailRow 3962 from AI data for email 1036 with markets: ['All'].
+2025-05-09 06:59:12,285 [INFO] [Signal] Resolved markets for rule in email 1036: ['All']
+2025-05-09 06:59:12,287 [INFO] [Signal] EmailRow 3963 created with status 'matching'. Triggering individual match task.
+2025-05-09 06:59:12,289 [INFO] [Signal] Created EmailRow 3963 from AI data for email 1036 with markets: ['All'].
+2025-05-09 06:59:12,290 [INFO] [Signal] Resolved markets for rule in email 1036: ['All']
+2025-05-09 06:59:12,291 [INFO] [Signal] EmailRow 3964 created with status 'matching'. Triggering individual match task.
+2025-05-09 06:59:12,293 [INFO] [Signal] Created EmailRow 3964 from AI data for email 1036 with markets: ['All'].
+2025-05-09 06:59:12,293 [INFO] Scheduling BATCH matching task for email 1036 with 3 rows.
+2025-05-09 06:59:12,293 [INFO] Matching task scheduled successfully for email 1036.
+2025-05-09 06:59:12,293 [INFO] Successfully extracted data from email body for 1036. Skipping attachments.
+2025-05-09 06:59:12,294 [INFO] Email 1036 status set to 'processing'.
+2025-05-09 06:59:12,294 [INFO] Processing logic completed.
+2025-05-09 06:59:12,656 [INFO] Waiting 110.0 seconds until next check
+2025-05-09 07:01:02,764 [INFO] Running email check
+2025-05-09 07:01:04,680 [INFO] Waiting 118.1 seconds until next check
+2025-05-09 07:03:02,866 [INFO] Running email check
+2025-05-09 07:03:03,918 [INFO] Waiting 119.0 seconds until next check
+2025-05-09 07:05:02,986 [INFO] Running email check
+2025-05-09 07:05:06,124 [INFO] Auto-analyzing email: 1037 - RE: 5B3KW3 | İptal Rezervasyon Hk.
+2025-05-09 07:05:06,134 [INFO] ClaudeAnalyzer initialized.
+2025-05-09 07:05:06,140 [INFO] Original method found 15 markers
+2025-05-09 07:05:06,140 [INFO] Found first marker element: span
+2025-05-09 07:05:06,140 [WARNING] No content before marker, using full email
+2025-05-09 07:05:07,756 [INFO] HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2025-05-09 07:05:07,757 [INFO] [RAW AI RESPONSE DUMP] Subject: RE: 5B3KW3 | İptal Rezervasyon Hk.:
+[
+  {
+    "hotel_name": "Stone Group Lara Turizm Merkezi",
+    "room_type": "All Room",
+    "markets": ["ALL"],
+    "start_date": null,
+    "end_date": null,
+    "sale_status": "stop"
+  }
+]
+2025-05-09 07:05:07,758 [WARNING] Skipping rule #0 due to missing required fields (hotel, dates, status): {'hotel_name': 'Stone Group Lara Turizm Merkezi', 'room_type': 'All Room', 'markets': ['ALL'], 'start_date': None, 'end_date': None, 'sale_status': 'stop', 'raw_response': '[\n  {\n    "hotel_name": "Stone Group Lara Turizm Merkezi",\n    "room_type": "All Room",\n    "markets": ["ALL"],\n    "start_date": null,\n    "end_date": null,\n    "sale_status": "stop"\n  }\n]'}
+2025-05-09 07:05:07,758 [INFO] Post-processed 0 rules from AI.
+2025-05-09 07:05:07,758 [WARNING] AI analysis returned a valid response, but post-processing yielded no valid rows.
+2025-05-09 07:05:07,758 [INFO] AI analysis successful. Extracted 0 processed rows.
+2025-05-09 07:05:07,758 [WARNING] Bad Request: /api/parse-email-content/
+2025-05-09 07:05:07,759 [WARNING] AI analysis API call failed (Status: 400, Success: False) for email 1037. Flagging for attachment check.
+2025-05-09 07:05:07,759 [WARNING] AI/Fallback analysis failed for email 1037. Setting status to 'processing_attachments' and triggering attachment check.
+2025-05-09 07:05:07,764 [INFO] Saved attachment: 5B3KW3.pdf for email: <DBBPR09MB4698349DEFD4B9DCD69B96D7D08AA@DBBPR09MB4698.eurprd09.prod.outlook.com>
+2025-05-09 07:05:07,765 [INFO] Processing logic completed.
+2025-05-09 07:05:08,321 [INFO] Auto-analyzing email: 1038 - Stop Sale Bildirimi - 09.05.2025 - ALL AGENCIES ALL MARKETS - Megasaray Westbeach Antalya
+2025-05-09 07:05:08,331 [INFO] ClaudeAnalyzer initialized.
+2025-05-09 07:05:08,334 [INFO] Original method found 2 markers
+2025-05-09 07:05:08,334 [INFO] Found first marker element: span
+2025-05-09 07:05:08,334 [WARNING] No content before marker, using full email
+2025-05-09 07:05:08,334 [INFO] Found table with date information
+2025-05-09 07:05:08,334 [INFO] Found table with date information
+2025-05-09 07:05:08,334 [INFO] Found table with date information
+2025-05-09 07:05:08,335 [INFO] Added 3 structured tables to content
+2025-05-09 07:05:11,596 [INFO] HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2025-05-09 07:05:11,598 [INFO] [RAW AI RESPONSE DUMP] Subject: Stop Sale Bildirimi - 09.05.2025 - ALL AGENCIES ALL MARKETS - Megasaray Westbeach Antalya:
+[
+  {
+    "hotel_name": "Megasaray Westbeach Antalya",
+    "room_type": "Comfort Standard Room City View",
+    "markets": ["ALL"],
+    "start_date": "2025-05-09",
+    "end_date": "2025-05-10",
+    "sale_status": "stop"
+  },
+  {
+    "hotel_name": "Megasaray Westbeach Antalya",
+    "room_type": "Deluxe Standard Sea View",
+    "markets": ["ALL"],
+    "start_date": "2025-05-09",
+    "end_date": "2025-05-09",
+    "sale_status": "stop"
+  },
+  {
+    "hotel_name": "Megasaray Westbeach Antalya",
+    "room_type": "Comfort Standard Room Sea View",
+    "markets": ["ALL"],
+    "start_date": "2025-05-09",
+    "end_date": "2025-05-10",
+    "sale_status": "stop"
+  },
+  {
+    "hotel_name": "Megasaray Westbeach Antalya",
+    "room_type": "Family Room",
+    "markets": ["ALL"],
+    "start_date": "2025-05-09",
+    "end_date": "2025-05-10",
+    "sale_status": "stop"
+  }
+]
+2025-05-09 07:05:11,600 [INFO] Post-processed 4 rules from AI.
+2025-05-09 07:05:11,600 [INFO] AI analysis successful. Extracted 4 processed rows.
+2025-05-09 07:05:11,600 [INFO] Successfully auto-analyzed email 1038 using AI.
+2025-05-09 07:05:11,601 [INFO] [Signal] Resolved markets for rule in email 1038: ['All']
+2025-05-09 07:05:11,603 [INFO] [Signal] EmailRow 3966 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:05:11,606 [INFO] [Signal] Created EmailRow 3966 from AI data for email 1038 with markets: ['All'].
+2025-05-09 07:05:11,606 [INFO] [Signal] Resolved markets for rule in email 1038: ['All']
+2025-05-09 07:05:11,608 [INFO] [Signal] EmailRow 3967 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:05:11,610 [INFO] [Signal] Created EmailRow 3967 from AI data for email 1038 with markets: ['All'].
+2025-05-09 07:05:11,611 [INFO] [Signal] Resolved markets for rule in email 1038: ['All']
+2025-05-09 07:05:11,613 [INFO] [Signal] EmailRow 3968 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:05:11,615 [INFO] [Signal] Created EmailRow 3968 from AI data for email 1038 with markets: ['All'].
+2025-05-09 07:05:11,616 [INFO] [Signal] Resolved markets for rule in email 1038: ['All']
+2025-05-09 07:05:11,618 [INFO] [Signal] EmailRow 3969 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:05:11,620 [INFO] [Signal] Created EmailRow 3969 from AI data for email 1038 with markets: ['All'].
+2025-05-09 07:05:11,620 [INFO] Scheduling BATCH matching task for email 1038 with 4 rows.
+2025-05-09 07:05:11,631 [INFO] Matching task scheduled successfully for email 1038.
+2025-05-09 07:05:11,631 [INFO] Successfully extracted data from email body for 1038. Skipping attachments.
+2025-05-09 07:05:11,632 [INFO] Email 1038 status set to 'processing'.
+2025-05-09 07:05:11,632 [INFO] Processing logic completed.
+2025-05-09 07:05:12,590 [INFO] Waiting 110.4 seconds until next check
+2025-05-09 07:07:03,080 [INFO] Running email check
+2025-05-09 07:07:05,542 [INFO] Auto-analyzing email: 1039 - RE: XANADU RESORT 2025 YAZ İNGİLTERE PAZARI İNDİRİM REVİZYONU HAKKINDA (SOR-SAT)
+2025-05-09 07:07:05,557 [INFO] ClaudeAnalyzer initialized.
+2025-05-09 07:07:05,561 [INFO] Original method found 5 markers
+2025-05-09 07:07:05,562 [INFO] Found first marker element: span
+2025-05-09 07:07:05,562 [WARNING] No content before marker, using full email
+2025-05-09 07:07:11,229 [INFO] HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2025-05-09 07:07:11,231 [INFO] [RAW AI RESPONSE DUMP] Subject: RE: XANADU RESORT 2025 YAZ İNGİLTERE PAZARI İNDİRİM REVİZYONU HAKKINDA (SOR-SAT):
+[
+  {
+    "hotel_name": "Xanadu Resort",
+    "room_type": "All Room",
+    "markets": ["UK Market"],
+    "start_date": "2025-05-09",
+    "end_date": "2025-06-10",
+    "sale_status": "open"
+  },
+  {
+    "hotel_name": "Xanadu Resort",
+    "room_type": "All Room",
+    "markets": ["UK Market"],
+    "start_date": "2025-05-09",
+    "end_date": "2025-05-22",
+    "sale_status": "open"
+  },
+  {
+    "hotel_name": "Xanadu Resort",
+    "room_type": "All Room",
+    "markets": ["UK Market"],
+    "start_date": "2025-05-23",
+    "end_date": "2025-05-31",
+    "sale_status": "open"
+  },
+  {
+    "hotel_name": "Xanadu Resort",
+    "room_type": "All Room",
+    "markets": ["UK Market"],
+    "start_date": "2025-06-01",
+    "end_date": "2025-06-04",
+    "sale_status": "open"
+  },
+  {
+    "hotel_name": "Xanadu Resort",
+    "room_type": "All Room",
+    "markets": ["UK Market"],
+    "start_date": "2025-06-05",
+    "end_date": "2025-06-14",
+    "sale_status": "open"
+  },
+  {
+    "hotel_name": "Xanadu Resort",
+    
+2025-05-09 07:07:11,233 [INFO] Post-processed 8 rules from AI.
+2025-05-09 07:07:11,233 [INFO] AI analysis successful. Extracted 8 processed rows.
+2025-05-09 07:07:11,234 [INFO] Successfully auto-analyzed email 1039 using AI.
+2025-05-09 07:07:11,235 [INFO] [Signal] Resolved markets for rule in email 1039: ['UK Market']
+2025-05-09 07:07:11,236 [INFO] [Signal] EmailRow 3970 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:07:11,237 [INFO] [Signal] Created EmailRow 3970 from AI data for email 1039 with markets: ['UK Market'].
+2025-05-09 07:07:11,237 [INFO] [Signal] Resolved markets for rule in email 1039: ['UK Market']
+2025-05-09 07:07:11,238 [INFO] [Signal] EmailRow 3971 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:07:11,238 [INFO] [Signal] Created EmailRow 3971 from AI data for email 1039 with markets: ['UK Market'].
+2025-05-09 07:07:11,238 [INFO] [Signal] Resolved markets for rule in email 1039: ['UK Market']
+2025-05-09 07:07:11,239 [INFO] [Signal] EmailRow 3972 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:07:11,239 [INFO] [Signal] Created EmailRow 3972 from AI data for email 1039 with markets: ['UK Market'].
+2025-05-09 07:07:11,240 [INFO] [Signal] Resolved markets for rule in email 1039: ['UK Market']
+2025-05-09 07:07:11,240 [INFO] [Signal] EmailRow 3973 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:07:11,241 [INFO] [Signal] Created EmailRow 3973 from AI data for email 1039 with markets: ['UK Market'].
+2025-05-09 07:07:11,241 [INFO] [Signal] Resolved markets for rule in email 1039: ['UK Market']
+2025-05-09 07:07:11,242 [INFO] [Signal] EmailRow 3974 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:07:11,243 [INFO] [Signal] Created EmailRow 3974 from AI data for email 1039 with markets: ['UK Market'].
+2025-05-09 07:07:11,243 [INFO] [Signal] Resolved markets for rule in email 1039: ['UK Market']
+2025-05-09 07:07:11,243 [INFO] [Signal] EmailRow 3975 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:07:11,244 [INFO] [Signal] Created EmailRow 3975 from AI data for email 1039 with markets: ['UK Market'].
+2025-05-09 07:07:11,245 [INFO] [Signal] Resolved markets for rule in email 1039: ['UK Market']
+2025-05-09 07:07:11,245 [INFO] [Signal] EmailRow 3976 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:07:11,246 [INFO] [Signal] Created EmailRow 3976 from AI data for email 1039 with markets: ['UK Market'].
+2025-05-09 07:07:11,246 [INFO] [Signal] Resolved markets for rule in email 1039: ['UK Market']
+2025-05-09 07:07:11,247 [INFO] [Signal] EmailRow 3977 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:07:11,247 [INFO] [Signal] Created EmailRow 3977 from AI data for email 1039 with markets: ['UK Market'].
+2025-05-09 07:07:11,248 [INFO] Scheduling BATCH matching task for email 1039 with 8 rows.
+2025-05-09 07:07:11,250 [INFO] Matching task scheduled successfully for email 1039.
+2025-05-09 07:07:11,250 [INFO] Successfully extracted data from email body for 1039. Skipping attachments.
+2025-05-09 07:07:11,252 [INFO] Email 1039 status set to 'processing'.
+2025-05-09 07:07:11,252 [INFO] Processing logic completed.
+2025-05-09 07:07:11,991 [INFO] Auto-analyzing email: 1040 - RE: XANADU RESORT 2025 YAZ DOĞU AVRUPA PAZARI İNDİRİM REVİZYONU HAKKINDA (SOR-SAT)
+2025-05-09 07:07:12,002 [INFO] ClaudeAnalyzer initialized.
+2025-05-09 07:07:12,020 [INFO] Original method found 5 markers
+2025-05-09 07:07:12,020 [INFO] Found first marker element: span
+2025-05-09 07:07:12,020 [WARNING] No content before marker, using full email
+2025-05-09 07:07:17,711 [INFO] HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2025-05-09 07:07:17,713 [INFO] [RAW AI RESPONSE DUMP] Subject: RE: XANADU RESORT 2025 YAZ DOĞU AVRUPA PAZARI İNDİRİM REVİZYONU HAKKINDA (SOR-SAT):
+[
+  {
+    "hotel_name": "Xanadu Resort",
+    "room_type": "All Room",
+    "markets": ["East Europe Market"],
+    "start_date": "2025-05-09",
+    "end_date": "2025-06-10",
+    "sale_status": "open"
+  },
+  {
+    "hotel_name": "Xanadu Resort",
+    "room_type": "All Room",
+    "markets": ["East Europe Market"],
+    "start_date": "2025-05-09",
+    "end_date": "2025-05-22",
+    "sale_status": "open"
+  },
+  {
+    "hotel_name": "Xanadu Resort",
+    "room_type": "All Room",
+    "markets": ["East Europe Market"],
+    "start_date": "2025-05-23",
+    "end_date": "2025-05-31",
+    "sale_status": "open"
+  },
+  {
+    "hotel_name": "Xanadu Resort",
+    "room_type": "All Room",
+    "markets": ["East Europe Market"],
+    "start_date": "2025-06-01",
+    "end_date": "2025-06-04",
+    "sale_status": "open"
+  },
+  {
+    "hotel_name": "Xanadu Resort",
+    "room_type": "All Room",
+    "markets": ["East Europe Market"],
+    "start_date": "2025-06-05",
+    "end_date": "2025-06-14",
+    "sale_status": "open"
+  }
+2025-05-09 07:07:17,715 [INFO] Post-processed 8 rules from AI.
+2025-05-09 07:07:17,715 [INFO] AI analysis successful. Extracted 8 processed rows.
+2025-05-09 07:07:17,715 [INFO] Successfully auto-analyzed email 1040 using AI.
+2025-05-09 07:07:17,716 [INFO] [Signal] Resolved markets for rule in email 1040: ['East Europe Market']
+2025-05-09 07:07:17,719 [INFO] [Signal] EmailRow 3978 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:07:17,720 [INFO] [Signal] Created EmailRow 3978 from AI data for email 1040 with markets: ['East Europe Market'].
+2025-05-09 07:07:17,720 [INFO] [Signal] Resolved markets for rule in email 1040: ['East Europe Market']
+2025-05-09 07:07:17,721 [INFO] [Signal] EmailRow 3979 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:07:17,722 [INFO] [Signal] Created EmailRow 3979 from AI data for email 1040 with markets: ['East Europe Market'].
+2025-05-09 07:07:17,722 [INFO] [Signal] Resolved markets for rule in email 1040: ['East Europe Market']
+2025-05-09 07:07:17,722 [INFO] [Signal] EmailRow 3980 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:07:17,723 [INFO] [Signal] Created EmailRow 3980 from AI data for email 1040 with markets: ['East Europe Market'].
+2025-05-09 07:07:17,723 [INFO] [Signal] Resolved markets for rule in email 1040: ['East Europe Market']
+2025-05-09 07:07:17,724 [INFO] [Signal] EmailRow 3981 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:07:17,724 [INFO] [Signal] Created EmailRow 3981 from AI data for email 1040 with markets: ['East Europe Market'].
+2025-05-09 07:07:17,725 [INFO] [Signal] Resolved markets for rule in email 1040: ['East Europe Market']
+2025-05-09 07:07:17,725 [INFO] [Signal] EmailRow 3982 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:07:17,726 [INFO] [Signal] Created EmailRow 3982 from AI data for email 1040 with markets: ['East Europe Market'].
+2025-05-09 07:07:17,726 [INFO] [Signal] Resolved markets for rule in email 1040: ['East Europe Market']
+2025-05-09 07:07:17,727 [INFO] [Signal] EmailRow 3983 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:07:17,727 [INFO] [Signal] Created EmailRow 3983 from AI data for email 1040 with markets: ['East Europe Market'].
+2025-05-09 07:07:17,728 [INFO] [Signal] Resolved markets for rule in email 1040: ['East Europe Market']
+2025-05-09 07:07:17,728 [INFO] [Signal] EmailRow 3984 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:07:17,729 [INFO] [Signal] Created EmailRow 3984 from AI data for email 1040 with markets: ['East Europe Market'].
+2025-05-09 07:07:17,729 [INFO] [Signal] Resolved markets for rule in email 1040: ['East Europe Market']
+2025-05-09 07:07:17,729 [INFO] [Signal] EmailRow 3985 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:07:17,730 [INFO] [Signal] Created EmailRow 3985 from AI data for email 1040 with markets: ['East Europe Market'].
+2025-05-09 07:07:17,730 [INFO] Scheduling BATCH matching task for email 1040 with 8 rows.
+2025-05-09 07:07:17,731 [INFO] Matching task scheduled successfully for email 1040.
+2025-05-09 07:07:17,731 [INFO] Successfully extracted data from email body for 1040. Skipping attachments.
+2025-05-09 07:07:17,732 [INFO] Email 1040 status set to 'processing'.
+2025-05-09 07:07:17,732 [INFO] Processing logic completed.
+2025-05-09 07:07:18,808 [INFO] Auto-analyzing email: 1041 - RE: XANADU RESORT 2025 YAZ BATI AVRUPA PAZARI İNDİRİM REVİZYONU HAKKINDA (SOR-SAT)
+2025-05-09 07:07:18,816 [INFO] ClaudeAnalyzer initialized.
+2025-05-09 07:07:18,820 [INFO] Original method found 5 markers
+2025-05-09 07:07:18,820 [INFO] Found first marker element: span
+2025-05-09 07:07:18,820 [WARNING] No content before marker, using full email
+2025-05-09 07:07:23,794 [INFO] HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2025-05-09 07:07:23,797 [INFO] [RAW AI RESPONSE DUMP] Subject: RE: XANADU RESORT 2025 YAZ BATI AVRUPA PAZARI İNDİRİM REVİZYONU HAKKINDA (SOR-SAT):
+[
+  {
+    "hotel_name": "Xanadu Resort",
+    "room_type": "All Room",
+    "markets": ["West Europe Market"],
+    "start_date": "2025-05-09",
+    "end_date": "2025-06-10",
+    "sale_status": "open"
+  },
+  {
+    "hotel_name": "Xanadu Resort",
+    "room_type": "All Room",
+    "markets": ["West Europe Market"],
+    "start_date": "2025-05-09",
+    "end_date": "2025-05-22",
+    "sale_status": "open"
+  },
+  {
+    "hotel_name": "Xanadu Resort",
+    "room_type": "All Room",
+    "markets": ["West Europe Market"],
+    "start_date": "2025-05-23",
+    "end_date": "2025-05-31",
+    "sale_status": "open"
+  },
+  {
+    "hotel_name": "Xanadu Resort",
+    "room_type": "All Room",
+    "markets": ["West Europe Market"],
+    "start_date": "2025-06-01",
+    "end_date": "2025-06-04",
+    "sale_status": "open"
+  },
+  {
+    "hotel_name": "Xanadu Resort",
+    "room_type": "All Room",
+    "markets": ["West Europe Market"],
+    "start_date": "2025-06-05",
+    "end_date": "2025-06-14",
+    "sale_status": "open"
+  }
+2025-05-09 07:07:23,799 [INFO] Post-processed 8 rules from AI.
+2025-05-09 07:07:23,799 [INFO] AI analysis successful. Extracted 8 processed rows.
+2025-05-09 07:07:23,800 [INFO] Successfully auto-analyzed email 1041 using AI.
+2025-05-09 07:07:23,801 [INFO] [Signal] Resolved markets for rule in email 1041: ['West Europe Market']
+2025-05-09 07:07:23,803 [INFO] [Signal] EmailRow 3986 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:07:23,806 [INFO] [Signal] Created EmailRow 3986 from AI data for email 1041 with markets: ['West Europe Market'].
+2025-05-09 07:07:23,806 [INFO] [Signal] Resolved markets for rule in email 1041: ['West Europe Market']
+2025-05-09 07:07:23,808 [INFO] [Signal] EmailRow 3987 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:07:23,810 [INFO] [Signal] Created EmailRow 3987 from AI data for email 1041 with markets: ['West Europe Market'].
+2025-05-09 07:07:23,810 [INFO] [Signal] Resolved markets for rule in email 1041: ['West Europe Market']
+2025-05-09 07:07:23,811 [INFO] [Signal] EmailRow 3988 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:07:23,812 [INFO] [Signal] Created EmailRow 3988 from AI data for email 1041 with markets: ['West Europe Market'].
+2025-05-09 07:07:23,812 [INFO] [Signal] Resolved markets for rule in email 1041: ['West Europe Market']
+2025-05-09 07:07:23,813 [INFO] [Signal] EmailRow 3989 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:07:23,813 [INFO] [Signal] Created EmailRow 3989 from AI data for email 1041 with markets: ['West Europe Market'].
+2025-05-09 07:07:23,814 [INFO] [Signal] Resolved markets for rule in email 1041: ['West Europe Market']
+2025-05-09 07:07:23,814 [INFO] [Signal] EmailRow 3990 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:07:23,815 [INFO] [Signal] Created EmailRow 3990 from AI data for email 1041 with markets: ['West Europe Market'].
+2025-05-09 07:07:23,816 [INFO] [Signal] Resolved markets for rule in email 1041: ['West Europe Market']
+2025-05-09 07:07:23,816 [INFO] [Signal] EmailRow 3991 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:07:23,817 [INFO] [Signal] Created EmailRow 3991 from AI data for email 1041 with markets: ['West Europe Market'].
+2025-05-09 07:07:23,817 [INFO] [Signal] Resolved markets for rule in email 1041: ['West Europe Market']
+2025-05-09 07:07:23,818 [INFO] [Signal] EmailRow 3992 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:07:23,819 [INFO] [Signal] Created EmailRow 3992 from AI data for email 1041 with markets: ['West Europe Market'].
+2025-05-09 07:07:23,819 [INFO] [Signal] Resolved markets for rule in email 1041: ['West Europe Market']
+2025-05-09 07:07:23,820 [INFO] [Signal] EmailRow 3993 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:07:23,820 [INFO] [Signal] Created EmailRow 3993 from AI data for email 1041 with markets: ['West Europe Market'].
+2025-05-09 07:07:23,820 [INFO] Scheduling BATCH matching task for email 1041 with 8 rows.
+2025-05-09 07:07:23,822 [INFO] Matching task scheduled successfully for email 1041.
+2025-05-09 07:07:23,822 [INFO] Successfully extracted data from email body for 1041. Skipping attachments.
+2025-05-09 07:07:23,823 [INFO] Email 1041 status set to 'processing'.
+2025-05-09 07:07:23,823 [INFO] Processing logic completed.
+2025-05-09 07:07:24,444 [INFO] Auto-analyzing email: 1042 - YNT: 00001315 Maliyet Hk
+2025-05-09 07:07:24,450 [INFO] ClaudeAnalyzer initialized.
+2025-05-09 07:07:25,957 [INFO] HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2025-05-09 07:07:25,958 [INFO] [RAW AI RESPONSE DUMP] Subject: YNT: 00001315 Maliyet Hk:
+[
+  {
+    "hotel_name": "Bedboxx",
+    "room_type": "All Room",
+    "markets": ["ALL"],
+    "start_date": "2025-05-09",
+    "end_date": "2025-05-09",
+    "sale_status": "open"
+  }
+]
+2025-05-09 07:07:25,958 [INFO] Post-processed 1 rules from AI.
+2025-05-09 07:07:25,958 [INFO] AI analysis successful. Extracted 1 processed rows.
+2025-05-09 07:07:25,959 [INFO] Successfully auto-analyzed email 1042 using AI.
+2025-05-09 07:07:25,959 [INFO] [Signal] Resolved markets for rule in email 1042: ['All']
+2025-05-09 07:07:25,960 [INFO] [Signal] EmailRow 3994 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:07:25,961 [INFO] [Signal] Created EmailRow 3994 from AI data for email 1042 with markets: ['All'].
+2025-05-09 07:07:25,961 [INFO] Scheduling BATCH matching task for email 1042 with 1 rows.
+2025-05-09 07:07:25,962 [INFO] Matching task scheduled successfully for email 1042.
+2025-05-09 07:07:25,962 [INFO] Successfully extracted data from email body for 1042. Skipping attachments.
+2025-05-09 07:07:25,962 [INFO] Email 1042 status set to 'processing'.
+2025-05-09 07:07:25,964 [INFO] Saved attachment: Bedboxx10.05.25.xlsx for email: <DB8P194MB0647C5436BEBE896055AC53BED8AA@DB8P194MB0647.EURP194.PROD.OUTLOOK.COM>
+2025-05-09 07:07:25,964 [INFO] Processing logic completed.
+2025-05-09 07:07:26,288 [INFO] Waiting 96.8 seconds until next check
+2025-05-09 07:09:03,155 [INFO] Running email check
+2025-05-09 07:09:04,589 [INFO] Auto-analyzing email: 1043 - RE: MARVIDA FAMILY ECO - DOĞU AVRUPA - 2025 YAZ  SEZONU İNDİRİM REVİZYONU HAKKINDA (SOR-SAT)
+2025-05-09 07:09:04,600 [INFO] ClaudeAnalyzer initialized.
+2025-05-09 07:09:04,606 [INFO] Original method found 5 markers
+2025-05-09 07:09:04,607 [INFO] Found first marker element: span
+2025-05-09 07:09:04,607 [WARNING] No content before marker, using full email
+2025-05-09 07:09:13,082 [INFO] HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2025-05-09 07:09:13,093 [INFO] [RAW AI RESPONSE DUMP] Subject: RE: MARVIDA FAMILY ECO - DOĞU AVRUPA - 2025 YAZ  SEZONU İNDİRİM REVİZYONU HAKKINDA (SOR-SAT):
+[
+  {
+    "hotel_name": "Marvida Family Eco",
+    "room_type": "All Room",
+    "markets": ["Balkan Market", "Baltic Market", "East Europe Market", "Scandinavian Market", "UK Market", "West Europe Market"],
+    "start_date": "2025-05-09",
+    "end_date": "2025-05-12",
+    "sale_status": "open"
+  },
+  {
+    "hotel_name": "Marvida Family Eco",
+    "room_type": "All Room",
+    "markets": ["Balkan Market", "Baltic Market", "East Europe Market", "Scandinavian Market", "UK Market", "West Europe Market"],
+    "start_date": "2025-05-13",
+    "end_date": "2025-05-28",
+    "sale_status": "open"
+  },
+  {
+    "hotel_name": "Marvida Family Eco",
+    "room_type": "All Room",
+    "markets": ["Balkan Market", "Baltic Market", "East Europe Market", "Scandinavian Market", "UK Market", "West Europe Market"],
+    "start_date": "2025-05-29",
+    "end_date": "2025-06-02",
+    "sale_status": "open"
+  },
+  {
+    "hotel_name": "Marvida Family Eco",
+    "room_type": "All Room",
+    "markets": ["Balkan Market", "
+2025-05-09 07:09:13,099 [WARNING] Rule #0: Market/Alias 'Scandinavian Market' not found in DB. Adding as is (uppercase).
+2025-05-09 07:09:13,100 [WARNING] Rule #1: Market/Alias 'Scandinavian Market' not found in DB. Adding as is (uppercase).
+2025-05-09 07:09:13,100 [WARNING] Rule #2: Market/Alias 'Scandinavian Market' not found in DB. Adding as is (uppercase).
+2025-05-09 07:09:13,100 [WARNING] Rule #3: Market/Alias 'Scandinavian Market' not found in DB. Adding as is (uppercase).
+2025-05-09 07:09:13,100 [WARNING] Rule #4: Market/Alias 'Scandinavian Market' not found in DB. Adding as is (uppercase).
+2025-05-09 07:09:13,101 [WARNING] Rule #5: Market/Alias 'Scandinavian Market' not found in DB. Adding as is (uppercase).
+2025-05-09 07:09:13,101 [WARNING] Rule #6: Market/Alias 'Scandinavian Market' not found in DB. Adding as is (uppercase).
+2025-05-09 07:09:13,101 [WARNING] Rule #7: Market/Alias 'Scandinavian Market' not found in DB. Adding as is (uppercase).
+2025-05-09 07:09:13,101 [WARNING] Rule #8: Market/Alias 'Scandinavian Market' not found in DB. Adding as is (uppercase).
+2025-05-09 07:09:13,101 [WARNING] Rule #9: Market/Alias 'Scandinavian Market' not found in DB. Adding as is (uppercase).
+2025-05-09 07:09:13,101 [INFO] Post-processed 10 rules from AI.
+2025-05-09 07:09:13,101 [INFO] AI analysis successful. Extracted 10 processed rows.
+2025-05-09 07:09:13,103 [INFO] Successfully auto-analyzed email 1043 using AI.
+2025-05-09 07:09:13,104 [WARNING] [Signal] Could not find direct match or alias for market name 'SCANDINAVIAN MARKET' from AI for email 1043.
+2025-05-09 07:09:13,104 [INFO] [Signal] Resolved markets for rule in email 1043: ['East Europe Market', 'West Europe Market', 'Balkan Market', 'Baltic Market', 'UK Market']
+2025-05-09 07:09:13,106 [INFO] [Signal] EmailRow 3995 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:09:13,107 [INFO] [Signal] Created EmailRow 3995 from AI data for email 1043 with markets: ['East Europe Market', 'West Europe Market', 'Balkan Market', 'Baltic Market', 'UK Market'].
+2025-05-09 07:09:13,107 [WARNING] [Signal] Could not find direct match or alias for market name 'SCANDINAVIAN MARKET' from AI for email 1043.
+2025-05-09 07:09:13,108 [INFO] [Signal] Resolved markets for rule in email 1043: ['East Europe Market', 'West Europe Market', 'Balkan Market', 'Baltic Market', 'UK Market']
+2025-05-09 07:09:13,108 [INFO] [Signal] EmailRow 3996 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:09:13,109 [INFO] [Signal] Created EmailRow 3996 from AI data for email 1043 with markets: ['East Europe Market', 'West Europe Market', 'Balkan Market', 'Baltic Market', 'UK Market'].
+2025-05-09 07:09:13,110 [WARNING] [Signal] Could not find direct match or alias for market name 'SCANDINAVIAN MARKET' from AI for email 1043.
+2025-05-09 07:09:13,110 [INFO] [Signal] Resolved markets for rule in email 1043: ['East Europe Market', 'West Europe Market', 'Balkan Market', 'Baltic Market', 'UK Market']
+2025-05-09 07:09:13,110 [INFO] [Signal] EmailRow 3997 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:09:13,111 [INFO] [Signal] Created EmailRow 3997 from AI data for email 1043 with markets: ['East Europe Market', 'West Europe Market', 'Balkan Market', 'Baltic Market', 'UK Market'].
+2025-05-09 07:09:13,112 [WARNING] [Signal] Could not find direct match or alias for market name 'SCANDINAVIAN MARKET' from AI for email 1043.
+2025-05-09 07:09:13,113 [INFO] [Signal] Resolved markets for rule in email 1043: ['East Europe Market', 'West Europe Market', 'Balkan Market', 'Baltic Market', 'UK Market']
+2025-05-09 07:09:13,113 [INFO] [Signal] EmailRow 3998 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:09:13,114 [INFO] [Signal] Created EmailRow 3998 from AI data for email 1043 with markets: ['East Europe Market', 'West Europe Market', 'Balkan Market', 'Baltic Market', 'UK Market'].
+2025-05-09 07:09:13,115 [WARNING] [Signal] Could not find direct match or alias for market name 'SCANDINAVIAN MARKET' from AI for email 1043.
+2025-05-09 07:09:13,116 [INFO] [Signal] Resolved markets for rule in email 1043: ['East Europe Market', 'West Europe Market', 'Balkan Market', 'Baltic Market', 'UK Market']
+2025-05-09 07:09:13,116 [INFO] [Signal] EmailRow 3999 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:09:13,117 [INFO] [Signal] Created EmailRow 3999 from AI data for email 1043 with markets: ['East Europe Market', 'West Europe Market', 'Balkan Market', 'Baltic Market', 'UK Market'].
+2025-05-09 07:09:13,118 [WARNING] [Signal] Could not find direct match or alias for market name 'SCANDINAVIAN MARKET' from AI for email 1043.
+2025-05-09 07:09:13,120 [INFO] [Signal] Resolved markets for rule in email 1043: ['East Europe Market', 'West Europe Market', 'Balkan Market', 'Baltic Market', 'UK Market']
+2025-05-09 07:09:13,129 [INFO] [Signal] EmailRow 4000 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:09:13,140 [INFO] [Signal] Created EmailRow 4000 from AI data for email 1043 with markets: ['East Europe Market', 'West Europe Market', 'Balkan Market', 'Baltic Market', 'UK Market'].
+2025-05-09 07:09:13,154 [WARNING] [Signal] Could not find direct match or alias for market name 'SCANDINAVIAN MARKET' from AI for email 1043.
+2025-05-09 07:09:13,171 [INFO] [Signal] Resolved markets for rule in email 1043: ['East Europe Market', 'West Europe Market', 'Balkan Market', 'Baltic Market', 'UK Market']
+2025-05-09 07:09:13,179 [INFO] [Signal] EmailRow 4001 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:09:13,198 [INFO] [Signal] Created EmailRow 4001 from AI data for email 1043 with markets: ['East Europe Market', 'West Europe Market', 'Balkan Market', 'Baltic Market', 'UK Market'].
+2025-05-09 07:09:13,206 [WARNING] [Signal] Could not find direct match or alias for market name 'SCANDINAVIAN MARKET' from AI for email 1043.
+2025-05-09 07:09:13,213 [INFO] [Signal] Resolved markets for rule in email 1043: ['East Europe Market', 'West Europe Market', 'Balkan Market', 'Baltic Market', 'UK Market']
+2025-05-09 07:09:13,230 [INFO] [Signal] EmailRow 4002 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:09:13,237 [INFO] [Signal] Created EmailRow 4002 from AI data for email 1043 with markets: ['East Europe Market', 'West Europe Market', 'Balkan Market', 'Baltic Market', 'UK Market'].
+2025-05-09 07:09:13,239 [WARNING] [Signal] Could not find direct match or alias for market name 'SCANDINAVIAN MARKET' from AI for email 1043.
+2025-05-09 07:09:13,241 [INFO] [Signal] Resolved markets for rule in email 1043: ['East Europe Market', 'West Europe Market', 'Balkan Market', 'Baltic Market', 'UK Market']
+2025-05-09 07:09:13,244 [INFO] [Signal] EmailRow 4003 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:09:13,246 [INFO] [Signal] Created EmailRow 4003 from AI data for email 1043 with markets: ['East Europe Market', 'West Europe Market', 'Balkan Market', 'Baltic Market', 'UK Market'].
+2025-05-09 07:09:13,250 [WARNING] [Signal] Could not find direct match or alias for market name 'SCANDINAVIAN MARKET' from AI for email 1043.
+2025-05-09 07:09:13,252 [INFO] [Signal] Resolved markets for rule in email 1043: ['East Europe Market', 'West Europe Market', 'Balkan Market', 'Baltic Market', 'UK Market']
+2025-05-09 07:09:13,253 [INFO] [Signal] EmailRow 4004 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:09:13,256 [INFO] [Signal] Created EmailRow 4004 from AI data for email 1043 with markets: ['East Europe Market', 'West Europe Market', 'Balkan Market', 'Baltic Market', 'UK Market'].
+2025-05-09 07:09:13,256 [INFO] Scheduling BATCH matching task for email 1043 with 10 rows.
+2025-05-09 07:09:13,260 [INFO] Matching task scheduled successfully for email 1043.
+2025-05-09 07:09:13,260 [INFO] Successfully extracted data from email body for 1043. Skipping attachments.
+2025-05-09 07:09:13,266 [INFO] Email 1043 status set to 'processing'.
+2025-05-09 07:09:13,266 [INFO] Processing logic completed.
+2025-05-09 07:09:13,759 [INFO] Auto-analyzing email: 1044 - RE: MARVIDA FAMILY ECO - BATI AVRUPA - 2025 YAZ SEZONU İNDİRİM REVİZYONU HAKKINDA (SOR-SAT)
+2025-05-09 07:09:13,775 [INFO] ClaudeAnalyzer initialized.
+2025-05-09 07:09:13,781 [INFO] Original method found 5 markers
+2025-05-09 07:09:13,781 [INFO] Found first marker element: span
+2025-05-09 07:09:13,781 [WARNING] No content before marker, using full email
+2025-05-09 07:09:20,214 [INFO] HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2025-05-09 07:09:20,219 [INFO] [RAW AI RESPONSE DUMP] Subject: RE: MARVIDA FAMILY ECO - BATI AVRUPA - 2025 YAZ SEZONU İNDİRİM REVİZYONU HAKKINDA (SOR-SAT):
+[
+  {
+    "hotel_name": "Marvida Family Eco",
+    "room_type": "All Room",
+    "markets": ["West Europe Market"],
+    "start_date": "2025-05-09",
+    "end_date": "2025-05-12",
+    "sale_status": "open"
+  },
+  {
+    "hotel_name": "Marvida Family Eco",
+    "room_type": "All Room",
+    "markets": ["West Europe Market"],
+    "start_date": "2025-05-13",
+    "end_date": "2025-05-28",
+    "sale_status": "open"
+  },
+  {
+    "hotel_name": "Marvida Family Eco",
+    "room_type": "All Room",
+    "markets": ["West Europe Market"],
+    "start_date": "2025-05-29",
+    "end_date": "2025-06-02",
+    "sale_status": "open"
+  },
+  {
+    "hotel_name": "Marvida Family Eco",
+    "room_type": "All Room",
+    "markets": ["West Europe Market"],
+    "start_date": "2025-06-03",
+    "end_date": "2025-06-08",
+    "sale_status": "open"
+  },
+  {
+    "hotel_name": "Marvida Family Eco",
+    "room_type": "All Room",
+    "markets": ["West Europe Market"],
+    "start_date": "2025-06-09",
+    "end_date": "2025-06-20",
+    
+2025-05-09 07:09:20,222 [INFO] Post-processed 10 rules from AI.
+2025-05-09 07:09:20,222 [INFO] AI analysis successful. Extracted 10 processed rows.
+2025-05-09 07:09:20,224 [INFO] Successfully auto-analyzed email 1044 using AI.
+2025-05-09 07:09:20,225 [INFO] [Signal] Resolved markets for rule in email 1044: ['West Europe Market']
+2025-05-09 07:09:20,228 [INFO] [Signal] EmailRow 4005 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:09:20,229 [INFO] [Signal] Created EmailRow 4005 from AI data for email 1044 with markets: ['West Europe Market'].
+2025-05-09 07:09:20,230 [INFO] [Signal] Resolved markets for rule in email 1044: ['West Europe Market']
+2025-05-09 07:09:20,231 [INFO] [Signal] EmailRow 4006 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:09:20,231 [INFO] [Signal] Created EmailRow 4006 from AI data for email 1044 with markets: ['West Europe Market'].
+2025-05-09 07:09:20,232 [INFO] [Signal] Resolved markets for rule in email 1044: ['West Europe Market']
+2025-05-09 07:09:20,232 [INFO] [Signal] EmailRow 4007 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:09:20,233 [INFO] [Signal] Created EmailRow 4007 from AI data for email 1044 with markets: ['West Europe Market'].
+2025-05-09 07:09:20,234 [INFO] [Signal] Resolved markets for rule in email 1044: ['West Europe Market']
+2025-05-09 07:09:20,234 [INFO] [Signal] EmailRow 4008 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:09:20,235 [INFO] [Signal] Created EmailRow 4008 from AI data for email 1044 with markets: ['West Europe Market'].
+2025-05-09 07:09:20,235 [INFO] [Signal] Resolved markets for rule in email 1044: ['West Europe Market']
+2025-05-09 07:09:20,236 [INFO] [Signal] EmailRow 4009 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:09:20,237 [INFO] [Signal] Created EmailRow 4009 from AI data for email 1044 with markets: ['West Europe Market'].
+2025-05-09 07:09:20,237 [INFO] [Signal] Resolved markets for rule in email 1044: ['West Europe Market']
+2025-05-09 07:09:20,238 [INFO] [Signal] EmailRow 4010 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:09:20,238 [INFO] [Signal] Created EmailRow 4010 from AI data for email 1044 with markets: ['West Europe Market'].
+2025-05-09 07:09:20,239 [INFO] [Signal] Resolved markets for rule in email 1044: ['West Europe Market']
+2025-05-09 07:09:20,239 [INFO] [Signal] EmailRow 4011 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:09:20,240 [INFO] [Signal] Created EmailRow 4011 from AI data for email 1044 with markets: ['West Europe Market'].
+2025-05-09 07:09:20,241 [INFO] [Signal] Resolved markets for rule in email 1044: ['West Europe Market']
+2025-05-09 07:09:20,241 [INFO] [Signal] EmailRow 4012 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:09:20,242 [INFO] [Signal] Created EmailRow 4012 from AI data for email 1044 with markets: ['West Europe Market'].
+2025-05-09 07:09:20,242 [INFO] [Signal] Resolved markets for rule in email 1044: ['West Europe Market']
+2025-05-09 07:09:20,243 [INFO] [Signal] EmailRow 4013 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:09:20,244 [INFO] [Signal] Created EmailRow 4013 from AI data for email 1044 with markets: ['West Europe Market'].
+2025-05-09 07:09:20,244 [INFO] [Signal] Resolved markets for rule in email 1044: ['West Europe Market']
+2025-05-09 07:09:20,244 [INFO] [Signal] EmailRow 4014 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:09:20,245 [INFO] [Signal] Created EmailRow 4014 from AI data for email 1044 with markets: ['West Europe Market'].
+2025-05-09 07:09:20,245 [INFO] Scheduling BATCH matching task for email 1044 with 10 rows.
+2025-05-09 07:09:20,248 [INFO] Matching task scheduled successfully for email 1044.
+2025-05-09 07:09:20,248 [INFO] Successfully extracted data from email body for 1044. Skipping attachments.
+2025-05-09 07:09:20,253 [INFO] Email 1044 status set to 'processing'.
+2025-05-09 07:09:20,253 [INFO] Processing logic completed.
+2025-05-09 07:09:20,639 [INFO] Auto-analyzing email: 1045 - RE: MARVIDA FAMILY ECO - İNGİLTERE PAZARI - 2025 YAZ SEZONU İNDİRİM REVİZYONU HAKKINDA (SOR-SAT)
+2025-05-09 07:09:20,655 [INFO] ClaudeAnalyzer initialized.
+2025-05-09 07:09:20,660 [INFO] Original method found 5 markers
+2025-05-09 07:09:20,660 [INFO] Found first marker element: span
+2025-05-09 07:09:20,660 [WARNING] No content before marker, using full email
+2025-05-09 07:09:27,528 [INFO] HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2025-05-09 07:09:27,531 [INFO] [RAW AI RESPONSE DUMP] Subject: RE: MARVIDA FAMILY ECO - İNGİLTERE PAZARI - 2025 YAZ SEZONU İNDİRİM REVİZYONU HAKKINDA (SOR-SAT):
+[
+  {
+    "hotel_name": "Marvida Family Eco",
+    "room_type": "All Room",
+    "markets": ["UK Market"],
+    "start_date": "2025-05-09",
+    "end_date": "2025-05-12",
+    "sale_status": "open"
+  },
+  {
+    "hotel_name": "Marvida Family Eco",
+    "room_type": "All Room",
+    "markets": ["UK Market"],
+    "start_date": "2025-05-13",
+    "end_date": "2025-05-28",
+    "sale_status": "open"
+  },
+  {
+    "hotel_name": "Marvida Family Eco",
+    "room_type": "All Room",
+    "markets": ["UK Market"],
+    "start_date": "2025-05-29",
+    "end_date": "2025-06-02",
+    "sale_status": "open"
+  },
+  {
+    "hotel_name": "Marvida Family Eco",
+    "room_type": "All Room",
+    "markets": ["UK Market"],
+    "start_date": "2025-06-03",
+    "end_date": "2025-06-08",
+    "sale_status": "open"
+  },
+  {
+    "hotel_name": "Marvida Family Eco",
+    "room_type": "All Room",
+    "markets": ["UK Market"],
+    "start_date": "2025-06-09",
+    "end_date": "2025-06-20",
+    "sale_status": "open"
+  },
+  {
+    "hotel_nam
+2025-05-09 07:09:27,533 [INFO] Post-processed 10 rules from AI.
+2025-05-09 07:09:27,533 [INFO] AI analysis successful. Extracted 10 processed rows.
+2025-05-09 07:09:27,534 [INFO] Successfully auto-analyzed email 1045 using AI.
+2025-05-09 07:09:27,535 [INFO] [Signal] Resolved markets for rule in email 1045: ['UK Market']
+2025-05-09 07:09:27,538 [INFO] [Signal] EmailRow 4015 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:09:27,541 [INFO] [Signal] Created EmailRow 4015 from AI data for email 1045 with markets: ['UK Market'].
+2025-05-09 07:09:27,542 [INFO] [Signal] Resolved markets for rule in email 1045: ['UK Market']
+2025-05-09 07:09:27,545 [INFO] [Signal] EmailRow 4016 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:09:27,547 [INFO] [Signal] Created EmailRow 4016 from AI data for email 1045 with markets: ['UK Market'].
+2025-05-09 07:09:27,547 [INFO] [Signal] Resolved markets for rule in email 1045: ['UK Market']
+2025-05-09 07:09:27,548 [INFO] [Signal] EmailRow 4017 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:09:27,549 [INFO] [Signal] Created EmailRow 4017 from AI data for email 1045 with markets: ['UK Market'].
+2025-05-09 07:09:27,549 [INFO] [Signal] Resolved markets for rule in email 1045: ['UK Market']
+2025-05-09 07:09:27,550 [INFO] [Signal] EmailRow 4018 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:09:27,551 [INFO] [Signal] Created EmailRow 4018 from AI data for email 1045 with markets: ['UK Market'].
+2025-05-09 07:09:27,551 [INFO] [Signal] Resolved markets for rule in email 1045: ['UK Market']
+2025-05-09 07:09:27,552 [INFO] [Signal] EmailRow 4019 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:09:27,552 [INFO] [Signal] Created EmailRow 4019 from AI data for email 1045 with markets: ['UK Market'].
+2025-05-09 07:09:27,553 [INFO] [Signal] Resolved markets for rule in email 1045: ['UK Market']
+2025-05-09 07:09:27,553 [INFO] [Signal] EmailRow 4020 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:09:27,554 [INFO] [Signal] Created EmailRow 4020 from AI data for email 1045 with markets: ['UK Market'].
+2025-05-09 07:09:27,554 [INFO] [Signal] Resolved markets for rule in email 1045: ['UK Market']
+2025-05-09 07:09:27,554 [INFO] [Signal] EmailRow 4021 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:09:27,555 [INFO] [Signal] Created EmailRow 4021 from AI data for email 1045 with markets: ['UK Market'].
+2025-05-09 07:09:27,555 [INFO] [Signal] Resolved markets for rule in email 1045: ['UK Market']
+2025-05-09 07:09:27,556 [INFO] [Signal] EmailRow 4022 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:09:27,556 [INFO] [Signal] Created EmailRow 4022 from AI data for email 1045 with markets: ['UK Market'].
+2025-05-09 07:09:27,557 [INFO] [Signal] Resolved markets for rule in email 1045: ['UK Market']
+2025-05-09 07:09:27,557 [INFO] [Signal] EmailRow 4023 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:09:27,558 [INFO] [Signal] Created EmailRow 4023 from AI data for email 1045 with markets: ['UK Market'].
+2025-05-09 07:09:27,558 [INFO] [Signal] Resolved markets for rule in email 1045: ['UK Market']
+2025-05-09 07:09:27,559 [INFO] [Signal] EmailRow 4024 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:09:27,559 [INFO] [Signal] Created EmailRow 4024 from AI data for email 1045 with markets: ['UK Market'].
+2025-05-09 07:09:27,559 [INFO] Scheduling BATCH matching task for email 1045 with 10 rows.
+2025-05-09 07:09:27,560 [INFO] Matching task scheduled successfully for email 1045.
+2025-05-09 07:09:27,560 [INFO] Successfully extracted data from email body for 1045. Skipping attachments.
+2025-05-09 07:09:27,561 [INFO] Email 1045 status set to 'processing'.
+2025-05-09 07:09:27,561 [INFO] Processing logic completed.
+2025-05-09 07:09:28,212 [INFO] Waiting 95.0 seconds until next check
+2025-05-09 07:11:03,234 [INFO] Running email check
+2025-05-09 07:11:05,482 [INFO] Auto-analyzing email: 1046 - OPEN SALE
+2025-05-09 07:11:05,496 [INFO] ClaudeAnalyzer initialized.
+2025-05-09 07:11:07,054 [INFO] HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2025-05-09 07:11:07,055 [INFO] [RAW AI RESPONSE DUMP] Subject: OPEN SALE:
+[
+  {
+    "hotel_name": "MERİT PARK HOTEL",
+    "room_type": "All Room",
+    "markets": ["ALL"],
+    "start_date": "2023-05-09",
+    "end_date": "2023-05-10",
+    "sale_status": "open"
+  }
+]
+2025-05-09 07:11:07,056 [INFO] Post-processed 1 rules from AI.
+2025-05-09 07:11:07,056 [INFO] AI analysis successful. Extracted 1 processed rows.
+2025-05-09 07:11:07,056 [INFO] Successfully auto-analyzed email 1046 using AI.
+2025-05-09 07:11:07,057 [INFO] [Signal] Resolved markets for rule in email 1046: ['All']
+2025-05-09 07:11:07,057 [INFO] [Signal] EmailRow 4025 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:11:07,058 [INFO] [Signal] Created EmailRow 4025 from AI data for email 1046 with markets: ['All'].
+2025-05-09 07:11:07,058 [INFO] Scheduling BATCH matching task for email 1046 with 1 rows.
+2025-05-09 07:11:07,060 [INFO] Matching task scheduled successfully for email 1046.
+2025-05-09 07:11:07,060 [INFO] Successfully extracted data from email body for 1046. Skipping attachments.
+2025-05-09 07:11:07,060 [INFO] Email 1046 status set to 'processing'.
+2025-05-09 07:11:07,060 [INFO] Processing logic completed.
+2025-05-09 07:11:07,431 [INFO] Waiting 115.8 seconds until next check
+2025-05-09 07:13:03,375 [INFO] Running email check
+2025-05-09 07:13:05,257 [INFO] Auto-analyzing email: 1047 - Fwd: Stop Sale Bildirimi - 09.05.2025 - ALL AGENCIES ALL MARKETS - Megasaray Westbeach Antalya
+2025-05-09 07:13:05,278 [INFO] ClaudeAnalyzer initialized.
+2025-05-09 07:13:05,279 [INFO] Email from ecctur.com domain detected, skipping cleaning: Emrecan Kurnaz <emrecan.kurnaz@ecctur.com>
+2025-05-09 07:13:09,213 [INFO] HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2025-05-09 07:13:09,216 [INFO] [RAW AI RESPONSE DUMP] Subject: Fwd: Stop Sale Bildirimi - 09.05.2025 - ALL AGENCIES ALL MARKETS - Megasaray Westbeach Antalya:
+[
+  {
+    "hotel_name": "Megasaray Westbeach Antalya",
+    "room_type": "Comfort Std. Room City View",
+    "markets": ["ALL"],
+    "start_date": "2025-05-09",
+    "end_date": "2025-05-10",
+    "sale_status": "stop"
+  },
+  {
+    "hotel_name": "Megasaray Westbeach Antalya",
+    "room_type": "Deluxe Standard Sea View",
+    "markets": ["ALL"],
+    "start_date": "2025-05-09",
+    "end_date": "2025-05-09",
+    "sale_status": "stop"
+  },
+  {
+    "hotel_name": "Megasaray Westbeach Antalya",
+    "room_type": "Comfort Std. Room Sea View",
+    "markets": ["ALL"],
+    "start_date": "2025-05-09",
+    "end_date": "2025-05-09",
+    "sale_status": "stop"
+  },
+  {
+    "hotel_name": "Megasaray Westbeach Antalya",
+    "room_type": "Family Room",
+    "markets": ["ALL"],
+    "start_date": "2025-05-09",
+    "end_date": "2025-05-10",
+    "sale_status": "stop"
+  }
+]
+2025-05-09 07:13:09,216 [INFO] Post-processed 4 rules from AI.
+2025-05-09 07:13:09,216 [INFO] AI analysis successful. Extracted 4 processed rows.
+2025-05-09 07:13:09,217 [INFO] Successfully auto-analyzed email 1047 using AI.
+2025-05-09 07:13:09,217 [INFO] [Signal] Resolved markets for rule in email 1047: ['All']
+2025-05-09 07:13:09,218 [INFO] [Signal] EmailRow 4026 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:13:09,218 [INFO] [Signal] Created EmailRow 4026 from AI data for email 1047 with markets: ['All'].
+2025-05-09 07:13:09,219 [INFO] [Signal] Resolved markets for rule in email 1047: ['All']
+2025-05-09 07:13:09,219 [INFO] [Signal] EmailRow 4027 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:13:09,220 [INFO] [Signal] Created EmailRow 4027 from AI data for email 1047 with markets: ['All'].
+2025-05-09 07:13:09,220 [INFO] [Signal] Resolved markets for rule in email 1047: ['All']
+2025-05-09 07:13:09,221 [INFO] [Signal] EmailRow 4028 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:13:09,221 [INFO] [Signal] Created EmailRow 4028 from AI data for email 1047 with markets: ['All'].
+2025-05-09 07:13:09,222 [INFO] [Signal] Resolved markets for rule in email 1047: ['All']
+2025-05-09 07:13:09,222 [INFO] [Signal] EmailRow 4029 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:13:09,223 [INFO] [Signal] Created EmailRow 4029 from AI data for email 1047 with markets: ['All'].
+2025-05-09 07:13:09,223 [INFO] Scheduling BATCH matching task for email 1047 with 4 rows.
+2025-05-09 07:13:09,225 [INFO] Matching task scheduled successfully for email 1047.
+2025-05-09 07:13:09,225 [INFO] Successfully extracted data from email body for 1047. Skipping attachments.
+2025-05-09 07:13:09,225 [INFO] Email 1047 status set to 'processing'.
+2025-05-09 07:13:09,225 [INFO] Processing logic completed.
+2025-05-09 07:13:10,002 [INFO] Auto-analyzing email: 1048 - 00001315 Maliyet Hk
+2025-05-09 07:13:10,009 [INFO] ClaudeAnalyzer initialized.
+2025-05-09 07:13:11,453 [INFO] HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2025-05-09 07:13:11,456 [INFO] [RAW AI RESPONSE DUMP] Subject: 00001315 Maliyet Hk:
+[
+  {
+    "hotel_name": "Hotel Name",
+    "room_type": "All Room",
+    "markets": ["ALL"],
+    "start_date": null,
+    "end_date": null,
+    "sale_status": "stop"
+  }
+]
+2025-05-09 07:13:11,457 [WARNING] Skipping rule #0 due to missing required fields (hotel, dates, status): {'hotel_name': 'Hotel Name', 'room_type': 'All Room', 'markets': ['ALL'], 'start_date': None, 'end_date': None, 'sale_status': 'stop', 'raw_response': '[\n  {\n    "hotel_name": "Hotel Name",\n    "room_type": "All Room",\n    "markets": ["ALL"],\n    "start_date": null,\n    "end_date": null,\n    "sale_status": "stop"\n  }\n]'}
+2025-05-09 07:13:11,457 [INFO] Post-processed 0 rules from AI.
+2025-05-09 07:13:11,457 [WARNING] AI analysis returned a valid response, but post-processing yielded no valid rows.
+2025-05-09 07:13:11,457 [INFO] AI analysis successful. Extracted 0 processed rows.
+2025-05-09 07:13:11,458 [WARNING] Bad Request: /api/parse-email-content/
+2025-05-09 07:13:11,458 [WARNING] AI analysis API call failed (Status: 400, Success: False) for email 1048. Flagging for attachment check.
+2025-05-09 07:13:11,458 [WARNING] AI/Fallback analysis failed for email 1048. Setting status to 'processing_attachments' and triggering attachment check.
+2025-05-09 07:13:11,462 [INFO] Processing logic completed.
+2025-05-09 07:13:12,310 [INFO] Waiting 111.1 seconds until next check
+2025-05-09 07:15:03,471 [INFO] Running email check
+2025-05-09 07:15:07,419 [INFO] Auto-analyzing email: 1049 - Re: Duplcate Reservation
+2025-05-09 07:15:07,434 [INFO] ClaudeAnalyzer initialized.
+2025-05-09 07:15:07,441 [INFO] Original method found 15 markers
+2025-05-09 07:15:07,441 [INFO] Found first marker element: strong
+2025-05-09 07:15:07,441 [WARNING] No content before marker, using full email
+2025-05-09 07:15:09,007 [INFO] HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2025-05-09 07:15:09,010 [INFO] [RAW AI RESPONSE DUMP] Subject: Re: Duplcate Reservation:
+[
+  {
+    "hotel_name": "KPZMDY",
+    "room_type": "All Room",
+    "markets": ["ALL"],
+    "start_date": "2025-06-17",
+    "end_date": "2025-06-17",
+    "sale_status": "stop"
+  }
+]
+2025-05-09 07:15:09,011 [INFO] Post-processed 1 rules from AI.
+2025-05-09 07:15:09,011 [INFO] AI analysis successful. Extracted 1 processed rows.
+2025-05-09 07:15:09,012 [INFO] Successfully auto-analyzed email 1049 using AI.
+2025-05-09 07:15:09,012 [INFO] [Signal] Resolved markets for rule in email 1049: ['All']
+2025-05-09 07:15:09,015 [INFO] [Signal] EmailRow 4030 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:15:09,017 [INFO] [Signal] Created EmailRow 4030 from AI data for email 1049 with markets: ['All'].
+2025-05-09 07:15:09,017 [INFO] Scheduling BATCH matching task for email 1049 with 1 rows.
+2025-05-09 07:15:09,019 [INFO] Matching task scheduled successfully for email 1049.
+2025-05-09 07:15:09,019 [INFO] Successfully extracted data from email body for 1049. Skipping attachments.
+2025-05-09 07:15:09,021 [INFO] Email 1049 status set to 'processing'.
+2025-05-09 07:15:09,022 [INFO] Processing logic completed.
+2025-05-09 07:15:10,306 [INFO] Auto-analyzing email: 1050 - RE: CONFIRMED New Reservation | KP0000597 // Booking Code : G3F2JF
+2025-05-09 07:15:10,315 [INFO] ClaudeAnalyzer initialized.
+2025-05-09 07:15:10,319 [INFO] Original method found 15 markers
+2025-05-09 07:15:10,319 [INFO] Found first marker element: span
+2025-05-09 07:15:10,319 [WARNING] No content before marker, using full email
+2025-05-09 07:15:11,802 [INFO] HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2025-05-09 07:15:11,804 [INFO] [RAW AI RESPONSE DUMP] Subject: RE: CONFIRMED New Reservation | KP0000597 // Booking Code : G3F2JF:
+[
+  {
+    "hotel_name": "Hotel Name",
+    "room_type": "All Room",
+    "markets": ["Lithuania", "UK"],
+    "start_date": null,
+    "end_date": null,
+    "sale_status": "open"
+  }
+]
+2025-05-09 07:15:11,806 [WARNING] Skipping rule #0 due to missing required fields (hotel, dates, status): {'hotel_name': 'Hotel Name', 'room_type': 'All Room', 'markets': ['Lithuania', 'UK'], 'start_date': None, 'end_date': None, 'sale_status': 'open', 'raw_response': '[\n  {\n    "hotel_name": "Hotel Name",\n    "room_type": "All Room",\n    "markets": ["Lithuania", "UK"],\n    "start_date": null,\n    "end_date": null,\n    "sale_status": "open"\n  }\n]'}
+2025-05-09 07:15:11,806 [INFO] Post-processed 0 rules from AI.
+2025-05-09 07:15:11,806 [WARNING] AI analysis returned a valid response, but post-processing yielded no valid rows.
+2025-05-09 07:15:11,806 [INFO] AI analysis successful. Extracted 0 processed rows.
+2025-05-09 07:15:11,806 [WARNING] Bad Request: /api/parse-email-content/
+2025-05-09 07:15:11,807 [WARNING] AI analysis API call failed (Status: 400, Success: False) for email 1050. Flagging for attachment check.
+2025-05-09 07:15:11,807 [WARNING] AI/Fallback analysis failed for email 1050. Setting status to 'processing_attachments' and triggering attachment check.
+2025-05-09 07:15:11,810 [INFO] Processing logic completed.
+2025-05-09 07:15:12,826 [INFO] Waiting 110.7 seconds until next check
+2025-05-09 07:17:03,552 [INFO] Running email check
+2025-05-09 07:17:51,950 [INFO] Waiting 112.7 seconds until next check
+2025-05-09 07:19:44,697 [INFO] Running email check
+2025-05-09 07:19:46,388 [INFO] Auto-analyzing email: 1051 - Stop Sale Hk.
+2025-05-09 07:19:46,400 [INFO] ClaudeAnalyzer initialized.
+2025-05-09 07:19:46,421 [INFO] Original method found 30 markers
+2025-05-09 07:19:46,421 [INFO] Found first marker element: span
+2025-05-09 07:19:46,421 [WARNING] No content before marker, using full email
+2025-05-09 07:19:51,504 [INFO] HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2025-05-09 07:19:51,509 [INFO] [RAW AI RESPONSE DUMP] Subject: Stop Sale Hk.:
+[
+  {
+    "hotel_name": "Didimclub",
+    "room_type": "All Room",
+    "markets": ["ALL"],
+    "start_date": "2025-05-18",
+    "end_date": "2025-05-18",
+    "sale_status": "stop"
+  },
+  {
+    "hotel_name": "Didimclub",
+    "room_type": "All Room",
+    "markets": ["ALL"],
+    "start_date": "2025-09-28",
+    "end_date": "2025-10-01",
+    "sale_status": "stop"
+  },
+  {
+    "hotel_name": "Didimclub",
+    "room_type": "All Room",
+    "markets": ["ALL"],
+    "start_date": "2025-05-13",
+    "end_date": "2025-05-14",
+    "sale_status": "stop"
+  },
+  {
+    "hotel_name": "Didimclub",
+    "room_type": "All Room",
+    "markets": ["ALL"],
+    "start_date": "2025-05-12",
+    "end_date": "2025-05-12",
+    "sale_status": "stop"
+  },
+  {
+    "hotel_name": "Didimclub",
+    "room_type": "All Room",
+    "markets": ["ALL"],
+    "start_date": "2025-05-30",
+    "end_date": "2025-06-03",
+    "sale_status": "stop"
+  },
+  {
+    "hotel_name": "Didimclub",
+    "room_type": "All Room",
+    "markets": ["ALL"],
+    "
+2025-05-09 07:19:51,511 [INFO] Post-processed 7 rules from AI.
+2025-05-09 07:19:51,511 [INFO] AI analysis successful. Extracted 7 processed rows.
+2025-05-09 07:19:51,512 [INFO] Successfully auto-analyzed email 1051 using AI.
+2025-05-09 07:19:51,513 [INFO] [Signal] Resolved markets for rule in email 1051: ['All']
+2025-05-09 07:19:51,516 [INFO] [Signal] EmailRow 4031 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:19:51,518 [INFO] [Signal] Created EmailRow 4031 from AI data for email 1051 with markets: ['All'].
+2025-05-09 07:19:51,519 [INFO] [Signal] Resolved markets for rule in email 1051: ['All']
+2025-05-09 07:19:51,521 [INFO] [Signal] EmailRow 4032 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:19:51,522 [INFO] [Signal] Created EmailRow 4032 from AI data for email 1051 with markets: ['All'].
+2025-05-09 07:19:51,522 [INFO] [Signal] Resolved markets for rule in email 1051: ['All']
+2025-05-09 07:19:51,523 [INFO] [Signal] EmailRow 4033 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:19:51,524 [INFO] [Signal] Created EmailRow 4033 from AI data for email 1051 with markets: ['All'].
+2025-05-09 07:19:51,524 [INFO] [Signal] Resolved markets for rule in email 1051: ['All']
+2025-05-09 07:19:51,525 [INFO] [Signal] EmailRow 4034 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:19:51,525 [INFO] [Signal] Created EmailRow 4034 from AI data for email 1051 with markets: ['All'].
+2025-05-09 07:19:51,526 [INFO] [Signal] Resolved markets for rule in email 1051: ['All']
+2025-05-09 07:19:51,526 [INFO] [Signal] EmailRow 4035 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:19:51,527 [INFO] [Signal] Created EmailRow 4035 from AI data for email 1051 with markets: ['All'].
+2025-05-09 07:19:51,527 [INFO] [Signal] Resolved markets for rule in email 1051: ['All']
+2025-05-09 07:19:51,528 [INFO] [Signal] EmailRow 4036 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:19:51,528 [INFO] [Signal] Created EmailRow 4036 from AI data for email 1051 with markets: ['All'].
+2025-05-09 07:19:51,529 [INFO] [Signal] Resolved markets for rule in email 1051: ['All']
+2025-05-09 07:19:51,529 [INFO] [Signal] EmailRow 4037 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:19:51,530 [INFO] [Signal] Created EmailRow 4037 from AI data for email 1051 with markets: ['All'].
+2025-05-09 07:19:51,530 [INFO] Scheduling BATCH matching task for email 1051 with 7 rows.
+2025-05-09 07:19:51,531 [INFO] Matching task scheduled successfully for email 1051.
+2025-05-09 07:19:51,531 [INFO] Successfully extracted data from email body for 1051. Skipping attachments.
+2025-05-09 07:19:51,532 [INFO] Email 1051 status set to 'processing'.
+2025-05-09 07:19:51,532 [INFO] Processing logic completed.
+2025-05-09 07:19:51,806 [INFO] Waiting 112.9 seconds until next check
+2025-05-09 07:21:44,789 [INFO] Running email check
+2025-05-09 07:21:53,638 [INFO] Waiting 111.2 seconds until next check
+2025-05-09 07:23:44,872 [INFO] Running email check
+2025-05-09 07:23:46,001 [INFO] Waiting 118.9 seconds until next check
+2025-05-09 07:25:10,118 [INFO] Received stop signal, shutting down...
+2025-05-09 07:25:11,066 [INFO] Email checking daemon stopped
+2025-05-09 07:25:20,860 [INFO] Starting email checking daemon
+2025-05-09 07:25:20,863 [INFO] Waiting 111.9 seconds until next check
+2025-05-09 07:27:12,875 [INFO] Running email check
+2025-05-09 07:27:13,972 [INFO] Waiting 119.0 seconds until next check
+2025-05-09 07:29:13,091 [INFO] Running email check
+2025-05-09 07:29:14,824 [INFO] Auto-analyzing email: 1052 - FW: Stop Sale- Labranda Mares Marmaris - ALL ROOM
+2025-05-09 07:29:14,842 [INFO] ClaudeAnalyzer successfully imported
+2025-05-09 07:29:15,245 [INFO] ClaudeAnalyzer successfully imported
+2025-05-09 07:29:15,266 [INFO] ClaudeAnalyzer initialized.
+2025-05-09 07:29:15,270 [INFO] Found table with date information
+2025-05-09 07:29:15,270 [INFO] Added 1 structured tables to content
+2025-05-09 07:29:17,125 [INFO] HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2025-05-09 07:29:17,134 [INFO] [RAW AI RESPONSE DUMP] Subject: FW: Stop Sale- Labranda Mares Marmaris - ALL ROOM:
+[
+  {
+    "hotel_name": "LABRANDA MARES MARMARİS",
+    "room_type": "All Room",
+    "markets": ["ALL"],
+    "start_date": "2025-05-17",
+    "end_date": "2025-05-17",
+    "sale_status": "stop"
+  }
+]
+2025-05-09 07:29:17,136 [INFO] Post-processed 1 rules from AI.
+2025-05-09 07:29:17,136 [INFO] AI analysis successful. Extracted 1 processed rows.
+2025-05-09 07:29:17,137 [INFO] Successfully auto-analyzed email 1052 using AI.
+2025-05-09 07:29:17,138 [INFO] [Signal] Resolved markets for rule in email 1052: ['All']
+2025-05-09 07:29:17,139 [INFO] [Signal] EmailRow 4038 created with status 'matching'. Triggering individual match task.
+2025-05-09 07:29:17,140 [INFO] [Signal] Created EmailRow 4038 from AI data for email 1052 with markets: ['All'].
+2025-05-09 07:29:17,140 [INFO] Scheduling BATCH matching task for email 1052 with 1 rows.
+2025-05-09 07:29:17,201 [INFO] Matching task scheduled successfully for email 1052.
+2025-05-09 07:29:17,201 [INFO] Successfully extracted data from email body for 1052. Skipping attachments.
+2025-05-09 07:29:17,202 [INFO] Email 1052 status set to 'processing'.
+2025-05-09 07:29:17,202 [INFO] Processing logic completed.
+2025-05-09 07:29:17,570 [INFO] Waiting 115.5 seconds until next check
+2025-05-09 07:31:13,195 [INFO] Running email check
+2025-05-09 07:31:14,411 [INFO] Waiting 118.8 seconds until next check
+2025-05-09 07:33:13,275 [INFO] Running email check
+2025-05-09 07:33:14,305 [INFO] Waiting 119.0 seconds until next check
+2025-05-09 07:35:13,385 [INFO] Running email check
+2025-05-09 07:35:14,373 [INFO] Waiting 119.0 seconds until next check
+2025-05-09 07:37:13,482 [INFO] Running email check
+2025-05-09 07:37:14,828 [INFO] Waiting 118.7 seconds until next check
+2025-05-09 07:39:13,591 [INFO] Running email check
+2025-05-09 07:39:15,245 [INFO] Waiting 118.4 seconds until next check
+2025-05-09 07:41:13,728 [INFO] Running email check
+2025-05-09 07:41:17,226 [INFO] Waiting 116.5 seconds until next check
+2025-05-09 07:43:13,821 [INFO] Running email check
+2025-05-09 07:43:15,320 [INFO] Waiting 118.5 seconds until next check
+2025-05-09 07:45:13,922 [INFO] Running email check
+2025-05-09 07:45:15,523 [INFO] Waiting 118.4 seconds until next check
+2025-05-09 07:47:14,022 [INFO] Running email check
+2025-05-09 07:47:15,428 [INFO] Waiting 118.6 seconds until next check
+2025-05-09 07:49:14,114 [INFO] Running email check
+2025-05-09 07:49:15,240 [INFO] Waiting 118.9 seconds until next check
+2025-05-09 07:51:14,203 [INFO] Running email check
+2025-05-09 07:51:15,804 [INFO] Waiting 118.4 seconds until next check
+2025-05-09 07:53:14,309 [INFO] Running email check
+2025-05-09 07:53:15,667 [INFO] Waiting 118.7 seconds until next check
+2025-05-09 07:55:14,397 [INFO] Running email check
+2025-05-09 07:55:15,866 [INFO] Waiting 118.5 seconds until next check
+2025-05-09 07:57:14,489 [INFO] Running email check
+2025-05-09 07:57:15,625 [INFO] Waiting 118.9 seconds until next check
+2025-05-09 07:59:14,599 [INFO] Running email check
+2025-05-09 07:59:15,657 [INFO] Waiting 119.0 seconds until next check
+2025-05-09 08:01:14,698 [INFO] Running email check
+2025-05-09 08:01:16,578 [INFO] Waiting 118.1 seconds until next check
+2025-05-09 08:03:14,733 [INFO] Running email check
+2025-05-09 08:03:16,056 [INFO] Waiting 119.2 seconds until next check
+2025-05-09 08:05:15,364 [INFO] Running email check
+2025-05-09 08:05:16,994 [INFO] Waiting 118.4 seconds until next check
+2025-05-09 08:07:15,452 [INFO] Running email check
+2025-05-09 08:07:17,540 [INFO] Waiting 117.9 seconds until next check
+2025-05-09 08:09:15,533 [INFO] Running email check
+2025-05-09 08:09:17,031 [INFO] Waiting 118.5 seconds until next check
+2025-05-09 08:11:15,647 [INFO] Running email check
+2025-05-09 08:11:18,072 [INFO] Waiting 117.6 seconds until next check
+2025-05-09 08:13:15,744 [INFO] Running email check
+2025-05-09 08:13:16,902 [INFO] Waiting 118.9 seconds until next check
+2025-05-09 08:15:15,834 [INFO] Running email check
+2025-05-09 08:15:16,943 [INFO] Waiting 118.9 seconds until next check
+2025-05-09 08:17:15,979 [INFO] Running email check
+2025-05-09 08:17:17,244 [INFO] Waiting 118.7 seconds until next check
+2025-05-09 08:19:16,079 [INFO] Running email check
+2025-05-09 08:19:17,364 [INFO] Waiting 118.7 seconds until next check
+2025-05-09 08:21:16,172 [INFO] Running email check
+2025-05-09 08:21:17,259 [INFO] Waiting 118.9 seconds until next check
+2025-05-09 08:23:16,264 [INFO] Running email check
+2025-05-09 08:23:17,331 [INFO] Waiting 118.9 seconds until next check
+2025-05-09 08:25:16,357 [INFO] Running email check
+2025-05-09 08:25:18,507 [INFO] Waiting 117.9 seconds until next check
+2025-05-09 08:27:16,448 [INFO] Running email check
+2025-05-09 08:27:17,780 [INFO] Waiting 118.7 seconds until next check
+2025-05-09 08:29:16,543 [INFO] Running email check
+2025-05-09 08:29:18,009 [INFO] Waiting 118.5 seconds until next check
+2025-05-09 08:31:16,634 [INFO] Running email check
+2025-05-09 08:31:17,775 [INFO] Waiting 118.9 seconds until next check
+2025-05-09 08:33:16,724 [INFO] Running email check
+2025-05-09 08:33:18,006 [INFO] Waiting 118.7 seconds until next check
+2025-05-09 08:35:16,831 [INFO] Running email check
+2025-05-09 08:35:19,073 [INFO] Waiting 117.8 seconds until next check
+2025-05-09 08:37:16,927 [INFO] Running email check
+2025-05-09 08:37:18,266 [INFO] Waiting 118.7 seconds until next check
+2025-05-09 08:39:17,060 [INFO] Running email check
+2025-05-09 08:39:18,412 [INFO] Waiting 118.7 seconds until next check
+2025-05-09 08:41:17,147 [INFO] Running email check
+2025-05-09 08:41:19,017 [INFO] Waiting 118.1 seconds until next check
+2025-05-09 08:43:17,249 [INFO] Running email check
+2025-05-09 08:43:18,743 [INFO] Waiting 118.5 seconds until next check
+2025-05-09 08:45:17,428 [INFO] Running email check
+2025-05-09 08:45:19,141 [INFO] Waiting 119.3 seconds until next check
+2025-05-09 08:47:18,462 [INFO] Running email check
+2025-05-09 08:47:19,480 [INFO] Waiting 119.0 seconds until next check
+2025-05-09 08:49:18,551 [INFO] Running email check
+2025-05-09 08:49:19,879 [INFO] Waiting 118.7 seconds until next check
+2025-05-09 08:51:18,642 [INFO] Running email check
+2025-05-09 08:51:19,766 [INFO] Waiting 118.9 seconds until next check
+2025-05-09 08:53:18,749 [INFO] Running email check
+2025-05-09 08:53:20,472 [INFO] Waiting 118.3 seconds until next check
+2025-05-09 08:55:18,846 [INFO] Running email check
+2025-05-09 08:55:19,894 [INFO] Waiting 119.0 seconds until next check
+2025-05-09 08:57:18,977 [INFO] Running email check
+2025-05-09 08:57:20,394 [INFO] Waiting 118.6 seconds until next check
+2025-05-09 08:59:19,067 [INFO] Running email check
+2025-05-09 08:59:21,105 [INFO] Waiting 118.0 seconds until next check
+2025-05-09 09:01:19,175 [INFO] Running email check
+2025-05-09 09:01:20,346 [INFO] Waiting 118.8 seconds until next check
+2025-05-09 09:03:19,335 [INFO] Running email check
+2025-05-09 09:03:20,515 [INFO] Waiting 118.8 seconds until next check
+2025-05-09 09:05:19,425 [INFO] Running email check
+2025-05-09 09:05:21,018 [INFO] Waiting 118.4 seconds until next check
+2025-05-09 09:07:19,513 [INFO] Running email check
+2025-05-09 09:07:20,508 [INFO] Waiting 119.0 seconds until next check
+2025-05-09 09:09:19,603 [INFO] Running email check
+2025-05-09 09:09:20,541 [INFO] Waiting 119.1 seconds until next check
+2025-05-09 09:11:19,701 [INFO] Running email check
+2025-05-09 09:11:20,717 [INFO] Waiting 119.0 seconds until next check
+2025-05-09 09:13:19,800 [INFO] Running email check
+2025-05-09 09:13:21,710 [INFO] Waiting 118.1 seconds until next check
+2025-05-09 09:15:19,899 [INFO] Running email check
+2025-05-09 09:15:21,093 [INFO] Waiting 118.8 seconds until next check
+2025-05-09 09:17:20,001 [INFO] Running email check
+2025-05-09 09:17:21,818 [INFO] Waiting 118.2 seconds until next check
+2025-05-09 09:19:20,117 [INFO] Running email check
+2025-05-09 09:19:21,155 [INFO] Waiting 119.1 seconds until next check
+2025-05-09 09:21:20,338 [INFO] Running email check
+2025-05-09 09:21:21,386 [INFO] Waiting 119.0 seconds until next check
+2025-05-09 09:23:20,451 [INFO] Running email check
+2025-05-09 09:23:21,584 [INFO] Waiting 118.9 seconds until next check
+2025-05-09 09:25:20,630 [INFO] Running email check
+2025-05-09 09:25:22,671 [INFO] Waiting 118.0 seconds until next check
+2025-05-09 09:27:20,737 [INFO] Running email check
+2025-05-09 09:27:22,408 [INFO] Waiting 118.3 seconds until next check
+2025-05-09 09:29:20,846 [INFO] Running email check
+2025-05-09 09:29:22,246 [INFO] Waiting 118.6 seconds until next check
+2025-05-09 09:31:20,949 [INFO] Running email check
+2025-05-09 09:31:22,063 [INFO] Waiting 118.9 seconds until next check
+2025-05-09 10:06:48,432 [INFO] Running email check
+2025-05-09 10:06:49,958 [INFO] Auto-analyzing email: 1071 - Lago Hotel - Stop Sale Bilgilendirme
+2025-05-09 10:06:50,014 [INFO] ClaudeAnalyzer initialized.
+2025-05-09 10:47:52,312 [INFO] Retrying request to /v1/messages in 0.416623 seconds
+2025-05-09 10:47:54,670 [INFO] HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2025-05-09 10:47:54,681 [INFO] [RAW AI RESPONSE DUMP] Subject: Lago Hotel - Stop Sale Bilgilendirme:
+[
+  {
+    "hotel_name": "Lago Hotel",
+    "room_type": "Tiny Villa",
+    "markets": ["West Europe Market"],
+    "start_date": "2025-05-09",
+    "end_date": "2025-11-06",
+    "sale_status": "stop"
+  }
+]
+2025-05-09 10:47:54,689 [INFO] Post-processed 1 rules from AI.
+2025-05-09 10:47:54,689 [INFO] AI analysis successful. Extracted 1 processed rows.
+2025-05-09 10:47:54,695 [INFO] Successfully auto-analyzed email 1071 using AI.
+2025-05-09 10:47:54,698 [INFO] [Signal] Resolved markets for rule in email 1071: ['West Europe Market']
+2025-05-09 10:47:54,702 [INFO] [Signal] EmailRow 4097 created with status 'matching'. Triggering individual match task.
+2025-05-09 10:47:54,706 [INFO] [Signal] Created EmailRow 4097 from AI data for email 1071 with markets: ['West Europe Market'].
+2025-05-09 10:47:54,706 [INFO] Scheduling BATCH matching task for email 1071 with 1 rows.
+2025-05-09 10:47:54,738 [INFO] Matching task scheduled successfully for email 1071.
+2025-05-09 10:47:54,738 [INFO] Successfully extracted data from email body for 1071. Skipping attachments.
+2025-05-09 10:47:54,739 [INFO] Email 1071 status set to 'processing'.
+2025-05-09 10:47:54,739 [INFO] Processing logic completed.
+2025-05-09 10:48:23,283 [ERROR] Error in IMAP connection
+Traceback (most recent call last):
+  File "/Users/serkanayhan/projects/github_Project01/Bedboxx_stopsale/emails/management/commands/check_emails.py", line 141, in check_imap
+    for msg_id in message_ids:
+                           ^^^
+  File "/opt/homebrew/Cellar/python@3.13/3.13.2/Frameworks/Python.framework/Versions/3.13/lib/python3.13/imaplib.py", line 557, in fetch
+    typ, dat = self._simple_command(name, message_set, message_parts)
+               ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.13/3.13.2/Frameworks/Python.framework/Versions/3.13/lib/python3.13/imaplib.py", line 1239, in _simple_command
+    return self._command_complete(name, self._command(name, *args))
+           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.13/3.13.2/Frameworks/Python.framework/Versions/3.13/lib/python3.13/imaplib.py", line 1056, in _command_complete
+    typ, data = self._get_tagged_response(tag, expect_bye=logout)
+                ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.13/3.13.2/Frameworks/Python.framework/Versions/3.13/lib/python3.13/imaplib.py", line 1182, in _get_tagged_response
+    self._get_response()
+    ~~~~~~~~~~~~~~~~~~^^
+  File "/opt/homebrew/Cellar/python@3.13/3.13.2/Frameworks/Python.framework/Versions/3.13/lib/python3.13/imaplib.py", line 1084, in _get_response
+    resp = self._get_line()
+  File "/opt/homebrew/Cellar/python@3.13/3.13.2/Frameworks/Python.framework/Versions/3.13/lib/python3.13/imaplib.py", line 1192, in _get_line
+    line = self.readline()
+  File "/opt/homebrew/Cellar/python@3.13/3.13.2/Frameworks/Python.framework/Versions/3.13/lib/python3.13/imaplib.py", line 332, in readline
+    line = self.file.readline(_MAXLINE + 1)
+  File "/opt/homebrew/Cellar/python@3.13/3.13.2/Frameworks/Python.framework/Versions/3.13/lib/python3.13/socket.py", line 719, in readinto
+    return self._sock.recv_into(b)
+           ~~~~~~~~~~~~~~~~~~~~^^^
+  File "/opt/homebrew/Cellar/python@3.13/3.13.2/Frameworks/Python.framework/Versions/3.13/lib/python3.13/ssl.py", line 1304, in recv_into
+    return self.read(nbytes, buffer)
+           ~~~~~~~~~^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.13/3.13.2/Frameworks/Python.framework/Versions/3.13/lib/python3.13/ssl.py", line 1138, in read
+    return self._sslobj.read(len, buffer)
+           ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+TimeoutError: [Errno 60] Operation timed out
+2025-05-09 10:48:23,305 [INFO] Waiting 112.1 seconds until next check
+2025-05-09 10:50:15,452 [INFO] Running email check
+2025-05-09 10:50:16,627 [INFO] Waiting 118.8 seconds until next check
+2025-05-09 10:52:15,561 [INFO] Running email check
+2025-05-09 10:52:19,466 [INFO] Waiting 116.1 seconds until next check
+2025-05-09 10:54:15,640 [INFO] Running email check
+2025-05-09 10:54:17,088 [INFO] Waiting 118.8 seconds until next check
+2025-05-09 10:56:15,930 [INFO] Running email check
+2025-05-09 10:56:17,606 [INFO] Waiting 118.4 seconds until next check
+2025-05-09 10:58:16,106 [INFO] Running email check
+2025-05-09 10:58:17,358 [INFO] Waiting 118.8 seconds until next check
+2025-05-09 11:00:16,204 [INFO] Running email check
+2025-05-09 11:00:18,213 [INFO] Waiting 119.9 seconds until next check
+2025-05-09 11:02:18,150 [INFO] Running email check
+2025-05-09 11:02:19,394 [INFO] Waiting 118.8 seconds until next check
+2025-05-09 11:04:18,241 [INFO] Running email check
+2025-05-09 11:04:19,744 [INFO] Waiting 118.5 seconds until next check
+2025-05-09 11:06:18,332 [INFO] Running email check
+2025-05-09 11:06:21,533 [INFO] Waiting 116.8 seconds until next check
+2025-05-09 11:08:18,432 [INFO] Running email check
+2025-05-09 11:08:19,587 [INFO] Waiting 118.9 seconds until next check
+2025-05-09 11:10:18,524 [INFO] Running email check
+2025-05-09 11:10:19,863 [INFO] Waiting 118.7 seconds until next check
+2025-05-09 11:12:18,634 [INFO] Running email check
+2025-05-09 11:12:19,746 [INFO] Waiting 118.9 seconds until next check
+2025-05-09 11:14:18,734 [INFO] Running email check
+2025-05-09 11:14:20,330 [INFO] Waiting 118.4 seconds until next check
+2025-05-09 11:16:18,839 [INFO] Running email check
+2025-05-09 11:16:20,015 [INFO] Waiting 118.8 seconds until next check
+2025-05-09 11:18:18,951 [INFO] Running email check
+2025-05-09 11:18:20,001 [INFO] Waiting 119.0 seconds until next check
+2025-05-09 11:20:19,040 [INFO] Running email check
+2025-05-09 11:20:20,018 [INFO] Waiting 119.0 seconds until next check
+2025-05-09 11:22:19,143 [INFO] Running email check
+2025-05-09 11:22:20,297 [INFO] Waiting 118.9 seconds until next check
+2025-05-09 11:24:19,242 [INFO] Running email check
+2025-05-09 11:24:20,540 [INFO] Waiting 118.7 seconds until next check
+2025-05-09 11:26:19,356 [INFO] Running email check
+2025-05-09 11:26:21,019 [INFO] Waiting 118.3 seconds until next check
+2025-05-09 11:28:19,453 [INFO] Running email check
+2025-05-09 11:28:23,994 [INFO] Waiting 116.1 seconds until next check
+2025-05-09 11:30:20,212 [INFO] Running email check
+2025-05-09 11:30:21,563 [INFO] Waiting 118.7 seconds until next check
+2025-05-09 11:32:20,326 [INFO] Running email check
+2025-05-09 11:32:23,841 [INFO] Waiting 120.0 seconds until next check
+2025-05-09 11:34:23,898 [INFO] Running email check
+2025-05-09 11:34:26,304 [INFO] Waiting 117.6 seconds until next check
+2025-05-09 11:36:23,993 [INFO] Running email check
+2025-05-09 11:36:26,261 [INFO] Waiting 117.7 seconds until next check
+2025-05-09 11:38:24,098 [INFO] Running email check
+2025-05-09 11:38:25,549 [INFO] Waiting 118.6 seconds until next check
+2025-05-09 11:40:24,216 [INFO] Running email check
+2025-05-09 11:40:25,597 [INFO] Waiting 118.6 seconds until next check
+2025-05-09 11:42:24,331 [INFO] Running email check
+2025-05-09 11:42:25,790 [INFO] Waiting 118.6 seconds until next check
+2025-05-09 11:44:24,429 [INFO] Running email check
+2025-05-09 11:44:25,894 [INFO] Waiting 118.5 seconds until next check
+2025-05-09 11:46:24,535 [INFO] Running email check
+2025-05-09 11:46:25,925 [INFO] Waiting 118.6 seconds until next check
+2025-05-09 11:48:24,620 [INFO] Running email check
+2025-05-09 11:48:26,284 [INFO] Waiting 118.3 seconds until next check
+2025-05-09 11:50:24,722 [INFO] Running email check
+2025-05-09 11:50:33,454 [INFO] Waiting 111.3 seconds until next check
+2025-05-09 11:52:24,805 [INFO] Running email check
+2025-05-09 11:52:27,282 [INFO] Waiting 117.5 seconds until next check
+2025-05-09 11:54:24,907 [INFO] Running email check
+2025-05-09 11:54:26,928 [INFO] Waiting 118.0 seconds until next check
+2025-05-09 11:56:25,013 [INFO] Running email check
+2025-05-09 11:56:27,138 [INFO] Waiting 117.9 seconds until next check
+2025-05-09 11:58:25,109 [INFO] Running email check
+2025-05-09 11:58:27,338 [INFO] Waiting 117.8 seconds until next check
+2025-05-09 12:00:25,212 [INFO] Running email check
+2025-05-09 12:00:27,184 [INFO] Waiting 118.0 seconds until next check
+2025-05-09 12:02:25,339 [INFO] Running email check
+2025-05-09 12:02:27,422 [INFO] Waiting 117.9 seconds until next check
+2025-05-09 12:04:25,438 [INFO] Running email check
+2025-05-09 12:04:28,889 [INFO] Waiting 116.6 seconds until next check
+2025-05-09 12:06:25,535 [INFO] Running email check
+2025-05-09 12:06:27,721 [INFO] Waiting 117.8 seconds until next check
+2025-05-09 12:08:25,642 [INFO] Running email check
+2025-05-09 12:08:27,822 [INFO] Waiting 117.8 seconds until next check
+2025-05-09 12:10:25,715 [INFO] Running email check
+2025-05-09 12:10:27,926 [INFO] Waiting 117.8 seconds until next check
+2025-05-09 12:12:25,807 [INFO] Running email check
+2025-05-09 12:12:27,830 [INFO] Waiting 118.0 seconds until next check
+2025-05-09 12:14:25,872 [INFO] Running email check
+2025-05-09 12:14:27,908 [INFO] Waiting 118.0 seconds until next check
+2025-05-09 12:16:25,956 [INFO] Running email check
+2025-05-09 12:16:28,007 [INFO] Waiting 118.0 seconds until next check
+2025-05-09 12:18:26,047 [INFO] Running email check
+2025-05-09 12:18:28,085 [INFO] Waiting 118.0 seconds until next check
+2025-05-09 12:20:26,150 [INFO] Running email check
+2025-05-09 12:20:28,267 [INFO] Waiting 117.9 seconds until next check
+2025-05-09 12:22:26,250 [INFO] Running email check
+2025-05-09 12:22:27,994 [INFO] Waiting 118.3 seconds until next check
+2025-05-09 12:24:26,337 [INFO] Running email check
+2025-05-09 12:24:28,455 [INFO] Waiting 117.9 seconds until next check
+2025-05-09 12:26:26,414 [INFO] Running email check
+2025-05-09 12:26:28,472 [INFO] Waiting 117.9 seconds until next check
+2025-05-09 12:28:26,512 [INFO] Running email check
+2025-05-09 12:28:28,876 [INFO] Waiting 117.7 seconds until next check
+2025-05-09 12:30:26,640 [INFO] Running email check
+2025-05-09 12:30:29,240 [INFO] Waiting 117.4 seconds until next check
+2025-05-09 12:32:26,788 [INFO] Running email check
+2025-05-09 12:32:29,896 [INFO] Waiting 116.9 seconds until next check
+2025-05-09 12:34:26,973 [INFO] Running email check
+2025-05-09 12:34:29,720 [INFO] Waiting 117.3 seconds until next check
+2025-05-09 12:36:27,156 [INFO] Running email check
+2025-05-09 12:36:29,919 [INFO] Waiting 117.2 seconds until next check
+2025-05-09 12:38:27,330 [INFO] Running email check
+2025-05-09 12:38:29,475 [INFO] Waiting 117.9 seconds until next check
+2025-05-09 12:40:27,506 [INFO] Running email check
+2025-05-09 12:40:29,348 [INFO] Waiting 118.2 seconds until next check
+2025-05-09 12:42:27,700 [INFO] Running email check
+2025-05-09 12:42:29,873 [INFO] Waiting 117.8 seconds until next check
+2025-05-09 12:44:27,878 [INFO] Running email check
+2025-05-09 12:44:29,644 [INFO] Waiting 118.2 seconds until next check
+2025-05-09 12:46:28,042 [INFO] Running email check
+2025-05-09 12:46:30,253 [INFO] Waiting 117.8 seconds until next check
+2025-05-09 12:48:28,201 [INFO] Running email check
+2025-05-09 12:48:30,498 [INFO] Waiting 117.7 seconds until next check
+2025-05-09 12:50:28,376 [INFO] Running email check
+2025-05-09 12:50:30,061 [INFO] Waiting 118.3 seconds until next check
+2025-05-09 12:52:28,545 [INFO] Running email check
+2025-05-09 12:52:30,715 [INFO] Waiting 117.8 seconds until next check
+2025-05-09 12:54:28,743 [INFO] Running email check
+2025-05-09 12:54:30,912 [INFO] Waiting 117.8 seconds until next check
+2025-05-09 12:56:28,928 [INFO] Running email check
+2025-05-09 12:56:31,298 [INFO] Waiting 117.6 seconds until next check
+2025-05-09 12:58:29,053 [INFO] Running email check
+2025-05-09 12:58:31,745 [INFO] Waiting 117.3 seconds until next check
+2025-05-09 13:00:29,169 [INFO] Running email check
+2025-05-09 13:00:31,485 [INFO] Waiting 117.7 seconds until next check
+2025-05-09 13:02:29,332 [INFO] Running email check
+2025-05-09 13:02:31,716 [INFO] Waiting 117.6 seconds until next check
+2025-05-09 13:04:29,511 [INFO] Running email check
+2025-05-09 13:04:31,974 [INFO] Waiting 117.6 seconds until next check
+2025-05-09 13:06:29,706 [INFO] Running email check
+2025-05-09 13:06:33,143 [INFO] Waiting 116.6 seconds until next check
+2025-05-09 13:08:29,873 [INFO] Running email check
+2025-05-09 13:08:31,975 [INFO] Waiting 117.9 seconds until next check
+2025-05-09 13:10:30,034 [INFO] Running email check
+2025-05-09 13:10:31,795 [INFO] Waiting 118.2 seconds until next check
+2025-05-09 13:12:30,217 [INFO] Running email check
+2025-05-09 13:12:32,289 [INFO] Waiting 117.9 seconds until next check
+2025-05-09 13:14:30,327 [INFO] Running email check
+2025-05-09 13:14:32,305 [INFO] Waiting 118.0 seconds until next check
+2025-05-09 13:16:30,437 [INFO] Running email check
+2025-05-09 13:16:32,026 [INFO] Waiting 118.4 seconds until next check
+2025-05-09 13:18:30,545 [INFO] Running email check
+2025-05-09 13:18:32,740 [INFO] Waiting 117.8 seconds until next check
+2025-05-09 13:20:30,666 [INFO] Running email check
+2025-05-09 13:20:33,574 [INFO] Waiting 117.1 seconds until next check
+2025-05-09 13:22:30,769 [INFO] Running email check
+2025-05-09 13:22:33,999 [INFO] Waiting 116.8 seconds until next check
+2025-05-09 13:24:30,873 [INFO] Running email check
+2025-05-09 13:24:33,483 [INFO] Waiting 117.4 seconds until next check
+2025-05-09 13:26:31,041 [INFO] Running email check
+2025-05-09 13:26:34,013 [INFO] Waiting 117.0 seconds until next check
+2025-05-09 13:28:31,162 [INFO] Running email check
+2025-05-09 13:28:33,226 [INFO] Waiting 117.9 seconds until next check
+2025-05-09 13:30:31,288 [INFO] Running email check
+2025-05-09 13:30:34,078 [INFO] Waiting 117.2 seconds until next check
+2025-05-09 13:32:31,384 [INFO] Running email check
+2025-05-09 13:32:34,086 [INFO] Waiting 117.3 seconds until next check
+2025-05-09 13:34:31,486 [INFO] Running email check
+2025-05-09 13:34:33,695 [INFO] Waiting 117.8 seconds until next check
+2025-05-09 13:36:31,624 [INFO] Running email check
+2025-05-09 13:36:34,206 [INFO] Waiting 117.4 seconds until next check
+2025-05-09 13:38:31,793 [INFO] Running email check
+2025-05-09 13:38:34,041 [INFO] Waiting 117.8 seconds until next check
+2025-05-09 13:40:31,963 [INFO] Running email check
+2025-05-09 13:40:33,991 [INFO] Waiting 118.0 seconds until next check
+2025-05-09 13:42:32,127 [INFO] Running email check
+2025-05-09 13:42:34,246 [INFO] Waiting 117.9 seconds until next check
+2025-05-09 13:44:32,353 [INFO] Running email check
+2025-05-09 13:44:34,613 [INFO] Waiting 117.7 seconds until next check
+2025-05-09 13:46:32,478 [INFO] Running email check
+2025-05-09 13:46:35,813 [INFO] Waiting 116.7 seconds until next check
+2025-05-09 13:48:32,583 [INFO] Running email check
+2025-05-09 13:48:35,469 [INFO] Waiting 117.1 seconds until next check
+2025-05-09 13:50:32,679 [INFO] Running email check
+2025-05-09 13:50:34,625 [INFO] Waiting 118.1 seconds until next check
+2025-05-09 13:52:32,769 [INFO] Running email check
+2025-05-09 13:52:35,445 [INFO] Waiting 117.3 seconds until next check
+2025-05-09 13:54:32,874 [INFO] Running email check
+2025-05-09 13:54:35,114 [INFO] Waiting 117.8 seconds until next check
+2025-05-09 13:56:32,963 [INFO] Running email check
+2025-05-09 13:56:38,793 [INFO] Waiting 114.2 seconds until next check
+2025-05-09 13:58:33,045 [INFO] Running email check
+2025-05-09 13:58:55,697 [INFO] Waiting 97.4 seconds until next check
+2025-05-09 14:00:33,166 [INFO] Running email check
+2025-05-09 14:00:35,680 [INFO] Waiting 117.5 seconds until next check
+2025-05-09 14:02:33,275 [INFO] Running email check
+2025-05-09 14:02:36,447 [INFO] Waiting 116.8 seconds until next check
+2025-05-09 14:04:33,362 [INFO] Running email check
+2025-05-09 14:04:35,606 [INFO] Waiting 117.8 seconds until next check
+2025-05-09 14:06:33,481 [INFO] Running email check
+2025-05-09 14:06:35,546 [INFO] Waiting 118.0 seconds until next check
+2025-05-09 14:08:33,665 [INFO] Running email check
+2025-05-09 14:08:35,848 [INFO] Waiting 117.8 seconds until next check
+2025-05-09 14:10:33,843 [INFO] Running email check
+2025-05-09 14:10:35,522 [INFO] Waiting 118.3 seconds until next check
+2025-05-09 14:12:34,014 [INFO] Running email check
+2025-05-09 14:12:35,637 [INFO] Waiting 118.4 seconds until next check
+2025-05-09 14:14:34,225 [INFO] Running email check
+2025-05-09 14:14:37,298 [INFO] Waiting 116.9 seconds until next check
+2025-05-09 14:16:34,420 [INFO] Running email check
+2025-05-09 14:16:36,518 [INFO] Waiting 117.9 seconds until next check
+2025-05-09 14:18:34,587 [INFO] Running email check
+2025-05-09 14:18:36,579 [INFO] Waiting 118.0 seconds until next check
+2025-05-09 14:20:34,746 [INFO] Running email check
+2025-05-09 14:20:36,372 [INFO] Waiting 118.4 seconds until next check
+2025-05-09 14:22:34,942 [INFO] Running email check
+2025-05-09 14:22:37,024 [INFO] Waiting 117.9 seconds until next check
+2025-05-09 14:24:35,112 [INFO] Running email check
+2025-05-09 14:24:37,238 [INFO] Waiting 117.9 seconds until next check
+2025-05-09 14:26:35,257 [INFO] Running email check
+2025-05-09 14:26:37,384 [INFO] Waiting 117.9 seconds until next check
+2025-05-09 14:28:35,412 [INFO] Running email check
+2025-05-09 14:28:37,435 [INFO] Waiting 118.0 seconds until next check
+2025-05-09 14:30:35,549 [INFO] Running email check
+2025-05-09 14:30:37,628 [INFO] Waiting 117.9 seconds until next check
+2025-05-09 14:32:35,749 [INFO] Running email check
+2025-05-09 14:32:37,849 [INFO] Waiting 117.9 seconds until next check
+2025-05-09 14:34:35,871 [INFO] Running email check
+2025-05-09 14:34:37,899 [INFO] Waiting 118.0 seconds until next check
+2025-05-09 14:36:36,037 [INFO] Running email check
+2025-05-09 14:36:38,185 [INFO] Waiting 117.9 seconds until next check
+2025-05-09 14:38:36,212 [INFO] Running email check
+2025-05-09 14:38:37,817 [INFO] Waiting 118.4 seconds until next check
+2025-05-09 14:40:36,388 [INFO] Running email check
+2025-05-09 14:40:38,609 [INFO] Waiting 117.8 seconds until next check
+2025-05-09 14:42:36,496 [INFO] Running email check
+2025-05-09 14:42:38,174 [INFO] Waiting 118.3 seconds until next check
+2025-05-09 14:44:36,602 [INFO] Running email check
+2025-05-09 14:44:38,316 [INFO] Waiting 118.3 seconds until next check
+2025-05-09 14:46:36,703 [INFO] Running email check
+2025-05-09 14:46:38,843 [INFO] Waiting 117.9 seconds until next check
+2025-05-09 14:48:36,789 [INFO] Running email check
+2025-05-09 14:48:38,468 [INFO] Waiting 118.3 seconds until next check
+2025-05-09 14:50:36,891 [INFO] Running email check
+2025-05-09 14:50:38,939 [INFO] Waiting 118.0 seconds until next check
+2025-05-09 14:52:36,976 [INFO] Running email check
+2025-05-09 14:52:38,884 [INFO] Waiting 118.1 seconds until next check
+2025-05-09 14:54:37,069 [INFO] Running email check
+2025-05-09 14:54:39,361 [INFO] Waiting 117.7 seconds until next check
+2025-05-09 14:56:37,156 [INFO] Running email check
+2025-05-09 14:56:38,939 [INFO] Auto-analyzing email: 1127 - stop sale 090525
+2025-05-09 14:56:38,997 [INFO] ClaudeAnalyzer initialized.
+2025-05-09 14:56:39,005 [WARNING] Smart cleaning produced empty content, using original content
+2025-05-09 14:56:39,005 [WARNING] All cleaning attempts produced empty content, returning fixed string
+2025-05-09 14:56:40,765 [INFO] HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2025-05-09 14:56:40,768 [INFO] [RAW AI RESPONSE DUMP] Subject: stop sale 090525:
+[
+  {
+    "hotel_name": null,
+    "room_type": null,
+    "markets": ["ALL"],
+    "start_date": null,
+    "end_date": null,
+    "sale_status": "stop"
+  }
+]
+2025-05-09 14:56:40,773 [WARNING] Skipping rule #0 due to missing required fields (hotel, dates, status): {'hotel_name': None, 'room_type': None, 'markets': ['ALL'], 'start_date': None, 'end_date': None, 'sale_status': 'stop', 'raw_response': '[\n  {\n    "hotel_name": null,\n    "room_type": null,\n    "markets": ["ALL"],\n    "start_date": null,\n    "end_date": null,\n    "sale_status": "stop"\n  }\n]'}
+2025-05-09 14:56:40,773 [INFO] Post-processed 0 rules from AI.
+2025-05-09 14:56:40,773 [WARNING] AI analysis returned a valid response, but post-processing yielded no valid rows.
+2025-05-09 14:56:40,773 [INFO] AI analysis successful. Extracted 0 processed rows.
+2025-05-09 14:56:40,776 [WARNING] Bad Request: /api/parse-email-content/
+2025-05-09 14:56:40,777 [WARNING] AI analysis API call failed (Status: 400, Success: False) for email 1127. Flagging for attachment check.
+2025-05-09 14:56:40,778 [WARNING] AI/Fallback analysis failed for email 1127. Setting status to 'processing_attachments' and triggering attachment check.
+2025-05-09 14:56:40,802 [INFO] Saved attachment: stop sale 090525.XLS for email: <476201dbc0f2$84701c40$8d5054c0$@gepardtravel.com>
+2025-05-09 14:56:40,802 [INFO] Processing logic completed.
+2025-05-09 14:56:41,153 [INFO] Waiting 116.0 seconds until next check
+2025-05-09 14:58:37,252 [INFO] Running email check
+2025-05-09 14:58:39,426 [INFO] Waiting 117.8 seconds until next check
+2025-05-09 15:00:37,365 [INFO] Running email check
+2025-05-09 15:00:39,412 [INFO] Waiting 118.0 seconds until next check
+2025-05-09 15:02:37,478 [INFO] Running email check
+2025-05-09 15:02:39,876 [INFO] Auto-analyzing email: 1129 - FW: Sarpedor Boutique Hotel  19 AĞUSTOS  FAMILY SUITE   STOP SALE
+2025-05-09 15:02:39,888 [INFO] ClaudeAnalyzer initialized.
+2025-05-09 15:02:39,890 [INFO] Original method found 4 markers
+2025-05-09 15:02:39,890 [INFO] Found first marker element: span
+2025-05-09 15:02:39,890 [WARNING] No content before marker, using full email
+2025-05-09 15:02:41,684 [INFO] HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2025-05-09 15:02:41,686 [INFO] [RAW AI RESPONSE DUMP] Subject: FW: Sarpedor Boutique Hotel  19 AĞUSTOS  FAMILY SUITE   STOP SALE:
+[
+  {
+    "hotel_name": "Sarpedor Boutique Hotel",
+    "room_type": "Family Suite",
+    "markets": ["ALL"],
+    "start_date": "2025-08-19",
+    "end_date": "2025-08-19",
+    "sale_status": "stop"
+  }
+]
+2025-05-09 15:02:41,689 [INFO] Post-processed 1 rules from AI.
+2025-05-09 15:02:41,689 [INFO] AI analysis successful. Extracted 1 processed rows.
+2025-05-09 15:02:41,690 [INFO] Successfully auto-analyzed email 1129 using AI.
+2025-05-09 15:02:41,692 [INFO] [Signal] Resolved markets for rule in email 1129: ['All']
+2025-05-09 15:02:41,696 [INFO] [Signal] EmailRow 4275 created with status 'matching'. Triggering individual match task.
+2025-05-09 15:02:41,700 [INFO] [Signal] Created EmailRow 4275 from AI data for email 1129 with markets: ['All'].
+2025-05-09 15:02:41,700 [INFO] Scheduling BATCH matching task for email 1129 with 1 rows.
+2025-05-09 15:02:41,703 [INFO] Matching task scheduled successfully for email 1129.
+2025-05-09 15:02:41,704 [INFO] Successfully extracted data from email body for 1129. Skipping attachments.
+2025-05-09 15:02:41,705 [INFO] Email 1129 status set to 'processing'.
+2025-05-09 15:02:41,705 [INFO] Processing logic completed.
+2025-05-09 15:02:42,056 [INFO] Waiting 115.4 seconds until next check
+2025-05-09 15:04:37,582 [INFO] Running email check
+2025-05-09 15:04:39,224 [INFO] Waiting 118.4 seconds until next check
+2025-05-09 15:06:37,686 [INFO] Running email check
+2025-05-09 15:06:39,845 [INFO] Waiting 117.8 seconds until next check
+2025-05-09 15:08:37,782 [INFO] Running email check
+2025-05-09 15:08:39,439 [INFO] Waiting 118.4 seconds until next check
+2025-05-09 15:10:37,878 [INFO] Running email check
+2025-05-09 15:10:40,038 [INFO] Waiting 117.8 seconds until next check
+2025-05-09 15:12:38,006 [INFO] Running email check
+2025-05-09 15:12:40,097 [INFO] Waiting 117.9 seconds until next check
+2025-05-09 15:14:38,112 [INFO] Running email check
+2025-05-09 15:14:39,827 [INFO] Waiting 118.3 seconds until next check
+2025-05-09 15:16:38,218 [INFO] Running email check
+2025-05-09 15:16:40,442 [INFO] Waiting 117.8 seconds until next check
+2025-05-09 15:18:38,318 [INFO] Running email check
+2025-05-09 15:18:40,373 [INFO] Waiting 118.0 seconds until next check
+2025-05-09 15:20:38,403 [INFO] Running email check
+2025-05-09 15:20:40,352 [INFO] Waiting 118.1 seconds until next check
+2025-05-09 15:31:30,186 [INFO] Running email check
+2025-05-09 15:31:32,325 [INFO] Auto-analyzing email: 1131 - FW: Stop Sale- Labranda Mares Marmaris - ALL ROOM
+2025-05-09 15:31:32,358 [INFO] ClaudeAnalyzer initialized.
+2025-05-09 15:31:32,374 [INFO] Found table with date information
+2025-05-09 15:31:32,375 [INFO] Added 1 structured tables to content
+2025-05-09 15:31:33,689 [INFO] HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2025-05-09 15:31:33,697 [INFO] [RAW AI RESPONSE DUMP] Subject: FW: Stop Sale- Labranda Mares Marmaris - ALL ROOM:
+[
+  {
+    "hotel_name": "LABRANDA MARES MARMARİS",
+    "room_type": "All Room",
+    "markets": ["ALL"],
+    "start_date": "2025-05-17",
+    "end_date": "2025-05-17",
+    "sale_status": "stop"
+  }
+]
+2025-05-09 15:31:33,700 [INFO] Post-processed 1 rules from AI.
+2025-05-09 15:31:33,700 [INFO] AI analysis successful. Extracted 1 processed rows.
+2025-05-09 15:31:33,703 [INFO] Successfully auto-analyzed email 1131 using AI.
+2025-05-09 15:31:33,705 [INFO] [Signal] Resolved markets for rule in email 1131: ['All']
+2025-05-09 15:31:33,707 [INFO] [Signal] EmailRow 4318 created with status 'matching'. Triggering individual match task.
+2025-05-09 15:31:33,709 [INFO] [Signal] Created EmailRow 4318 from AI data for email 1131 with markets: ['All'].
+2025-05-09 15:31:33,709 [INFO] Scheduling BATCH matching task for email 1131 with 1 rows.
+2025-05-09 15:31:33,717 [INFO] Matching task scheduled successfully for email 1131.
+2025-05-09 15:31:33,717 [INFO] Successfully extracted data from email body for 1131. Skipping attachments.
+2025-05-09 15:31:33,720 [INFO] Email 1131 status set to 'processing'.
+2025-05-09 15:31:33,720 [INFO] Processing logic completed.
+2025-05-09 15:31:34,261 [INFO] Auto-analyzing email: 1132 - Stop Sale- Labranda Lebedos Princess 
+2025-05-09 15:31:34,282 [INFO] ClaudeAnalyzer initialized.
+2025-05-09 15:31:34,289 [INFO] Found table with date information
+2025-05-09 15:31:34,290 [INFO] Found table with date information
+2025-05-09 15:31:34,291 [INFO] Added 2 structured tables to content
+2025-05-09 15:31:35,606 [INFO] HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2025-05-09 15:31:35,609 [INFO] [RAW AI RESPONSE DUMP] Subject: Stop Sale- Labranda Lebedos Princess :
+[
+  {
+    "hotel_name": "Labranda Lebedos Princess",
+    "room_type": "Standard Room",
+    "markets": ["ALL"],
+    "start_date": "2025-05-30",
+    "end_date": "2025-05-30",
+    "sale_status": "stop"
+  }
+]
+2025-05-09 15:31:35,610 [INFO] Post-processed 1 rules from AI.
+2025-05-09 15:31:35,611 [INFO] AI analysis successful. Extracted 1 processed rows.
+2025-05-09 15:31:35,611 [INFO] Successfully auto-analyzed email 1132 using AI.
+2025-05-09 15:31:35,612 [INFO] [Signal] Resolved markets for rule in email 1132: ['All']
+2025-05-09 15:31:35,615 [INFO] [Signal] EmailRow 4319 created with status 'matching'. Triggering individual match task.
+2025-05-09 15:31:35,617 [INFO] [Signal] Created EmailRow 4319 from AI data for email 1132 with markets: ['All'].
+2025-05-09 15:31:35,617 [INFO] Scheduling BATCH matching task for email 1132 with 1 rows.
+2025-05-09 15:31:35,618 [INFO] Matching task scheduled successfully for email 1132.
+2025-05-09 15:31:35,618 [INFO] Successfully extracted data from email body for 1132. Skipping attachments.
+2025-05-09 15:31:35,620 [INFO] Email 1132 status set to 'processing'.
+2025-05-09 15:31:35,620 [INFO] Processing logic completed.
+2025-05-09 15:31:35,969 [INFO] Waiting 114.2 seconds until next check
+2025-05-09 16:51:51,092 [INFO] Running email check

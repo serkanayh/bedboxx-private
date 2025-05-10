@@ -1,0 +1,20 @@
+*** EmailsConfig.ready() called ***
+Email signals imported successfully
+Connecting to IMAP server imap.gmail.com:993
+Available mailboxes/labels:
+  (\HasNoChildren) "/" "INBOX"
+  (\HasChildren \Noselect) "/" "[Gmail]"
+  (\All \HasNoChildren) "/" "[Gmail]/All Mail"
+  (\Drafts \HasNoChildren) "/" "[Gmail]/Drafts"
+  (\HasNoChildren \Important) "/" "[Gmail]/Important"
+  (\HasNoChildren \Sent) "/" "[Gmail]/Sent Mail"
+  (\HasNoChildren \Junk) "/" "[Gmail]/Spam"
+  (\Flagged \HasNoChildren) "/" "[Gmail]/Starred"
+  (\HasNoChildren \Trash) "/" "[Gmail]/Trash"
+  (\HasNoChildren) "/" "stop_sale"
+Found matching mailbox for label 'stop_sale': stop_sale
+Using mailbox that matches label: stop_sale
+Selecting mailbox: stop_sale
+Searching for unseen emails in mailbox: stop_sale
+Found 0 new email(s)
+Email check completed successfully

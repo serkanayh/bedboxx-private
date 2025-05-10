@@ -1,6 +1,9 @@
 from django.urls import path, include
 from django.contrib.auth import views as auth_views
 from . import views
+from core.views import serve_pdf
+from django.conf import settings
+from django.conf.urls.static import static
 
 app_name = 'core'
 
@@ -37,4 +40,7 @@ urlpatterns = [
     
     # Include users URLs
     path('users/', include('users.urls')),
+    path('pdf/<str:filename>/', serve_pdf, name='serve_pdf'),
 ]
+
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

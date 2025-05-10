@@ -101,9 +101,16 @@ class Email(models.Model):
     STATUS_CHOICES = [
         ('pending', 'Pending'),
         ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+        ('rejected_hotel_not_found', 'Rejected - JP Hotel Not Found'),
+        ('rejected_room_not_found', 'Rejected - JP Room Not Found'),
         ('manual_processed', 'Manual Processed'),
         ('sent_to_robot', 'Sent to Robot'),
         ('robot_processed', 'Robot Processed'),
+        ('juniper_manual', 'Juniper(M)'),
+        ('juniper_robot', 'Juniper(R)'),
+        ('processing', 'Processing'),
+        ('processed_nodata', 'No Data Found'),
         ('ignored', 'Ignored'),
         ('error', 'Error'),
     ]
@@ -115,7 +122,7 @@ class Email(models.Model):
     message_id = models.CharField(max_length=500, unique=True)
     body_text = models.TextField()
     body_html = models.TextField(null=True, blank=True)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='pending')
     has_attachments = models.BooleanField(default=False)
     processed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='processed_emails')
     assigned_to = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_emails')
@@ -133,7 +140,12 @@ class Email(models.Model):
         
     @property
     def status_display(self):
-        return dict(self.STATUS_CHOICES).get(self.status)
+        status_dict = dict(self.STATUS_CHOICES)
+        if self.status == 'rejected_hotel_not_found':
+            return 'Rejected - JP Hotel Not Found'
+        elif self.status == 'rejected_room_not_found':
+            return 'Rejected - JP Room Not Found'
+        return status_dict.get(self.status, self.status.replace('_', ' ').title())
     
     @property
     def is_processed(self):
@@ -188,6 +200,7 @@ class EmailAttachment(models.Model):
     filename = models.CharField(max_length=255)
     content_type = models.CharField(max_length=100, null=True, blank=True)
     size = models.PositiveIntegerField(null=True, blank=True)
+    content_id = models.CharField(max_length=255, null=True, blank=True, help_text="Content-ID header from email")
     extracted_text = models.TextField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     
@@ -217,13 +230,17 @@ class EmailRow(models.Model):
     """
     STATUS_CHOICES = [
         ('pending', 'Pending'),
-        ('approved', 'Approved'),
-        ('room_not_found', 'Room Not Found'),
+        ('matching', 'Matching in Progress'),
         ('hotel_not_found', 'Hotel Not Found'),
-        ('sent_to_robot', 'Sent to Robot'),
-        ('robot_processed', 'Robot Processed'),
+        ('room_not_found', 'Room Not Found'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+        ('rejected_hotel_not_found', 'Rejected - JP Hotel Not Found'),
+        ('rejected_room_not_found', 'Rejected - JP Room Not Found'),
+        ('robot_processing', 'Robot Processing'),
+        ('robot_success', 'Robot Success'),
+        ('robot_failed', 'Robot Failed'),
         ('ignored', 'Ignored'),
-        ('error', 'Error'),
     ]
     
     SALE_TYPE_CHOICES = [
@@ -238,7 +255,8 @@ class EmailRow(models.Model):
     start_date = models.DateField()
     end_date = models.DateField()
     sale_type = models.CharField(max_length=10, choices=SALE_TYPE_CHOICES, default='stop')
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='pending')
+    reject_reason = models.CharField(max_length=100, blank=True, null=True)
     
     juniper_hotel = models.ForeignKey(Hotel, on_delete=models.SET_NULL, null=True, blank=True, related_name='email_rows')
     juniper_rooms = models.ManyToManyField(Room, blank=True, related_name='email_rows')

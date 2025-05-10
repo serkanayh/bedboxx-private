@@ -1,0 +1,46 @@
+                <!-- Ekler -->
+                {% if email.attachments.all %}
+                <div class="card mb-3">
+                    <div class="card-header d-flex justify-content-between">
+                        <h5 class="mb-0">Ekler</h5>
+                        <div class="d-flex align-items-center">
+                            <small class="text-info mr-2"><i class="fas fa-info-circle"></i> Sadece PDF ve Word dosyaları (.pdf, .doc, .docx) analiz edilir.</small>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Dosya Adı</th>
+                                        <th>Boyut</th>
+                                        <th>İşlemler</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for attachment in email.attachments.all %}
+                                    <tr>
+                                        <td>
+                                            {{ attachment.filename }}
+                                            {% with ext=attachment.filename|lower|slice:"-4:" %}
+                                            {% if ext == '.pdf' or ext == '.doc' or attachment.filename|lower|slice:"-5:" == '.docx' %}
+                                            <span class="badge badge-success ml-2" title="Bu dosya formatı analiz edilir">Analiz Edilir</span>
+                                            {% else %}
+                                            <span class="badge badge-secondary ml-2" title="Bu dosya formatı analiz edilmez">Analiz Edilmez</span>
+                                            {% endif %}
+                                            {% endwith %}
+                                        </td>
+                                        <td>{{ attachment.size|filesizeformat }}</td>
+                                        <td>
+                                            <a href="{% url 'emails:download_attachment' attachment.id %}" class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-download"></i> İndir
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}

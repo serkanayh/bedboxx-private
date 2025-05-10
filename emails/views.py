@@ -2,7 +2,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.http import HttpResponse, JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.clickjacking import xframe_options_sameorigin
+from django.views.decorators.clickjacking import xframe_options_sameorigin, xframe_options_exempt
 from django.views.decorators.http import require_POST
 from django.utils import timezone
 from django.conf import settings
@@ -44,6 +44,7 @@ def email_list(request):
     # Get query parameters
     status = request.GET.get('status', '')
     search = request.GET.get('search', '')
+    sort_order = request.GET.get('sort', 'asc')  # Default is ascending (oldest first)
     
     # Base queryset
     queryset = Email.objects.all()
@@ -59,8 +60,11 @@ def email_list(request):
             Q(body_text__icontains=search)
         )
     
-    # Order by received date (newest first)
-    queryset = queryset.order_by('-received_date')
+    # Order by received date (oldest first by default, user can change)
+    if sort_order == 'desc':
+        queryset = queryset.order_by('-received_date')  # Newest first
+    else:
+        queryset = queryset.order_by('received_date')   # Oldest first
     
     # Hesaplanan özellikler: Önceden hesaplayıp template'e gönder
     for email in queryset:
@@ -102,6 +106,7 @@ def email_list(request):
         'page_obj': page_obj,
         'status_filter': status,
         'search_query': search,
+        'sort_order': sort_order,  # Pass current sort order to template
     }
     
     return render(request, 'emails/email_list.html', context)
@@ -136,6 +141,105 @@ def email_detail(request, email_id):
             att.analysis_result = None
     # --- END ADD --- 
 
+    # Process HTML content for display with embedded images
+    processed_html = process_html_for_display(email)
+
+    # AI önerilerini oluştur
+    ai_suggestions = []
+    
+    # Eşleşmesi olmayan satırlar için öneriler üret
+    unmatched_rows = [r for r in rows if (r.status == 'pending' or r.status == 'matching' or r.status == 'hotel_not_found' or r.status == 'room_not_found') and (not r.juniper_hotel or (not r.juniper_rooms.exists() and not r.room_type.lower().strip() in ['all room', 'all rooms', 'all room types']))]
+    
+    if unmatched_rows:
+        # EmailHotelMatch ve RoomTypeMatch modellerini kullanarak öneriler oluştur
+        from .models import EmailHotelMatch, RoomTypeMatch
+        
+        for row in unmatched_rows[:5]:  # İlk 5 eşleşmemiş satır için öneriler göster
+            # 1. Gönderen e-postaya göre otel önerisi
+            if row.email.sender and not row.juniper_hotel:
+                sender_email = row.email.sender
+                if '<' in sender_email and '>' in sender_email:
+                    sender_email = sender_email.split('<')[1].split('>')[0].strip()
+                
+                hotel_matches = EmailHotelMatch.objects.filter(sender_email=sender_email).order_by('-confidence_score')[:3]
+                
+                for hotel_match in hotel_matches:
+                    # Otel önerisi oluştur
+                    suggestion = {
+                        'row_id': row.id,
+                        'hotel_id': hotel_match.hotel.id,
+                        'hotel_name': hotel_match.hotel.juniper_hotel_name,
+                        'room_type': "Sistem tarafından belirlenecek",
+                        'room_ids': [],
+                        'confidence': min(hotel_match.confidence_score, 95),  # En fazla %95 güven
+                        'reason': f"Bu gönderici ({sender_email}) daha önce bu otel için eşleştirme yapmış"
+                    }
+                    
+                    # Oda önerileri ekle
+                    if row.room_type:
+                        room_matches = RoomTypeMatch.objects.filter(
+                            email_room_type__icontains=row.room_type,
+                            juniper_room__hotel=hotel_match.hotel
+                        )[:3]  # Remove the problematic order_by('-match_score')
+                        
+                        if room_matches:
+                            suggestion['room_type'] = ', '.join([rm.juniper_room.juniper_room_type for rm in room_matches])
+                            suggestion['room_ids'] = [rm.juniper_room.id for rm in room_matches]
+                            suggestion['reason'] += f" ve benzer oda tipleri için kullanılmış"
+                    
+                    ai_suggestions.append(suggestion)
+            
+            # 2. Benzer otel adı ve oda tipi eşleştirmesi
+            if row.hotel_name and not row.juniper_hotel:
+                from difflib import SequenceMatcher
+                from hotels.models import Hotel
+                
+                hotels = Hotel.objects.all()
+                best_matches = []
+                
+                for hotel in hotels:
+                    score = SequenceMatcher(None, row.hotel_name.lower(), hotel.juniper_hotel_name.lower()).ratio()
+                    if score > 0.6:  # %60 üzerinde benzerlik
+                        best_matches.append((hotel, score))
+                
+                # En iyi 3 eşleşme için öneriler oluştur
+                best_matches.sort(key=lambda x: x[1], reverse=True)
+                for hotel, score in best_matches[:3]:
+                    suggestion = {
+                        'row_id': row.id,
+                        'hotel_id': hotel.id,
+                        'hotel_name': hotel.juniper_hotel_name,
+                        'room_type': "Sistem tarafından belirlenecek",
+                        'room_ids': [],
+                        'confidence': int(score * 100),
+                        'reason': f"Otel adı benzerliği: {int(score * 100)}%"
+                    }
+                    
+                    # Oda önerileri ekleme mantığı
+                    if row.room_type:
+                        from hotels.models import Room
+                        rooms = Room.objects.filter(hotel=hotel)
+                        room_best_matches = []
+                        
+                        for room in rooms:
+                            room_score = SequenceMatcher(None, row.room_type.lower(), room.juniper_room_type.lower()).ratio()
+                            if room_score > 0.5:  # %50 üzerinde benzerlik
+                                room_best_matches.append((room, room_score))
+                        
+                        room_best_matches.sort(key=lambda x: x[1], reverse=True)
+                        if room_best_matches:
+                            suggestion['room_type'] = ', '.join([rm[0].juniper_room_type for rm in room_best_matches[:3]])
+                            suggestion['room_ids'] = [rm[0].id for rm in room_best_matches[:3]]
+                            suggestion['reason'] += f" ve oda tipi benzerliği"
+                    
+                    ai_suggestions.append(suggestion)
+    
+    # Yüksek güvenden düşük güvene doğru sırala
+    ai_suggestions.sort(key=lambda x: x['confidence'], reverse=True)
+    
+    # Eğer birden fazla öneri varsa, en iyi 5 tanesi ile sınırla
+    ai_suggestions = ai_suggestions[:5] if ai_suggestions else []
+
     has_analyzed_attachments = rows.filter(extracted_from_attachment=True).exists() if hasattr(rows, 'filter') else any(getattr(r, 'extracted_from_attachment', False) for r in rows)
     first_matched_row = rows.filter(juniper_hotel__isnull=False).first() if hasattr(rows, 'filter') else None
     unique_hotel_names = list(rows.exclude(hotel_name__isnull=True).exclude(hotel_name__exact='').values_list('hotel_name', flat=True).distinct().order_by('hotel_name')) if hasattr(rows, 'exclude') else []
@@ -147,15 +251,17 @@ def email_detail(request, email_id):
         'has_analyzed_attachments': has_analyzed_attachments,
         'first_matched_row': first_matched_row,
         'unique_hotel_names': unique_hotel_names,
+        'ai_suggestions': ai_suggestions,  # AI önerilerini context'e ekle
+        'processed_html': processed_html,  # Add processed HTML to context
     }
     return render(request, 'emails/email_detail.html', context)
 
 
 @login_required
-@xframe_options_sameorigin
+@xframe_options_exempt
 def email_attachment_view(request, attachment_id):
     """
-    View for displaying email attachment (allows same-origin embedding)
+    View for displaying email attachment (allows embedding anywhere)
     """
     attachment = get_object_or_404(EmailAttachment, id=attachment_id)
     
@@ -516,59 +622,105 @@ def approve_row(request, row_id):
 
 @login_required
 def reject_row(request, row_id):
-    """
-    View for rejecting a row
-    """
+    """Reject a single row."""
     row = get_object_or_404(EmailRow, id=row_id)
-    
-    allowed_statuses_for_reject = ['pending', 'hotel_not_found', 'room_not_found']
-    if row.status not in allowed_statuses_for_reject:
-        messages.error(request, f"Only rows with status {', '.join(allowed_statuses_for_reject)} can be rejected")
-        return redirect('emails:email_detail', email_id=row.email.id)
-    
     row.status = 'rejected'
     row.processed_by = request.user
     row.processed_at = timezone.now()
     row.save()
     
+    # Log the action
     UserLog.objects.create(
         user=request.user,
         action_type='reject_row',
         email=row.email,
         email_row=row,
-        ip_address=request.META.get('REMOTE_ADDR')
+        ip_address=request.META.get('REMOTE_ADDR'),
+        details=f"Rejected row {row_id}"
     )
     
+    # Update email status if all rows have been processed
     email = row.email
-    all_rows = email.rows.all()
-    pending_or_matching_exists = all_rows.filter(status__in=['pending', 'matching', 'hotel_not_found', 'room_not_found']).exists()
+    pending_rows = email.rows.filter(status__in=['pending', 'matching', 'hotel_not_found', 'room_not_found']).count()
     
-    if not pending_or_matching_exists:
-        approved_count = all_rows.filter(status='approved').count()
-        rejected_count = all_rows.filter(status='rejected').count()
-        total_count = all_rows.count()
-        
-        if approved_count == total_count:
-            email.status = 'approved'
-            email.processed_by = request.user
-            email.processed_at = timezone.now()
-            email.save()
-        elif rejected_count == total_count:
-            email.status = 'rejected'
-            email.processed_by = request.user
-            email.processed_at = timezone.now()
-            email.save()
-        else:
-            email.status = 'processed'
-            email.processed_by = request.user
-            email.processed_at = timezone.now()
-            email.save()
+    if pending_rows == 0:
+        # All rows have been processed, update the email status
+        email.status = 'rejected'  # Keep 'rejected' for general rejection
+        email.processed_by = request.user
+        email.processed_at = timezone.now()
+        email.save()
+    
+    messages.success(request, f"Row {row_id} has been rejected.")
+    return redirect('emails:email_detail', email_id=row.email.id)
 
-    messages.success(request, "Row rejected successfully")
-    # Filtre parametrelerini koru
-    query_string = request.META.get('QUERY_STRING', '')
-    if query_string:
-        return redirect(f"{reverse('emails:email_detail', args=[row.email.id])}?{query_string}")
+
+@login_required
+def reject_row_hotel_not_found(request, row_id):
+    """Reject a single row with reason: JP Hotel Not Found."""
+    row = get_object_or_404(EmailRow, id=row_id)
+    row.status = 'rejected_hotel_not_found'
+    row.reject_reason = 'JP Hotel Not Found'
+    row.processed_by = request.user
+    row.processed_at = timezone.now()
+    row.save()
+    
+    # Log the action
+    UserLog.objects.create(
+        user=request.user,
+        action_type='reject_row_hotel_not_found',
+        email=row.email,
+        email_row=row,
+        ip_address=request.META.get('REMOTE_ADDR'),
+        details=f"Rejected row {row_id} - JP Hotel Not Found"
+    )
+    
+    # Update email status if all rows have been processed
+    email = row.email
+    pending_rows = email.rows.filter(status__in=['pending', 'matching', 'hotel_not_found', 'room_not_found']).count()
+    
+    if pending_rows == 0:
+        # All rows have been processed, update the email status
+        email.status = 'rejected_hotel_not_found'  # Use specific rejection reason
+        email.processed_by = request.user
+        email.processed_at = timezone.now()
+        email.save()
+    
+    messages.success(request, f"Row {row_id} has been rejected: JP Hotel Not Found.")
+    return redirect('emails:email_detail', email_id=row.email.id)
+
+
+@login_required
+def reject_row_room_not_found(request, row_id):
+    """Reject a single row with reason: JP Room Not Found."""
+    row = get_object_or_404(EmailRow, id=row_id)
+    row.status = 'rejected_room_not_found'
+    row.reject_reason = 'JP Room Not Found'
+    row.processed_by = request.user
+    row.processed_at = timezone.now()
+    row.save()
+    
+    # Log the action
+    UserLog.objects.create(
+        user=request.user,
+        action_type='reject_row_room_not_found',
+        email=row.email,
+        email_row=row,
+        ip_address=request.META.get('REMOTE_ADDR'),
+        details=f"Rejected row {row_id} - JP Room Not Found"
+    )
+    
+    # Update email status if all rows have been processed
+    email = row.email
+    pending_rows = email.rows.filter(status__in=['pending', 'matching', 'hotel_not_found', 'room_not_found']).count()
+    
+    if pending_rows == 0:
+        # All rows have been processed, update the email status
+        email.status = 'rejected_room_not_found'  # Use specific rejection reason
+        email.processed_by = request.user
+        email.processed_at = timezone.now()
+        email.save()
+    
+    messages.success(request, f"Row {row_id} has been rejected: JP Room Not Found.")
     return redirect('emails:email_detail', email_id=row.email.id)
 
 
@@ -1124,13 +1276,13 @@ def get_hotel_suggestions(hotel_name):
             highest_score = score
             best_match = hotel
         
-        # Benzerlik puanı 0.6'dan yüksekse önerilere ekle
-        if score > 0.6:
+        # Benzerlik puanı 0.8'dan yüksekse önerilere ekle (0.6 yerine %80 ve üzeri)
+        if score >= 0.8:
             hotel.match_score = int(score * 100)  # Yüzdelik gösterimi için
             suggestions.append(hotel)
     
     # En iyi eşleşmeyi önerilerin başına ekle (eğer zaten eklenmemişse)
-    if best_match and best_match not in suggestions:
+    if best_match and best_match not in suggestions and highest_score >= 0.8:
         best_match.match_score = int(highest_score * 100)
         suggestions.insert(0, best_match)
     
@@ -1477,65 +1629,210 @@ def email_bulk_approve(request):
 
 @login_required
 def email_bulk_reject(request):
-    """
-    View for rejecting multiple emails at once
-    """
-    if request.method != 'POST':
-        return JsonResponse({'error': 'Only POST method is allowed'}, status=405)
-    
-    email_ids = request.POST.getlist('email_ids')
-    
-    if not email_ids:
-        messages.error(request, "No emails selected for rejection")
-        return redirect('emails:email_list')
-    
-    try:
-        emails = Email.objects.filter(id__in=email_ids)
-        rejected_count = 0
-        
-        for email in emails:
-            # Only process emails that are in a pending-type status
-            if email.status in ['pending', 'processing', 'processed']:
-                # Mark all rows as rejected
-                rows = email.rows.filter(status__in=['pending', 'matching', 'hotel_not_found', 'room_not_found'])
+    """Bulk reject selected emails."""
+    if request.method == 'POST':
+        try:
+            # Try to parse JSON data first
+            if request.content_type == 'application/json':
+                data = json.loads(request.body)
+                email_ids = data.get('ids', [])
+            else:
+                # Then try form data
+                email_ids = request.POST.getlist('email_ids')
+            
+            emails = Email.objects.filter(id__in=email_ids)
+            processed_count = 0
+            
+            for email in emails:
+                rows = EmailRow.objects.filter(email=email)
                 for row in rows:
                     row.status = 'rejected'
                     row.processed_by = request.user
                     row.processed_at = timezone.now()
                     row.save()
-                    
-                    UserLog.objects.create(
-                        user=request.user,
-                        action_type='bulk_reject_row',
-                        email=email,
-                        email_row=row,
-                        ip_address=request.META.get('REMOTE_ADDR')
-                    )
                 
-                # Update email status
-                email.status = 'rejected'
+                # Update email status directly
+                email.status = 'rejected'  # Keep 'rejected' for general rejection
                 email.processed_by = request.user
                 email.processed_at = timezone.now()
                 email.save()
-                rejected_count += 1
-        
-        if rejected_count > 0:
-            messages.success(request, f"Successfully rejected {rejected_count} emails")
-        else:
-            messages.warning(request, "No emails were rejected")
+                processed_count += 1
+                
+                # Log the action
+                UserLog.objects.create(
+                    user=request.user,
+                    action_type='bulk_reject',
+                    email=email,
+                    ip_address=request.META.get('REMOTE_ADDR'),
+                    details=f"Bulk rejected email {email.id}"
+                )
+            
+            # Return JSON response for AJAX requests, redirect for normal form submissions
+            if request.content_type == 'application/json':
+                return JsonResponse({
+                    'success': True,
+                    'message': f"{processed_count} emails have been rejected.",
+                    'details': {
+                        'success': [email.id for email in emails],
+                        'errors': []
+                    }
+                })
+            else:
+                messages.success(request, f"{processed_count} emails have been rejected.")
+                return redirect('emails:email_list')
+                
+        except json.JSONDecodeError:
+            if request.content_type == 'application/json':
+                return JsonResponse({'error': 'Invalid JSON'}, status=400)
+            messages.error(request, "Invalid request data")
+        except Exception as e:
+            logger.error(f"Error in bulk reject: {e}", exc_info=True)
+            if request.content_type == 'application/json':
+                return JsonResponse({'error': str(e)}, status=500)
+            messages.error(request, f"An error occurred: {str(e)}")
     
-    except Exception as e:
-        logger.error(f"Error in bulk reject: {e}", exc_info=True)
-        messages.error(request, f"An error occurred: {str(e)}")
+    return redirect('emails:email_list')
+
+
+@login_required
+def email_bulk_reject_hotel_not_found(request):
+    """Bulk reject selected emails with reason: JP Hotel Not Found."""
+    if request.method == 'POST':
+        try:
+            # Try to parse JSON data first
+            if request.content_type == 'application/json':
+                data = json.loads(request.body)
+                email_ids = data.get('ids', [])
+            else:
+                # Then try form data
+                email_ids = request.POST.getlist('email_ids')
+            
+            emails = Email.objects.filter(id__in=email_ids)
+            processed_count = 0
+            
+            for email in emails:
+                rows = EmailRow.objects.filter(email=email)
+                for row in rows:
+                    row.status = 'rejected_hotel_not_found'
+                    row.reject_reason = 'JP Hotel Not Found'
+                    row.processed_by = request.user
+                    row.processed_at = timezone.now()
+                    row.save()
+                
+                # Update email status directly
+                email.status = 'rejected_hotel_not_found'  # Use specific status for hotel not found
+                email.processed_by = request.user
+                email.processed_at = timezone.now()
+                email.save()
+                processed_count += 1
+                
+                # Log the action
+                UserLog.objects.create(
+                    user=request.user,
+                    action_type='bulk_reject_hotel_not_found',
+                    email=email,
+                    ip_address=request.META.get('REMOTE_ADDR'),
+                    details=f"Bulk rejected email {email.id} - JP Hotel Not Found"
+                )
+            
+            # Return JSON response for AJAX requests, redirect for normal form submissions
+            if request.content_type == 'application/json':
+                return JsonResponse({
+                    'success': True,
+                    'message': f"{processed_count} emails have been rejected: JP Hotel Not Found",
+                    'details': {
+                        'success': [email.id for email in emails],
+                        'errors': []
+                    }
+                })
+            else:
+                messages.success(request, f"{processed_count} emails have been rejected: JP Hotel Not Found.")
+                return redirect('emails:email_list')
+                
+        except json.JSONDecodeError:
+            if request.content_type == 'application/json':
+                return JsonResponse({'error': 'Invalid JSON'}, status=400)
+            messages.error(request, "Invalid request data")
+        except Exception as e:
+            logger.error(f"Error in bulk reject hotel not found: {e}", exc_info=True)
+            if request.content_type == 'application/json':
+                return JsonResponse({'error': str(e)}, status=500)
+            messages.error(request, f"An error occurred: {str(e)}")
+    
+    return redirect('emails:email_list')
+
+
+@login_required
+def email_bulk_reject_room_not_found(request):
+    """Bulk reject selected emails with reason: JP Room Not Found."""
+    if request.method == 'POST':
+        try:
+            # Try to parse JSON data first
+            if request.content_type == 'application/json':
+                data = json.loads(request.body)
+                email_ids = data.get('ids', [])
+            else:
+                # Then try form data
+                email_ids = request.POST.getlist('email_ids')
+            
+            emails = Email.objects.filter(id__in=email_ids)
+            processed_count = 0
+            
+            for email in emails:
+                rows = EmailRow.objects.filter(email=email)
+                for row in rows:
+                    row.status = 'rejected_room_not_found'
+                    row.reject_reason = 'JP Room Not Found'
+                    row.processed_by = request.user
+                    row.processed_at = timezone.now()
+                    row.save()
+                
+                # Update email status directly
+                email.status = 'rejected_room_not_found'  # Use specific status for room not found
+                email.processed_by = request.user
+                email.processed_at = timezone.now()
+                email.save()
+                processed_count += 1
+                
+                # Log the action
+                UserLog.objects.create(
+                    user=request.user,
+                    action_type='bulk_reject_room_not_found',
+                    email=email,
+                    ip_address=request.META.get('REMOTE_ADDR'),
+                    details=f"Bulk rejected email {email.id} - JP Room Not Found"
+                )
+            
+            # Return JSON response for AJAX requests, redirect for normal form submissions
+            if request.content_type == 'application/json':
+                return JsonResponse({
+                    'success': True,
+                    'message': f"{processed_count} emails have been rejected: JP Room Not Found",
+                    'details': {
+                        'success': [email.id for email in emails],
+                        'errors': []
+                    }
+                })
+            else:
+                messages.success(request, f"{processed_count} emails have been rejected: JP Room Not Found.")
+                return redirect('emails:email_list')
+                
+        except json.JSONDecodeError:
+            if request.content_type == 'application/json':
+                return JsonResponse({'error': 'Invalid JSON'}, status=400)
+            messages.error(request, "Invalid request data")
+        except Exception as e:
+            logger.error(f"Error in bulk reject room not found: {e}", exc_info=True)
+            if request.content_type == 'application/json':
+                return JsonResponse({'error': str(e)}, status=500)
+            messages.error(request, f"An error occurred: {str(e)}")
     
     return redirect('emails:email_list')
 
 
 @login_required
 def email_bulk_delete(request):
-    """
-    View for deleting multiple emails at once
-    """
+    """View for deleting multiple emails at once"""
     if request.method != 'POST':
         return JsonResponse({'error': 'Only POST method is allowed'}, status=405)
     
@@ -1554,7 +1851,7 @@ def email_bulk_delete(request):
             UserLog.objects.create(
                 user=request.user,
                 action_type='delete_email',
-                email=None,  # Will be NULL since email is being deleted
+                email=email,
                 ip_address=request.META.get('REMOTE_ADDR'),
                 details=f"Deleted email ID: {email.id}, Subject: {email.subject}"
             )
@@ -1573,3 +1870,561 @@ def email_bulk_delete(request):
         messages.error(request, f"An error occurred: {str(e)}")
     
     return redirect('emails:email_list')
+
+
+@login_required
+def approve_email(request, email_id):
+    """
+    View for approving all rows in an email
+    """
+    email = get_object_or_404(Email, id=email_id)
+    
+    if email.status != 'pending':
+        messages.error(request, "Only pending emails can be approved")
+        return redirect('emails:email_detail', email_id=email.id)
+    
+    # Mark all rows with a hotel match as approved
+    rows = email.rows.filter(status__in=['pending', 'matching', 'hotel_not_found', 'room_not_found'])
+    for row in rows:
+        if row.juniper_hotel:  # Only approve rows that have at least a hotel match
+            row.status = 'approved'
+            row.processed_by = request.user
+            row.processed_at = timezone.now()
+            row.save()
+            
+            UserLog.objects.create(
+                user=request.user,
+                action_type='approve_row',
+                email=email,
+                email_row=row,
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+    
+    # Update email status if all rows are now approved
+    if not email.rows.filter(status__in=['pending', 'matching', 'hotel_not_found', 'room_not_found']).exists():
+        email.status = 'approved'
+        email.processed_by = request.user
+        email.processed_at = timezone.now()
+        email.save()
+    
+    messages.success(request, "All matching rows in email approved successfully")
+    return redirect('emails:email_detail', email_id=email.id)
+
+
+@login_required
+def reject_email(request, email_id):
+    """Reject all rows in an email."""
+    email = get_object_or_404(Email, id=email_id)
+    rows = EmailRow.objects.filter(email=email)
+    
+    for row in rows:
+        row.status = 'rejected'
+        row.processed_by = request.user
+        row.processed_at = timezone.now()
+        row.save()
+    
+    # Log the action
+    UserLog.objects.create(
+        user=request.user,
+        action_type='reject_email',
+        email=email,
+        ip_address=request.META.get('REMOTE_ADDR'),
+        details=f"Rejected all rows in email {email_id}"
+    )
+    
+    # Update email status directly
+    email.status = 'rejected'  # Keep 'rejected' for general rejection
+    email.processed_by = request.user
+    email.processed_at = timezone.now()
+    email.save()
+    
+    messages.success(request, f"All rows in email {email_id} have been rejected.")
+    
+    # AJAX request için JSON yanıtı döndür, normal request için redirect
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({
+            'success': True, 
+            'message': f"All rows in email {email_id} have been rejected.",
+            'status': email.status
+        })
+    else:
+        return redirect('emails:email_detail', email_id=email_id)
+
+
+@login_required
+def reject_email_hotel_not_found(request, email_id):
+    """Reject all rows in an email with reason: JP Hotel Not Found."""
+    email = get_object_or_404(Email, id=email_id)
+    rows = EmailRow.objects.filter(email=email)
+    
+    for row in rows:
+        row.status = 'rejected_hotel_not_found'
+        row.reject_reason = 'JP Hotel Not Found'
+        row.processed_by = request.user
+        row.processed_at = timezone.now()
+        row.save()
+    
+    # Log the action
+    UserLog.objects.create(
+        user=request.user,
+        action_type='reject_email_hotel_not_found',
+        email=email,
+        ip_address=request.META.get('REMOTE_ADDR'),
+        details=f"Rejected all rows in email {email_id} - JP Hotel Not Found"
+    )
+    
+    # Update email status directly
+    email.status = 'rejected_hotel_not_found'
+    email.processed_by = request.user
+    email.processed_at = timezone.now()
+    email.save()
+    
+    messages.success(request, f"All rows in email {email_id} have been rejected: JP Hotel Not Found.")
+    
+    # AJAX request için JSON yanıtı döndür, normal request için redirect
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({
+            'success': True, 
+            'message': f"All rows in email {email_id} have been rejected: JP Hotel Not Found",
+            'status': email.status
+        })
+    else:
+        return redirect('emails:email_detail', email_id=email_id)
+
+
+@login_required
+def reject_email_room_not_found(request, email_id):
+    """Reject all rows in an email with reason: JP Room Not Found."""
+    email = get_object_or_404(Email, id=email_id)
+    rows = EmailRow.objects.filter(email=email)
+    
+    for row in rows:
+        row.status = 'rejected_room_not_found'
+        row.reject_reason = 'JP Room Not Found'
+        row.processed_by = request.user
+        row.processed_at = timezone.now()
+        row.save()
+    
+    # Log the action
+    UserLog.objects.create(
+        user=request.user,
+        action_type='reject_email_room_not_found',
+        email=email,
+        ip_address=request.META.get('REMOTE_ADDR'),
+        details=f"Rejected all rows in email {email_id} - JP Room Not Found"
+    )
+    
+    # Update email status directly
+    email.status = 'rejected_room_not_found'
+    email.processed_by = request.user
+    email.processed_at = timezone.now()
+    email.save()
+    
+    messages.success(request, f"All rows in email {email_id} have been rejected: JP Room Not Found.")
+    
+    # AJAX request için JSON yanıtı döndür, normal request için redirect
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({
+            'success': True, 
+            'message': f"All rows in email {email_id} have been rejected: JP Room Not Found",
+            'status': email.status
+        })
+    else:
+        return redirect('emails:email_detail', email_id=email_id)
+
+
+@login_required
+@require_POST
+def apply_suggestion(request, row_id):
+    """
+    AI önerisini satıra uygulayan API endpoint'i
+    """
+    try:
+        row = get_object_or_404(EmailRow, id=row_id)
+        
+        # Gelen veriyi parse et
+        data = json.loads(request.body)
+        hotel_id = data.get('hotel_id')
+        room_ids = data.get('room_ids', [])
+        
+        # Hotel ve Room modellerini import et
+        from hotels.models import Hotel, Room
+        
+        # Oteli bul ve satıra ekle
+        hotel = get_object_or_404(Hotel, id=hotel_id)
+        row.juniper_hotel = hotel
+        
+        # Odaları ekle (eğer mevcutsa)
+        if room_ids:
+            rooms = Room.objects.filter(id__in=room_ids, hotel=hotel)
+            row.juniper_rooms.set(rooms)
+            
+            # Oda tipini güncelle
+            room_names = [room.juniper_room_type for room in rooms]
+            row.room_type = ", ".join(room_names)
+        
+        # Durumu pending olarak güncelle
+        row.status = 'pending'
+        row.save()
+        
+        # İşlemi kaydet
+        UserLog.objects.create(
+            user=request.user,
+            action_type='apply_suggestion',
+            email=row.email,
+            email_row=row,
+            ip_address=request.META.get('REMOTE_ADDR'),
+            details=f"AI önerisi uygulandı - Otel: {hotel.juniper_hotel_name}"
+        )
+        
+        # Başarılı yanıt
+        return JsonResponse({
+            'success': True,
+            'message': 'Öneri başarıyla uygulandı',
+            'hotel': hotel.juniper_hotel_name,
+            'rooms': [room.juniper_room_type for room in rooms] if room_ids else []
+        })
+    
+    except json.JSONDecodeError:
+        logger.error("JSON parse error in apply_suggestion")
+        return JsonResponse({'success': False, 'error': 'Geçersiz JSON formatı'}, status=400)
+    
+    except Exception as e:
+        logger.error(f"Error in apply_suggestion: {str(e)}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+def check_new_emails_api(request):
+    """
+    API endpoint to check for new emails since a given timestamp
+    """
+    try:
+        last_check_time = request.GET.get('last_check')
+        if not last_check_time:
+            # If no timestamp is provided, default to checking the last 5 minutes
+            last_check_time = (timezone.now() - timedelta(minutes=5)).isoformat()
+        
+        # Parse the timestamp
+        try:
+            last_check_datetime = datetime.fromisoformat(last_check_time)
+            # Ensure it's timezone aware
+            if last_check_datetime.tzinfo is None:
+                last_check_datetime = timezone.make_aware(last_check_datetime)
+        except (ValueError, TypeError):
+            # Invalid timestamp format, default to 5 minutes ago
+            last_check_datetime = timezone.now() - timedelta(minutes=5)
+        
+        # Query for new emails received after the timestamp
+        new_emails = Email.objects.filter(received_date__gt=last_check_datetime).order_by('-received_date')
+        
+        # Prepare the response data
+        emails_data = []
+        for email in new_emails:
+            emails_data.append({
+                'id': email.id,
+                'subject': email.subject,
+                'sender': email.sender,
+                'received_date': email.received_date.isoformat(),
+                'status': email.status,
+                'has_attachments': email.has_attachments,
+                'url': reverse('emails:email_detail', args=[email.id])
+            })
+        
+        # Return the response with new emails and current server time
+        return JsonResponse({
+            'success': True,
+            'new_emails_count': len(emails_data),
+            'new_emails': emails_data,
+            'server_time': timezone.now().isoformat()
+        })
+    
+    except Exception as e:
+        logger.error(f"Error in check_new_emails_api: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e),
+            'server_time': timezone.now().isoformat()
+        }, status=500)
+
+
+@login_required
+def bulk_action_rows(request, action):
+    """
+    Handle bulk actions on multiple rows (rules) at once.
+    Supports:
+    - approve: Approve selected rows
+    - reject: Reject selected rows with general rejection
+    - reject-hotel-not-found: Reject selected rows with JP Hotel Not Found reason
+    - reject-room-not-found: Reject selected rows with JP Room Not Found reason
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Only POST method is allowed'}, status=405)
+    
+    try:
+        # Parse request data based on content type
+        if request.content_type == 'application/json':
+            data = json.loads(request.body)
+            row_ids = data.get('ids', [])
+        else:
+            row_ids = request.POST.getlist('row_ids')
+        
+        if not row_ids:
+            return JsonResponse({'error': 'No rows selected'}, status=400)
+        
+        # Get selected rows
+        rows = EmailRow.objects.filter(id__in=row_ids)
+        
+        # Apply action based on parameter
+        processed_count = 0
+        emails_updated = set()  # Keep track of emails to update
+        
+        for row in rows:
+            try:
+                # Apply specific action to each row
+                if action == 'approve':
+                    if row.juniper_hotel:  # Only approve rows with a hotel match
+                        row.status = 'approved'
+                        row.processed_by = request.user
+                        row.processed_at = timezone.now()
+                        processed_count += 1
+                elif action == 'reject':
+                    row.status = 'rejected'
+                    row.processed_by = request.user
+                    row.processed_at = timezone.now()
+                    processed_count += 1
+                elif action == 'reject-hotel-not-found':
+                    row.status = 'rejected_hotel_not_found'
+                    row.reject_reason = 'JP Hotel Not Found'
+                    row.processed_by = request.user
+                    row.processed_at = timezone.now()
+                    processed_count += 1
+                elif action == 'reject-room-not-found':
+                    row.status = 'rejected_room_not_found'
+                    row.reject_reason = 'JP Room Not Found'
+                    row.processed_by = request.user
+                    row.processed_at = timezone.now()
+                    processed_count += 1
+                else:
+                    continue  # Skip unsupported actions
+                
+                row.save()
+                
+                # Log the action
+                UserLog.objects.create(
+                    user=request.user,
+                    action_type=f'bulk_{action}',
+                    email=row.email,
+                    email_row=row,
+                    ip_address=request.META.get('REMOTE_ADDR'),
+                    details=f"Bulk action '{action}' on row {row.id}"
+                )
+                
+                # Add this row's email to the set of emails to update
+                emails_updated.add(row.email)
+                
+            except Exception as e:
+                logger.error(f"Error processing row {row.id} with action {action}: {e}", exc_info=True)
+        
+        # Now update all affected emails' statuses
+        for email in emails_updated:
+            # Check remaining rows status to decide the email status
+            pending_rows = email.rows.filter(status__in=['pending', 'matching', 'hotel_not_found', 'room_not_found']).count()
+            
+            if pending_rows == 0:
+                # All rows have been processed
+                if action == 'approve':
+                    if email.rows.filter(status='approved').count() == email.rows.count():
+                        email.status = 'approved'
+                elif action == 'reject':
+                    email.status = 'rejected'
+                elif action == 'reject-hotel-not-found':
+                    email.status = 'rejected_hotel_not_found'
+                elif action == 'reject-room-not-found':
+                    email.status = 'rejected_room_not_found'
+                
+                email.processed_by = request.user
+                email.processed_at = timezone.now()
+                email.save()
+        
+        # Prepare success response
+        action_display = {
+            'approve': 'approved',
+            'reject': 'rejected',
+            'reject-hotel-not-found': 'rejected: JP Hotel Not Found',
+            'reject-room-not-found': 'rejected: JP Room Not Found'
+        }.get(action, action)
+        
+        return JsonResponse({
+            'success': True,
+            'message': f"{processed_count} rows have been {action_display}.",
+            'details': {
+                'success': [r.id for r in rows if r.status == action.replace('-', '_') or 
+                            (action == 'approve' and r.status == 'approved')],
+                'errors': []
+            }
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        logger.error(f"Error in bulk action {action}: {e}", exc_info=True)
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+# Belirli bir ekin görüntüleme/indirme fonksiyonunu bulmak için
+@login_required
+def download_attachment(request, attachment_id):
+    """
+    View for downloading an attachment
+    """
+    attachment = get_object_or_404(EmailAttachment, id=attachment_id)
+    
+    if not attachment.file:
+        messages.error(request, "Attachment file not found")
+        return redirect('emails:email_detail', email_id=attachment.email.id)
+    
+    # Check if file exists on disk
+    if not os.path.exists(attachment.file.path):
+        messages.error(request, "Attachment file not found on disk")
+        return redirect('emails:email_detail', email_id=attachment.email.id)
+    
+    # Log attachment access
+    UserLog.objects.create(
+        user=request.user,
+        action_type='download_attachment',
+        email=attachment.email,
+        ip_address=request.META.get('REMOTE_ADDR'),
+        details=f"Downloaded attachment: {attachment.filename}"
+    )
+    
+    # Create response with file
+    file_path = attachment.file.path
+    with open(file_path, 'rb') as f:
+        file_data = f.read()
+        
+    # Determine content type
+    content_type = attachment.content_type
+    if not content_type:
+        content_type = 'application/octet-stream'  # Default content type
+    
+    # Determine if this file is analyzed (only PDF and Word files are analyzed)
+    file_ext = os.path.splitext(attachment.filename.lower())[1]
+    is_analyzed = file_ext in ['.pdf', '.doc', '.docx']
+    
+    # Set filename
+    response = HttpResponse(file_data, content_type=content_type)
+    response['Content-Disposition'] = f'attachment; filename="{attachment.filename}"'
+    
+    return response
+
+
+def process_html_for_display(email):
+    """Process HTML content to make it displayable in a browser"""
+    if not email.body_html:
+        return None
+        
+    # Process CID references if attachments exist
+    html_content = email.body_html
+    attachments = email.attachments.all()
+    
+    if attachments:
+        import re
+        
+        # Create a mapping of Content-IDs to attachment URLs
+        for attachment in attachments:
+            # Create a URL to the attachment
+            attachment_id = attachment.id
+            attachment_url = reverse('emails:email_attachment_view', args=[attachment_id])
+            
+            # Try to replace CID references with the attachment URL using different patterns
+            patterns = []
+            
+            # Use the stored content_id if available
+            if attachment.content_id:
+                patterns.append(f'src=["\']cid:{re.escape(attachment.content_id)}["\']')
+            
+            # Filename based pattern (fallback)
+            filename = attachment.filename
+            patterns.append(f'src=["\']cid:{re.escape(filename)}["\']')
+            
+            # Generic pattern for image CIDs (last resort)
+            patterns.append(f'src=["\']cid:image[^"\']*["\']')
+            
+            # Apply all patterns
+            for pattern in patterns:
+                html_content = re.sub(pattern, f'src="{attachment_url}"', html_content)
+    
+    # Add base target to open links in new tab
+    html_content = html_content.replace('<head>', '<head><base target="_blank">')
+    
+    # Handle character encoding issues
+    html_content = html_content.replace('\x00', '')
+    
+    return html_content
+
+
+@login_required
+def mark_email_juniper_manual(request, email_id):
+    """Mark email as processed manually in Juniper"""
+    email = get_object_or_404(Email, id=email_id)
+    
+    # Update the email status
+    email.status = 'juniper_manual'
+    email.processed_by = request.user
+    email.processed_at = timezone.now()
+    email.save()
+    
+    # Log the action
+    UserLog.objects.create(
+        user=request.user,
+        action_type='mark_juniper_manual',
+        email=email,
+        ip_address=request.META.get('REMOTE_ADDR'),
+        details=f"Marked email {email_id} as Juniper(M) - manually processed in Juniper"
+    )
+    
+    messages.success(request, f"Email has been marked as Juniper(M) - manually processed in Juniper.")
+    
+    # AJAX request için JSON yanıtı döndür, normal request için redirect
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({
+            'success': True, 
+            'message': f"Email has been marked as Juniper(M).",
+            'status': email.status
+        })
+    else:
+        return redirect('emails:email_detail', email_id=email_id)
+
+
+@login_required
+def mark_email_juniper_robot(request, email_id):
+    """Mark email as processed by robot in Juniper"""
+    email = get_object_or_404(Email, id=email_id)
+    
+    # Update the email status
+    email.status = 'juniper_robot'
+    email.processed_by = request.user
+    email.processed_at = timezone.now()
+    email.save()
+    
+    # Log the action
+    UserLog.objects.create(
+        user=request.user,
+        action_type='mark_juniper_robot',
+        email=email,
+        ip_address=request.META.get('REMOTE_ADDR'),
+        details=f"Marked email {email_id} as Juniper(R) - processed by robot in Juniper"
+    )
+    
+    messages.success(request, f"Email has been marked as Juniper(R) - processed by robot in Juniper.")
+    
+    # AJAX request için JSON yanıtı döndür, normal request için redirect
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({
+            'success': True, 
+            'message': f"Email has been marked as Juniper(R).",
+            'status': email.status
+        })
+    else:
+        return redirect('emails:email_detail', email_id=email_id)

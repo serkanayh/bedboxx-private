@@ -82,7 +82,7 @@
 
 <!-- Stats Cards -->
 <div class="row mb-4">
-    <div class="col-md-3 mb-3">
+    <div class="col-md-2 mb-3">
         <div class="stat-card primary card h-100">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
@@ -100,7 +100,7 @@
             </div>
         </div>
     </div>
-    <div class="col-md-3 mb-3">
+    <div class="col-md-2 mb-3">
         <div class="stat-card success card h-100">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
@@ -118,7 +118,7 @@
             </div>
         </div>
     </div>
-    <div class="col-md-3 mb-3">
+    <div class="col-md-2 mb-3">
         <div class="stat-card warning card h-100">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
@@ -136,7 +136,7 @@
             </div>
         </div>
     </div>
-    <div class="col-md-3 mb-3">
+    <div class="col-md-2 mb-3">
         <div class="stat-card danger card h-100">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
@@ -151,6 +151,98 @@
                 <div class="mt-3 text-white-50">
                     <small>Last 7 days</small>
                 </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2 mb-3">
+        <div class="stat-card info card h-100" style="background-color: #17a2b8; color: white;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title text-white-50">Juniper (M)</h6>
+                        <h2 class="mb-0">{{ stats.juniper_m_emails }}</h2>
+                    </div>
+                    <div class="stat-icon">
+                        <i class="bi bi-envelope"></i>
+                    </div>
+                </div>
+                <div class="mt-3 text-white-50">
+                    <small>Manual Emails</small>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2 mb-3">
+        <div class="stat-card secondary card h-100" style="background-color: #6c757d; color: white;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title text-white-50">Juniper (R)</h6>
+                        <h2 class="mb-0">{{ stats.juniper_contracts }}</h2>
+                    </div>
+                    <div class="stat-icon">
+                        <i class="bi bi-file-text"></i>
+                    </div>
+                </div>
+                <div class="mt-3 text-white-50">
+                    <small>Contracts</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Your Personal Stats -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">Your Personal Stats</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-3 text-center mb-3">
+                <div class="display-6 text-primary mb-1">{{ personal_stats.processed_count }}</div>
+                <div class="text-muted">Processed Rows</div>
+                <div class="progress mt-2" style="height: 10px;">
+                    <div class="progress-bar bg-primary" role="progressbar" style="width: 100%" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+            </div>
+            <div class="col-md-3 text-center mb-3">
+                <div class="display-6 text-success mb-1">{{ personal_stats.approved_count }}</div>
+                <div class="text-muted">Approved</div>
+                <div class="progress mt-2" style="height: 10px;">
+                    <div class="progress-bar bg-success" role="progressbar" style="width: {{ personal_stats.approval_rate|floatformat:0 }}%;" aria-valuenow="{{ personal_stats.approval_rate|floatformat:0 }}" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+                <div class="small mt-1 text-muted">{{ personal_stats.approval_rate }}% approval rate</div>
+            </div>
+            <div class="col-md-3 text-center mb-3">
+                <div class="display-6 text-danger mb-1">{{ personal_stats.rejected_count }}</div>
+                <div class="text-muted">Rejected</div>
+                <div class="progress mt-2" style="height: 10px;">
+                    {% if personal_stats.processed_count > 0 %}
+                    <div class="progress-bar bg-danger" role="progressbar" style="width: {{ personal_stats.rejected_count|floatformat:0 }}%;" aria-valuenow="{{ personal_stats.rejected_count|floatformat:0 }}" aria-valuemin="0" aria-valuemax="100"></div>
+                    {% else %}
+                    <div class="progress-bar bg-danger" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                    {% endif %}
+                </div>
+                <div class="small mt-1 text-muted">
+                    {% if personal_stats.processed_count > 0 %}
+                    {{ personal_stats.rejected_count|floatformat:0 }}% rejection rate
+                    {% else %}
+                    0% rejection rate
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-md-3 text-center mb-3">
+                <div class="display-6 {% if user_performance_stats.accuracy_rate > 90 %}text-success{% elif user_performance_stats.accuracy_rate > 75 %}text-warning{% else %}text-danger{% endif %} mb-1">
+                    {{ user_performance_stats.accuracy_rate|default:"N/A" }}%
+                </div>
+                <div class="text-muted">Accuracy Rate</div>
+                <div class="progress mt-2" style="height: 10px;">
+                    <div class="progress-bar {% if user_performance_stats.accuracy_rate > 90 %}bg-success{% elif user_performance_stats.accuracy_rate > 75 %}bg-warning{% else %}bg-danger{% endif %}" role="progressbar" style="width: {{ user_performance_stats.accuracy_rate|default:0|floatformat:0 }}%;" aria-valuenow="{{ user_performance_stats.accuracy_rate|default:0|floatformat:0 }}" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+                {% if user_performance_stats.avg_processing_time %}
+                <div class="small mt-1 text-muted">Avg. {{ user_performance_stats.avg_processing_time }} seconds per row</div>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -197,13 +289,9 @@
                             <td>{{ user.processed_count }}</td>
                             <td>
                                 <div class="progress" style="height: 8px;">
-                                    <div class="progress-bar bg-primary" role="progressbar" style="width: {{ user.rate }}%;" aria-valuenow="{{ user.rate }}" aria-valuemin="0" aria-valuemax="100"></div>
+                                    <div class="progress-bar bg-primary" role="progressbar" style="width: {{ user.rate|floatformat:0 }}%;" aria-valuenow="{{ user.rate|floatformat:0 }}" aria-valuemin="0" aria-valuemax="100"></div>
                                 </div>
                             </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="3" class="text-center py-3">No data available</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -214,248 +302,644 @@
 </div>
 
 <div class="row">
-    <!-- AI Performance Chart -->
+    <!-- Your Activity Chart -->
     <div class="col-lg-6 mb-4">
         <div class="card h-100">
             <div class="card-header">
-                <h5 class="mb-0">AI Performance</h5>
+                <h5 class="mb-0">Your Activity (Last 14 Days)</h5>
             </div>
             <div class="card-body">
                 <div class="chart-container">
-                    <canvas id="aiPerformanceChart"></canvas>
+                    <canvas id="userActivityChart"></canvas>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Hotel Correction Rates -->
+    <!-- Your Top Hotels -->
     <div class="col-lg-6 mb-4">
         <div class="card h-100">
             <div class="card-header">
-                <h5 class="mb-0">Hotel AI Correction Rates</h5>
+                <h5 class="mb-0">Your Top Hotels</h5>
             </div>
             <div class="card-body">
-                <div class="chart-container">
-                    <canvas id="hotelCorrectionChart"></canvas>
+                {% if top_hotels_for_user %}
+                <div class="list-group">
+                    {% for hotel in top_hotels_for_user %}
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>{{ hotel.juniper_hotel__juniper_hotel_name }}</span>
+                        <span class="badge bg-primary rounded-pill">{{ hotel.count }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted text-center py-4">You haven't processed any hotels yet</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Matches -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">Your Recent Matches</h5>
+    </div>
+    <div class="card-body">
+        {% if recent_matches %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Hotel</th>
+                        <th>Room Type</th>
+                        <th>Markets</th>
+                        <th>Date Range</th>
+                        <th>Status</th>
+                        <th>Processed At</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for match in recent_matches %}
+                    <tr>
+                        <td><strong>{{ match.juniper_hotel.juniper_hotel_name }}</strong></td>
+                        <td>
+                            {% if match.juniper_rooms.exists %}
+                                {% for room in match.juniper_rooms.all %}
+                                    {{ room.juniper_room_type }}{% if not forloop.last %}, {% endif %}
+                                {% endfor %}
+                            {% else %}
+                                {{ match.room_type }}
+                        {% endif %}
+                        </td>
+                        <td>
+                            {% if match.markets.exists %}
+                                {% for market in match.markets.all %}
+                                    {{ market.name }}{% if not forloop.last %}, {% endif %}
+                                {% endfor %}
+                            {% else %}
+                                All
+                        {% endif %}
+                        </td>
+                        <td>{{ match.start_date|date:"d/m/Y" }} - {{ match.end_date|date:"d/m/Y" }}</td>
+                        <td>
+                            <span class="badge bg-{{ match.status }}">{{ match.get_status_display }}</span>
+                        </td>
+                        <td>{{ match.processed_at|date:"d/m/Y H:i" }}</td>
+                    </tr>
+            {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted text-center py-4">No recent matches found</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Juniper Information -->
+<div class="row">
+    <!-- Juniper Manual Emails (M) -->
+    <div class="col-lg-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Juniper Manual Emails (M)</h5>
+                <span class="badge bg-info">{{ stats.juniper_m_emails }}</span>
+            </div>
+            <div class="card-body">
+                {% if juniper_m_emails %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Subject</th>
+                                <th>Date</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for email in juniper_m_emails %}
+                            <tr>
+                                <td><strong>{{ email.id }}</strong></td>
+                                <td>{{ email.subject }}</td>
+                                <td>{{ email.received_date|date:"d/m/Y H:i" }}</td>
+                                <td>
+                                    <span class="badge bg-info">Manual</span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted text-center py-4">No Juniper manual emails found</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Juniper Market Codes (M) -->
+    <div class="col-lg-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Juniper Market Codes (M)</h5>
+                <a href="{% url 'admin:hotels_junipermarketcode_changelist' %}" class="btn btn-sm btn-outline-primary">View All</a>
+            </div>
+            <div class="card-body">
+                {% if juniper_markets %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Market</th>
+                                <th>Code</th>
+                                <th>Description</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for market_code in juniper_markets %}
+                            <tr>
+                                <td><strong>{{ market_code.market.name }}</strong></td>
+                                <td>{{ market_code.code }}</td>
+                                <td>{{ market_code.description|default:"" }}</td>
+                                <td>
+                                    {% if market_code.is_active %}
+                                    <span class="badge bg-success">Active</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">Inactive</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted text-center py-4">No Juniper market codes found</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Juniper Contract Markets (R) -->
+    <div class="col-lg-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Juniper Contract Markets (R)</h5>
+                <a href="{% url 'admin:hotels_junipercontractmarket_changelist' %}" class="btn btn-sm btn-outline-primary">View All</a>
+            </div>
+            <div class="card-body">
+                {% if juniper_contracts %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Hotel</th>
+                                <th>Contract</th>
+                                <th>Season</th>
+                                <th>Market</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for contract in juniper_contracts %}
+                            <tr>
+                                <td><strong>{{ contract.hotel.juniper_hotel_name }}</strong></td>
+                                <td>{{ contract.contract_name }}</td>
+                                <td>{{ contract.season }}</td>
+                                <td>{{ contract.market.name }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted text-center py-4">No Juniper contract markets found</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics -->
+    <div class="col-lg-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0">Juniper Statistics</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Market Distribution</h6>
+                        {% if market_distribution %}
+                        <div class="list-group">
+                            {% for market in market_distribution %}
+                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                                <span>{{ market.name }}</span>
+                                <span class="badge bg-info rounded-pill">{{ market.code_count }}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <p class="text-muted text-center py-2">No data available</p>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Contract Distribution</h6>
+                        {% if contract_distribution %}
+                        <div class="list-group">
+                            {% for hotel in contract_distribution %}
+                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                                <span>{{ hotel.juniper_hotel_name }}</span>
+                                <span class="badge bg-secondary rounded-pill">{{ hotel.contract_count }}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <p class="text-muted text-center py-2">No data available</p>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Recent Activity -->
-<div class="card mb-4">
-    <div class="card-header">
-        <h5 class="mb-0">Recent Activity</h5>
-    </div>
-    <div class="card-body p-0">
-        <div class="list-group list-group-flush">
-            {% for activity in recent_activity %}
-            <div class="activity-item {% if activity.action_type == 'approve_row' or activity.action_type == 'login' %}success{% elif activity.action_type == 'edit_row' %}warning{% elif activity.action_type == 'mark_hotel_not_found' or activity.action_type == 'mark_room_not_found' %}danger{% endif %}">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <strong>{{ activity.user.username }}</strong> 
-                        {% if activity.action_type == 'login' %}
-                        logged in
-                        {% elif activity.action_type == 'logout' %}
-                        logged out
-                        {% elif activity.action_type == 'approve_row' %}
-                        approved a row
-                        {% elif activity.action_type == 'edit_row' %}
-                        edited a row
-                        {% elif activity.action_type == 'send_to_robot' %}
-                        sent a row to robot
-                        {% elif activity.action_type == 'mark_hotel_not_found' %}
-                        marked hotel not found
-                        {% elif activity.action_type == 'mark_room_not_found' %}
-                        marked room not found
-                        {% elif activity.action_type == 'ignore_email' %}
-                        ignored an email
-                        {% elif activity.action_type == 'assign_email' %}
-                        assigned an email
-                        {% endif %}
-                        
-                        {% if activity.email %}
-                        <a href="{% url 'emails:email_detail' activity.email.id %}">{{ activity.email.subject|truncatechars:50 }}</a>
-                        {% endif %}
-                    </div>
-                    <span class="activity-time">{{ activity.timestamp|timesince }} ago</span>
+<div class="row">
+    <div class="col-lg-12 mb-4">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Hotel Sale Type Statistics</h5>
+                <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#hotelSaleTypeTable" aria-expanded="false" aria-controls="hotelSaleTypeTable">
+                    Detayları Göster / Gizle
+                </button>
+            </div>
+            <div class="card-body">
+                {% if hotel_sale_type_stats %}
+                <div class="mb-4" style="max-width: 600px; margin: 0 auto;">
+                    <canvas id="hotelSaleTypePieChart"></canvas>
                 </div>
-                {% if activity.details %}
-                <div class="text-muted small mt-1">{{ activity.details|truncatechars:100 }}</div>
+                <div class="collapse" id="hotelSaleTypeTable">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Otel Adı</th>
+                                    <th>Türü</th>
+                                    <th>Adet</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for stat in hotel_sale_type_stats %}
+                                <tr>
+                                    <td>{{ stat.hotel_name }}</td>
+                                    <td>
+                                        {% if stat.sale_type == 'stop' %}
+                                            <span class="badge bg-danger">Stop Sale</span>
+                                        {% elif stat.sale_type == 'open' %}
+                                            <span class="badge bg-success">Open Sale</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">{{ stat.sale_type }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ stat.count }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% else %}
+                <p class="text-muted text-center py-4">No sale type statistics available</p>
                 {% endif %}
             </div>
-            {% empty %}
-            <div class="p-4 text-center text-muted">
-                <i class="bi bi-clock-history fs-1 d-block mb-2"></i>
-                No recent activity
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-12 mb-4">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Red Nedenleri Dağılımı</h5>
+                <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#rejectedDetailTable" aria-expanded="false" aria-controls="rejectedDetailTable">
+                    Detayları Göster / Gizle
+                </button>
             </div>
-            {% endfor %}
+            <div class="card-body">
+                <div class="mb-4" style="max-width: 500px; margin: 0 auto;">
+                    <canvas id="rejectedPieChart"></canvas>
+                </div>
+                <div class="row text-center mb-3">
+                    <div class="col">
+                        <span class="badge bg-danger">Genel Red: %{{ rejected_percent }}</span>
+                    </div>
+                    <div class="col">
+                        <span class="badge bg-warning text-dark">Otel Yok: %{{ rejected_hotel_percent }}</span>
+                    </div>
+                    <div class="col">
+                        <span class="badge bg-info text-dark">Oda Yok: %{{ rejected_room_percent }}</span>
+                    </div>
+                </div>
+                <div class="collapse" id="rejectedDetailTable">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Otel Adı</th>
+                                    <th>Oda Tipi</th>
+                                    <th>Red Nedeni</th>
+                                    <th>Adet</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for row in rejected_details %}
+                                <tr>
+                                    <td>{{ row.hotel_name }}</td>
+                                    <td>{{ row.room_type }}</td>
+                                    <td>
+                                        {% if row.status == 'rejected' %}
+                                            <span class="badge bg-danger">Genel Red</span>
+                                        {% elif row.status == 'rejected_hotel_not_found' %}
+                                            <span class="badge bg-warning text-dark">Otel Yok</span>
+                                        {% elif row.status == 'rejected_room_not_found' %}
+                                            <span class="badge bg-info text-dark">Oda Yok</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">{{ row.status }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ row.count }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
 
 {% block extra_js %}
+{{ block.super }}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 <script>
-    // Processing Trend Chart
-    const processingTrendCtx = document.getElementById('processingTrendChart').getContext('2d');
-    const processingTrendChart = new Chart(processingTrendCtx, {
-        type: 'line',
-        data: {
-            labels: {{ chart_data.processing_trend.labels|safe }},
-            datasets: [
-                {
-                    label: 'Processed Emails',
-                    data: {{ chart_data.processing_trend.processed|safe }},
-                    borderColor: '#3f51b5',
-                    backgroundColor: 'rgba(63, 81, 181, 0.1)',
-                    tension: 0.4,
-                    fill: true
-                },
-                {
-                    label: 'Approved Rows',
-                    data: {{ chart_data.processing_trend.approved|safe }},
-                    borderColor: '#4caf50',
-                    backgroundColor: 'rgba(76, 175, 80, 0.1)',
-                    tension: 0.4,
-                    fill: true
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'top',
-                },
-                tooltip: {
-                    mode: 'index',
-                    intersect: false,
-                }
+    document.addEventListener('DOMContentLoaded', function() {
+        // Processing Trend Chart
+        const processingTrendCtx = document.getElementById('processingTrendChart').getContext('2d');
+        const processingTrendChart = new Chart(processingTrendCtx, {
+            type: 'line',
+            data: {
+                labels: {{ chart_data.processing_trend.labels|safe }},
+                datasets: [
+                    {
+                        label: 'Processed Emails',
+                        data: {{ chart_data.processing_trend.processed|safe }},
+                        borderColor: '#4a6bdf',
+                        backgroundColor: 'rgba(74, 107, 223, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    },
+                    {
+                        label: 'Approved Rows',
+                        data: {{ chart_data.processing_trend.approved|safe }},
+                        borderColor: '#66bb6a',
+                        backgroundColor: 'rgba(102, 187, 106, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }
+                ]
             },
-            scales: {
-                y: {
-                    beginAtZero: true
-                }
-            }
-        }
-    });
-
-    // AI Performance Chart
-    const aiPerformanceCtx = document.getElementById('aiPerformanceChart').getContext('2d');
-    const aiPerformanceChart = new Chart(aiPerformanceCtx, {
-        type: 'line',
-        data: {
-            labels: {{ chart_data.ai_performance.labels|safe }},
-            datasets: [
-                {
-                    label: 'Success Rate',
-                    data: {{ chart_data.ai_performance.success_rate|safe }},
-                    borderColor: '#f44336',
-                    backgroundColor: 'rgba(244, 67, 54, 0.1)',
-                    tension: 0.4,
-                    fill: true
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'top',
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top'
+                    }
                 },
-                tooltip: {
-                    mode: 'index',
-                    intersect: false,
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    max: 100,
-                    ticks: {
-                        callback: function(value) {
-                            return value + '%';
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            drawBorder: false
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
                         }
                     }
                 }
             }
-        }
-    });
+        });
 
-    // Hotel Correction Rates Chart
-    const hotelCorrectionCtx = document.getElementById('hotelCorrectionChart').getContext('2d');
-    const hotelCorrectionChart = new Chart(hotelCorrectionCtx, {
-        type: 'bar',
-        data: {
-            labels: {{ chart_data.hotel_correction.labels|safe }},
-            datasets: [
-                {
-                    label: 'Correction Rate',
-                    data: {{ chart_data.hotel_correction.rates|safe }},
-                    backgroundColor: [
-                        'rgba(63, 81, 181, 0.7)',
-                        'rgba(76, 175, 80, 0.7)',
-                        'rgba(255, 152, 0, 0.7)',
-                        'rgba(244, 67, 54, 0.7)',
-                        'rgba(156, 39, 176, 0.7)'
-                    ],
-                    borderWidth: 1
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    display: false
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            return context.raw + '% correction rate';
-                        }
+        // User Activity Chart
+        const userActivityCtx = document.getElementById('userActivityChart').getContext('2d');
+        const userActivityChart = new Chart(userActivityCtx, {
+            type: 'bar',
+            data: {
+                labels: {{ chart_data.user_activity.labels|safe }},
+                datasets: [
+                    {
+                        label: 'Rows Processed',
+                        data: {{ chart_data.user_activity.counts|safe }},
+                        backgroundColor: 'rgba(74, 107, 223, 0.7)',
+                        borderColor: '#4a6bdf',
+                        borderWidth: 1
                     }
-                }
+                ]
             },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    max: 100,
-                    ticks: {
-                        callback: function(value) {
-                            return value + '%';
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            drawBorder: false
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
                         }
                     }
                 }
             }
-        }
-    });
-
-    // Time period toggle for Processing Trend Chart
-    document.getElementById('weekBtn').addEventListener('click', function() {
-        this.classList.add('active');
-        document.getElementById('monthBtn').classList.remove('active');
+        });
         
-        // Update chart with weekly data
-        processingTrendChart.data.labels = {{ chart_data.processing_trend_week.labels|safe }};
-        processingTrendChart.data.datasets[0].data = {{ chart_data.processing_trend_week.processed|safe }};
-        processingTrendChart.data.datasets[1].data = {{ chart_data.processing_trend_week.approved|safe }};
-        processingTrendChart.update();
-    });
+        // Switch between week and month views
+        document.getElementById('weekBtn').addEventListener('click', function() {
+            // Update chart data
+            processingTrendChart.data.labels = {{ chart_data.processing_trend_week.labels|safe }};
+            processingTrendChart.data.datasets[0].data = {{ chart_data.processing_trend_week.processed|safe }};
+            processingTrendChart.data.datasets[1].data = {{ chart_data.processing_trend_week.approved|safe }};
+            processingTrendChart.update();
+            
+            // Update button states
+            document.getElementById('weekBtn').classList.add('active');
+            document.getElementById('monthBtn').classList.remove('active');
+        });
 
-    document.getElementById('monthBtn').addEventListener('click', function() {
-        this.classList.add('active');
-        document.getElementById('weekBtn').classList.remove('active');
-        
-        // Update chart with monthly data
-        processingTrendChart.data.labels = {{ chart_data.processing_trend_month.labels|safe }};
-        processingTrendChart.data.datasets[0].data = {{ chart_data.processing_trend_month.processed|safe }};
-        processingTrendChart.data.datasets[1].data = {{ chart_data.processing_trend_month.approved|safe }};
-        processingTrendChart.update();
+        document.getElementById('monthBtn').addEventListener('click', function() {
+            // Update chart data
+            processingTrendChart.data.labels = {{ chart_data.processing_trend_month.labels|safe }};
+            processingTrendChart.data.datasets[0].data = {{ chart_data.processing_trend_month.processed|safe }};
+            processingTrendChart.data.datasets[1].data = {{ chart_data.processing_trend_month.approved|safe }};
+            processingTrendChart.update();
+            
+            // Update button states
+            document.getElementById('weekBtn').classList.remove('active');
+            document.getElementById('monthBtn').classList.add('active');
+        });
+
+        // Hotel Sale Type Pie Chart
+        {% if hotel_sale_type_stats %}
+        // Prepare data for pie chart
+        let hotelSaleTypeStats = [
+            {% for stat in hotel_sale_type_stats %}
+                {
+                    label: `{{ stat.hotel_name }} - {% if stat.sale_type == 'stop' %}Stop{% elif stat.sale_type == 'open' %}Open{% else %}{{ stat.sale_type }}{% endif %}`,
+                    hotel: `{{ stat.hotel_name }}`,
+                    type: `{{ stat.sale_type }}`,
+                    count: {{ stat.count }}
+                },
+            {% endfor %}
+        ];
+        // Sort by count desc
+        hotelSaleTypeStats = hotelSaleTypeStats.sort((a, b) => b.count - a.count);
+        // If too many slices, group small ones as 'Other'
+        const maxSlices = 8;
+        if (hotelSaleTypeStats.length > maxSlices) {
+            const main = hotelSaleTypeStats.slice(0, maxSlices);
+            const otherCount = hotelSaleTypeStats.slice(maxSlices).reduce((sum, item) => sum + item.count, 0);
+            main.push({label: 'Diğer', hotel: 'Diğer', type: '', count: otherCount});
+            hotelSaleTypeStats = main;
+        }
+        const totalCount = hotelSaleTypeStats.reduce((sum, item) => sum + item.count, 0);
+        // Color palette for hotels
+        const hotelColors = [
+            '#4a6bdf', '#66bb6a', '#f39c12', '#e74c3c', '#8e44ad', '#16a085', '#2980b9', '#d35400', '#7f8c8d'
+        ];
+        // Assign color per hotel, shade for stop/open
+        const hotelNames = [...new Set(hotelSaleTypeStats.map(item => item.hotel))];
+        function getColor(hotel, type) {
+            const idx = hotelNames.indexOf(hotel);
+            let base = hotelColors[idx % hotelColors.length];
+            if (hotel === 'Diğer') return '#bdbdbd';
+            if (type === 'stop') return base;
+            if (type === 'open') return Chart.helpers.color(base).alpha(0.5).rgbString();
+            return base;
+        }
+        const pieLabels = hotelSaleTypeStats.map(item => item.label);
+        const pieData = hotelSaleTypeStats.map(item => item.count);
+        const pieBgColors = hotelSaleTypeStats.map(item => getColor(item.hotel, item.type));
+        const pieChart = new Chart(document.getElementById('hotelSaleTypePieChart').getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: pieLabels,
+                datasets: [{
+                    data: pieData,
+                    backgroundColor: pieBgColors,
+                    borderColor: '#fff',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            font: { size: 14 }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.parsed || 0;
+                                const percent = totalCount > 0 ? ((value / totalCount) * 100).toFixed(1) : 0;
+                                return `${label}: ${value} adet (%${percent})`;
+                            }
+                        }
+                    },
+                    datalabels: {
+                        color: '#222',
+                        font: { weight: 'bold', size: 13 },
+                        formatter: function(value, context) {
+                            const percent = totalCount > 0 ? ((value / totalCount) * 100).toFixed(1) : 0;
+                            return percent >= 5 ? `${percent}%` : '';
+                        }
+                    },
+                    doughnutlabel: {
+                        labels: [
+                            {
+                                text: totalCount,
+                                font: { size: 22, weight: 'bold' },
+                                color: '#222'
+                            },
+                            {
+                                text: 'Toplam',
+                                font: { size: 14 },
+                                color: '#888'
+                            }
+                        ]
+                    }
+                },
+                cutout: '70%'
+            },
+            plugins: [ChartDataLabels]
+        });
+        {% endif %}
+
+        // Red Nedenleri Pie Chart
+        const rejectedPieCtx = document.getElementById('rejectedPieChart').getContext('2d');
+        const rejectedData = [
+            {{ rejected_percent }},
+            {{ rejected_hotel_percent }},
+            {{ rejected_room_percent }}
+        ];
+        const rejectedLabels = ['Genel Red', 'Otel Yok', 'Oda Yok'];
+        const rejectedColors = ['#dc3545', '#ffc107', '#17a2b8'];
+        new Chart(rejectedPieCtx, {
+            type: 'doughnut',
+            data: {
+                labels: rejectedLabels,
+                datasets: [{
+                    data: rejectedData,
+                    backgroundColor: rejectedColors,
+                    borderColor: '#fff',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { font: { size: 14 } }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return `${context.label}: %${context.parsed}`;
+                            }
+                        }
+                    }
+                },
+                cutout: '70%'
+            }
+        });
     });
 </script>
 {% endblock %}

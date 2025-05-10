@@ -5,17 +5,20 @@ from django.db.models import Count, Sum, Avg, F, Q
 from django.utils import timezone
 from datetime import timedelta
 import json
-from emails.models import Email, EmailRow, UserLog, AIModel, Prompt, RegexRule, EmailFilter
-from hotels.models import Hotel
+from emails.models import Email, EmailRow, UserLog, AIModel, Prompt, RegexRule, EmailFilter, EmailAttachment
+from hotels.models import Hotel, Room, Market, JuniperMarketCode, JuniperContractMarket
 from users.models import User
 from .models import AIPerformanceMetric, HotelAICounter, WebhookLog, EmailConfiguration
-from django.http import JsonResponse
+from django.http import JsonResponse, FileResponse, Http404
 from rest_framework.test import APIClient
 import email
 import chardet
 from django.urls import reverse
 import logging
 import email.parser as email_parser
+import os
+from django.conf import settings
+from django.db import transaction
 
 # Set up logger
 logger = logging.getLogger(__name__)
@@ -54,6 +57,9 @@ def dashboard(request):
         'pending_emails': Email.objects.filter(status='pending').count(),
         'approved_rows': EmailRow.objects.filter(status='approved').count(),
         'manual_edits': EmailRow.objects.filter(manually_edited=True).count(),
+        'juniper_market_codes': JuniperMarketCode.objects.count(),
+        'juniper_contracts': JuniperContractMarket.objects.count(),
+        'juniper_m_emails': Email.objects.filter(status='juniper_manual').count(),
     }
     
     # Calculate rates
@@ -77,6 +83,90 @@ def dashboard(request):
             stats['ai_success_rate'] = 0
     else:
         stats['ai_success_rate'] = 0
+    
+    # Kullanıcıya özgü istatistikler
+    current_user = request.user
+    personal_stats = {
+        'processed_count': EmailRow.objects.filter(processed_by=current_user).count(),
+        'approved_count': EmailRow.objects.filter(processed_by=current_user, status='approved').count(),
+        'rejected_count': EmailRow.objects.filter(processed_by=current_user, status='rejected').count(),
+        'manual_edits': EmailRow.objects.filter(processed_by=current_user, manually_edited=True).count(),
+    }
+    
+    if personal_stats['processed_count'] > 0:
+        personal_stats['approval_rate'] = round((personal_stats['approved_count'] / personal_stats['processed_count']) * 100, 1)
+        personal_stats['edit_rate'] = round((personal_stats['manual_edits'] / personal_stats['processed_count']) * 100, 1)
+    else:
+        personal_stats['approval_rate'] = 0
+        personal_stats['edit_rate'] = 0
+    
+    # Kullanıcının son 30 gündeki aktivitesi (günlük bazda)
+    thirty_days_ago = timezone.now().date() - timedelta(days=30)
+    user_daily_activity = []
+    
+    for i in range(30):
+        date = thirty_days_ago + timedelta(days=i)
+        processed_count = EmailRow.objects.filter(
+            processed_by=current_user,
+            processed_at__date=date
+        ).count()
+        
+        user_daily_activity.append({
+            'date': date.strftime('%Y-%m-%d'),
+            'formatted_date': date.strftime('%d %b'),
+            'count': processed_count
+        })
+    
+    # En sık işlem yapılan oteller (kullanıcı bazlı)
+    top_hotels_for_user = EmailRow.objects.filter(
+        processed_by=current_user,
+        juniper_hotel__isnull=False
+    ).values(
+        'juniper_hotel__juniper_hotel_name'
+    ).annotate(
+        count=Count('id')
+    ).order_by('-count')[:5]
+    
+    # Kullanıcının performans değerlendirmesi
+    user_performance_stats = {}
+    
+    # 1. İşlem hızı (son 20 işlem için ortalama)
+    recent_rows = EmailRow.objects.filter(
+        processed_by=current_user,
+        processed_at__isnull=False
+    ).order_by('-processed_at')[:20]
+    
+    if recent_rows.exists() and recent_rows.count() >= 5:  # En az 5 işlem varsa hesapla
+        total_time = 0
+        valid_rows = 0
+        
+        for i in range(1, recent_rows.count()):
+            current_row = recent_rows[i-1]
+            prev_row = recent_rows[i]
+            
+            if current_row.processed_at and prev_row.processed_at:
+                time_diff = (current_row.processed_at - prev_row.processed_at).total_seconds()
+                # Çok uzun süre farkı varsa (1 saatten fazla) hesaba katma
+                if time_diff > 0 and time_diff < 3600:
+                    total_time += time_diff
+                    valid_rows += 1
+        
+        if valid_rows > 0:
+            avg_time = total_time / valid_rows
+            user_performance_stats['avg_processing_time'] = round(avg_time, 1)
+        else:
+            user_performance_stats['avg_processing_time'] = None
+    else:
+        user_performance_stats['avg_processing_time'] = None
+    
+    # 2. Doğruluk oranı (manuel düzeltme gerektirmeyen işlemler)
+    total_rows_by_user = personal_stats['processed_count']
+    
+    if total_rows_by_user > 0:
+        accuracy_rate = 100 - personal_stats['edit_rate']
+        user_performance_stats['accuracy_rate'] = round(accuracy_rate, 1)
+    else:
+        user_performance_stats['accuracy_rate'] = 0
     
     # Get user performance data
     user_performance = []
@@ -104,6 +194,81 @@ def dashboard(request):
     # Get recent activity
     recent_activity = UserLog.objects.select_related('user', 'email', 'email_row').order_by('-timestamp')[:10]
     
+    # Son filtrelenmiş eşleşmeler (kullanıcı bazlı)
+    recent_matches = EmailRow.objects.filter(
+        processed_by=current_user,
+        juniper_hotel__isnull=False
+    ).select_related(
+        'juniper_hotel', 'email'
+    ).prefetch_related(
+        'juniper_rooms', 'markets'
+    ).order_by('-processed_at')[:5]
+    
+    # Sık kullanılan Juniper otelleri ve odaları (son 30 gün)
+    recent_date = timezone.now() - timedelta(days=30)
+    hotel_data = {}
+    
+    rows_with_hotel = EmailRow.objects.filter(
+        juniper_hotel__isnull=False,
+        processed_at__gte=recent_date
+    ).select_related('juniper_hotel')
+    
+    for row in rows_with_hotel:
+        hotel_id = row.juniper_hotel.id
+        hotel_name = row.juniper_hotel.juniper_hotel_name
+        
+        if hotel_id not in hotel_data:
+            hotel_data[hotel_id] = {
+                'name': hotel_name,
+                'count': 0,
+                'rooms': {}
+            }
+        
+        hotel_data[hotel_id]['count'] += 1
+        
+        # Oda verilerini topla
+        if hasattr(row, 'juniper_rooms'):
+            for room in row.juniper_rooms.all():
+                room_id = room.id
+                if room_id not in hotel_data[hotel_id]['rooms']:
+                    hotel_data[hotel_id]['rooms'][room_id] = {
+                        'name': room.juniper_room_type,
+                        'count': 0
+                    }
+                hotel_data[hotel_id]['rooms'][room_id]['count'] += 1
+    
+    # En çok kullanılan 5 oteli göster
+    top_hotels = sorted(hotel_data.values(), key=lambda x: x['count'], reverse=True)[:5]
+    
+    # Her otel için en çok kullanılan 3 oda tipini belirle
+    for hotel in top_hotels:
+        top_rooms = sorted(hotel['rooms'].values(), key=lambda x: x['count'], reverse=True)[:3]
+        hotel['top_rooms'] = top_rooms
+    
+    # Otel bazında stop/open sale istatistiği
+    hotel_sale_type_stats = (
+        EmailRow.objects.values('hotel_name', 'sale_type')
+        .annotate(count=Count('id'))
+        .order_by('-count')
+    )
+    
+    # Reddedilme istatistikleri
+    total_rows_all = EmailRow.objects.count()
+    rejected_count = EmailRow.objects.filter(status='rejected').count()
+    rejected_hotel_count = EmailRow.objects.filter(status='rejected_hotel_not_found').count()
+    rejected_room_count = EmailRow.objects.filter(status='rejected_room_not_found').count()
+    if total_rows_all > 0:
+        rejected_percent = round((rejected_count / total_rows_all) * 100, 1)
+        rejected_hotel_percent = round((rejected_hotel_count / total_rows_all) * 100, 1)
+        rejected_room_percent = round((rejected_room_count / total_rows_all) * 100, 1)
+    else:
+        rejected_percent = rejected_hotel_percent = rejected_room_percent = 0
+    # Detay tablosu için: hangi otel, hangi oda, hangi tür reddedilmiş
+    rejected_details = EmailRow.objects.filter(status__in=['rejected', 'rejected_hotel_not_found', 'rejected_room_not_found']) \
+        .values('hotel_name', 'room_type', 'status') \
+        .annotate(count=Count('id')) \
+        .order_by('-count')
+    
     # Prepare chart data
     chart_data = {
         'processing_trend': {
@@ -128,6 +293,10 @@ def dashboard(request):
         'hotel_correction': {
             'labels': [],
             'rates': []
+        },
+        'user_activity': {
+            'labels': [day['formatted_date'] for day in user_daily_activity[-14:]],  # Son 14 gün
+            'counts': [day['count'] for day in user_daily_activity[-14:]]
         }
     }
     
@@ -214,11 +383,45 @@ def dashboard(request):
         for subkey, subvalue in value.items():
             chart_data[key][subkey] = json.dumps(subvalue)
     
+    # Add Juniper market information
+    juniper_markets = JuniperMarketCode.objects.select_related('market').order_by('-created_at')[:10]
+    
+    # Add Juniper (M) email information
+    juniper_m_emails = Email.objects.filter(status='juniper_manual').order_by('-received_date')[:10]
+    
+    # Add Juniper contract information
+    juniper_contracts = JuniperContractMarket.objects.select_related('hotel', 'market').order_by('-created_at')[:10]
+    
+    # Market code distribution by market
+    market_distribution = Market.objects.annotate(
+        code_count=Count('juniper_codes')
+    ).filter(code_count__gt=0).order_by('-code_count')[:5]
+    
+    # Contract distribution by hotel
+    contract_distribution = Hotel.objects.annotate(
+        contract_count=Count('contract_markets')
+    ).filter(contract_count__gt=0).order_by('-contract_count')[:5]
+    
     context = {
         'stats': stats,
+        'personal_stats': personal_stats,
         'user_performance': user_performance,
         'recent_activity': recent_activity,
         'chart_data': chart_data,
+        'user_performance_stats': user_performance_stats,
+        'top_hotels_for_user': top_hotels_for_user,
+        'recent_matches': recent_matches,
+        'top_hotels': top_hotels,
+        'juniper_markets': juniper_markets,
+        'juniper_contracts': juniper_contracts,
+        'juniper_m_emails': juniper_m_emails,
+        'market_distribution': market_distribution,
+        'contract_distribution': contract_distribution,
+        'hotel_sale_type_stats': hotel_sale_type_stats,
+        'rejected_percent': rejected_percent,
+        'rejected_hotel_percent': rejected_hotel_percent,
+        'rejected_room_percent': rejected_room_percent,
+        'rejected_details': rejected_details,
     }
     
     return render(request, 'core/dashboard.html', context)
@@ -1044,3 +1247,12 @@ def ai_test(request):
     }
     
     return render(request, 'core/ai_test.html', context)
+
+def serve_pdf(request, filename):
+    file_path = os.path.join(settings.MEDIA_ROOT, filename)
+    if os.path.exists(file_path):
+        response = FileResponse(open(file_path, 'rb'), content_type='application/pdf')
+        response['X-Frame-Options'] = 'ALLOWALL'
+        return response
+    else:
+        raise Http404("PDF not found.")

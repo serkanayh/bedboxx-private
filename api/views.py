@@ -3,17 +3,18 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from emails.models import Email, EmailRow, UserLog, AIModel, Prompt
+from emails.models import Email, EmailRow, UserLog, AIModel, Prompt, EmailAttachment, EmailHotelMatch
 from core.models import AIPerformanceMetric
 from hotels.models import Hotel, Room, Market
 from .serializers import (
     EmailSerializer, EmailRowSerializer, HotelSerializer, 
-    RoomSerializer, MarketSerializer
+    RoomSerializer, MarketSerializer, EmailAttachmentSerializer
 )
 import json
 import logging
 from django.db.models import Q
 from difflib import SequenceMatcher
+from django.shortcuts import render
 
 # Set up logger
 logger = logging.getLogger(__name__)
@@ -161,6 +162,7 @@ class EmailListAPI(generics.ListAPIView):
         # Get query parameters
         status = self.request.query_params.get('status')
         search = self.request.query_params.get('search')
+        sort_order = self.request.query_params.get('sort', 'asc')  # Default to ascending (oldest first)
         
         # Base queryset
         queryset = Email.objects.all()
@@ -172,8 +174,11 @@ class EmailListAPI(generics.ListAPIView):
         if search:
             queryset = queryset.filter(subject__icontains=search)
         
-        # Order by received date (newest first)
-        return queryset.order_by('-received_date')
+        # Order by received date based on sort parameter
+        if sort_order == 'desc':
+            return queryset.order_by('-received_date')  # Newest first
+        else:
+            return queryset.order_by('received_date')   # Oldest first
 
 
 class EmailDetailAPI(generics.RetrieveDestroyAPIView):
@@ -477,9 +482,6 @@ def parse_email_content(request, *args, **kwargs):
     """
     if request.method == 'POST':
         data = request.data
-        email_content = data.get('email_content', '') # Prefer raw text body
-        email_html = data.get('email_html', '')
-        email_subject = data.get('email_subject', '')
         email_id = data.get('email_id')
         model_id = data.get('model_id')
         prompt_id = data.get('prompt_id')
@@ -506,6 +508,13 @@ def parse_email_content(request, *args, **kwargs):
             # Use specific prompt if provided, otherwise analyzer uses its default (Unified)
             active_prompt_content = Prompt.objects.get(pk=prompt_id).content if prompt_id else None
             
+            # Get email data from the model
+            email_obj = Email.objects.get(pk=email_id)
+            email_subject = email_obj.subject
+            email_content = email_obj.body_text
+            email_html = email_obj.body_html
+            email_sender = email_obj.sender  # Get the sender email address
+            
             if not active_model or not active_model.api_key:
                 raise ValueError("Active AI model with API key not found.")
                 
@@ -513,8 +522,8 @@ def parse_email_content(request, *args, **kwargs):
             if not analyzer.claude_client:
                  raise ConnectionError("Failed to initialize Claude client.")
                  
-            # Clean the email body (preferring HTML)
-            cleaned_body = analyzer.clean_email_body(email_html, email_content)
+            # Clean the email body (preferring HTML) - pass the sender email
+            cleaned_body = analyzer.smart_clean_email_body(email_html, email_content, sender=email_sender)
             
             if not cleaned_body:
                  raise ValueError("Email body content is empty after cleaning.")
@@ -806,3 +815,71 @@ def manual_mapping_api(request):
             {'error': str(e)},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
+
+@api_view(['GET', 'POST'])
+@permission_classes([permissions.IsAuthenticated])
+def get_email_status(request, email_id):
+    """Get or update the status of an email by ID"""
+    try:
+        email = Email.objects.get(id=email_id)
+        
+        # GET request: Return current status
+        if request.method == 'GET':
+            # Get the proper status display from model property
+            status_display = email.status_display
+            
+            # Log more details for debugging purposes
+            logger.debug(f"Email {email_id} status API response: status={email.status}, status_display={status_display}")
+            
+            return Response({
+                'status': email.status,
+                'status_display': status_display
+            })
+        
+        # POST request: Update status
+        elif request.method == 'POST':
+            # Get new status from request data
+            try:
+                data = json.loads(request.body)
+                new_status = data.get('status')
+                
+                if not new_status:
+                    return Response({'error': 'Status is required'}, status=400)
+                
+                # Validate status value
+                valid_statuses = [status[0] for status in Email.STATUS_CHOICES]
+                if new_status not in valid_statuses:
+                    return Response({'error': f'Invalid status. Valid values are: {", ".join(valid_statuses)}'}, status=400)
+                
+                # Update email status
+                email.status = new_status
+                email.processed_by = request.user
+                email.processed_at = timezone.now()
+                email.save()
+                
+                # Log the action
+                UserLog.objects.create(
+                    user=request.user,
+                    action_type='update_status',
+                    email=email,
+                    ip_address=request.META.get('REMOTE_ADDR'),
+                    details=f"Updated email status to {new_status}"
+                )
+                
+                # Get the proper status display from model property
+                status_display = email.status_display
+                
+                logger.debug(f"Email {email_id} status updated: status={new_status}, status_display={status_display}")
+                
+                return Response({
+                    'success': True,
+                    'status': email.status,
+                    'status_display': status_display
+                })
+                
+            except json.JSONDecodeError:
+                return Response({'error': 'Invalid JSON'}, status=400)
+    
+    except Email.DoesNotExist:
+        return Response({'error': 'Email not found'}, status=404)

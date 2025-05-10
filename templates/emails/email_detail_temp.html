@@ -1257,7 +1257,7 @@ Rezervasyon Departmanı
             // Perform selected action
             if (selectedAction === 'juniper') {
                 // Open Juniper in new tab
-                window.open(document.querySelector('.juniper-link-btn').href, '_blank');
+                window.location.href = document.querySelector('.juniper-link-btn').href;
                 
                 // Add to history
                 addHistoryEntry('Admin User', 'Juniper\'e Gönderildi', 'Veriler Juniper sistemine gönderildi');

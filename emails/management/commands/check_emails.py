@@ -5,6 +5,7 @@ import datetime
 import logging
 import mimetypes
 import uuid
+import hashlib
 from email.header import decode_header
 from django.core.management.base import BaseCommand
 from django.utils import timezone
@@ -12,7 +13,6 @@ from django.db import transaction
 from django.core.files.base import ContentFile
 from core.models import EmailConfiguration
 from emails.models import Email, EmailRow, EmailAttachment
-import time
 
 # --- Import for text extraction ---
 try:
@@ -79,10 +79,55 @@ class Command(BaseCommand):
             # Login
             mail.login(config.imap_username, config.imap_password)
             
-            # Select mailbox
-            mail.select(config.imap_folder)
+            # Check if we're connecting to Gmail
+            is_gmail = 'gmail' in config.imap_host.lower()
             
-            # Search for unseen emails
+            # List available mailboxes/labels for reference and find label match
+            self.stdout.write("Available mailboxes/labels:")
+            status, mailboxes = mail.list()
+            
+            # Variables to store info about available labels
+            available_mailboxes = []
+            found_label_mailbox = None
+            
+            # Safely get imap_label - handle case where it might not exist in older configs
+            imap_label = getattr(config, 'imap_label', None)
+            
+            if status == 'OK':
+                for mailbox in mailboxes:
+                    mailbox_str = mailbox.decode()
+                    self.stdout.write(f"  {mailbox_str}")
+                    available_mailboxes.append(mailbox_str)
+                    
+                    # Check if this mailbox matches our label
+                    if imap_label and imap_label.lower() in mailbox_str.lower():
+                        # Extract the actual mailbox name from the response
+                        # Format is typically: (flags) "/" "mailbox_name"
+                        # We want the mailbox_name part
+                        parts = mailbox_str.split('"')
+                        if len(parts) >= 2:
+                            found_label_mailbox = parts[-2]  # Get the mailbox name
+                            self.stdout.write(self.style.SUCCESS(f"Found matching mailbox for label '{imap_label}': {found_label_mailbox}"))
+            
+            # Decide which mailbox to select based on configuration and available mailboxes
+            selected_mailbox = config.imap_folder  # Default
+            
+            if imap_label and found_label_mailbox:
+                selected_mailbox = found_label_mailbox
+                self.stdout.write(f"Using mailbox that matches label: {selected_mailbox}")
+            
+            # Select the appropriate mailbox
+            self.stdout.write(f"Selecting mailbox: {selected_mailbox}")
+            status, _ = mail.select(selected_mailbox)
+            
+            if status != 'OK':
+                self.stdout.write(self.style.ERROR(f"Could not select mailbox: {selected_mailbox}"))
+                # Fall back to the default
+                self.stdout.write(f"Falling back to default mailbox: {config.imap_folder}")
+                mail.select(config.imap_folder)
+            
+            # Search for unseen emails in the selected mailbox
+            self.stdout.write(f"Searching for unseen emails in mailbox: {selected_mailbox}")
             status, messages = mail.search(None, 'UNSEEN')
             
             if status != 'OK':
@@ -183,73 +228,79 @@ class Command(BaseCommand):
             message_id = f"generated-{uuid.uuid4()}"
             logger.warning(f"[WARNING] Email missing Message-ID. Generated fallback ID: {message_id}")
 
-        # İlk olarak, bu message_id'ye sahip bir e-posta olup olmadığını kontrol et
-        if Email.objects.filter(message_id=message_id).exists():
-            self.stdout.write(f"[SKIP] Duplicate email detected: {message_id}")
-            logger.info(f"[SKIP] Duplicate email detected: {message_id}")
-            return False  # Indicate that the email was not processed
-
         try:
-            # Temel e-posta bilgilerini hazırla
+            # Extract headers
             subject = self.decode_email_header(email_message['Subject'])
             sender = self.decode_email_header(email_message['From'])
             recipient = self.decode_email_header(email_message['To'])
 
-            # Tarihi ayarla
+            # Extract date
             date_str = email_message['Date']
             if date_str:
                 try:
+                    # Parse the date
                     received_date = email.utils.parsedate_to_datetime(date_str)
                 except Exception:
                     received_date = timezone.now()
             else:
                 received_date = timezone.now()
-
-            # E-posta gövdesini çıkar
+                
+            # Extract body first to use for content hash
             body_text, body_html = self.get_email_body(email_message)
+            
+            # Create a content hash from subject and body to detect similar emails
+            content_to_hash = f"{subject}{body_text}"
+            content_hash = hashlib.md5(content_to_hash.encode('utf-8')).hexdigest()
 
-            # Ekleri İŞLEME - Önce ekleri hazırlayıp sonra e-postayı oluşturacağız
-            attachment_data = []  # attachment verilerini depolayacak liste
-            has_attachments = False
+            # Check if email already exists by message_id (primary check)
+            if Email.objects.filter(message_id=message_id).exists():
+                self.stdout.write(f"[SKIP] Duplicate email detected by Message-ID: {subject} (Message-ID: {message_id})")
+                logger.info(f"[SKIP] Duplicate email detected by Message-ID: {subject} (Message-ID: {message_id})")
+                return False  # Indicate that the email was not processed
             
-            if email_message.is_multipart():
-                for part in email_message.walk():
-                    content_disposition = str(part.get("Content-Disposition"))
-                    
-                    # Sadece ekleri işle
-                    if "attachment" not in content_disposition:
-                        continue
-                        
-                    # Dosya adını çıkar
-                    filename = part.get_filename()
-                    if not filename:
-                        # Dosya adı yoksa, üret
-                        ext = mimetypes.guess_extension(part.get_content_type())
-                        if not ext:
-                            ext = '.bin'  # Varsayılan uzantı
-                        filename = f'attachment-{uuid.uuid4().hex}{ext}'
-                    
-                    # Dosya adını temizle
-                    filename = os.path.basename(filename)
-                    
-                    # İçeriği al
-                    payload = part.get_payload(decode=True)
-                    if not payload:
-                        logger.warning(f"Empty attachment payload for {filename} in email: {message_id}")
-                        continue
-                    
-                    # Ek verilerini listeye ekle
-                    attachment_data.append({
-                        'filename': filename,
-                        'content_type': part.get_content_type(),
-                        'size': len(payload) if payload else 0,
-                        'payload': payload
-                    })
-                    
-                    has_attachments = True
+            # Secondary check by subject, sender and date (within a 10-minute window)
+            # This catches forwarded emails or emails with regenerated Message-IDs
+            ten_minutes = timezone.timedelta(minutes=10)
+            date_min = received_date - ten_minutes
+            date_max = received_date + ten_minutes
             
-            # ÖNEMLİ DEĞİŞİKLİK: İşlem sırasını değiştirdik - önce email objesi oluştur, sonra attachments, sonra da güncelle
-            # E-posta nesnesini oluştur ama sinyaller tetiklenmemesi için has_attachments=False ile başlat
+            # Check for very similar emails
+            similar_emails = Email.objects.filter(
+                subject=subject,
+                sender=sender,
+                received_date__gte=date_min,
+                received_date__lte=date_max
+            )
+            
+            if similar_emails.exists():
+                # Log more details for the admin
+                similar_count = similar_emails.count()
+                similar_list = ", ".join([f"ID: {e.id}, Date: {e.received_date}" for e in similar_emails[:3]])
+                
+                self.stdout.write(f"[SKIP] Similar email(s) detected: {subject} - Found {similar_count} similar email(s): {similar_list}")
+                logger.info(f"[SKIP] Similar email(s) detected: {subject} - Found {similar_count} similar email(s): {similar_list}")
+                return False  # Indicate that the email was not processed
+                
+            # Third check: Examine recently processed emails for similar content
+            # This can catch emails that were forwarded from different senders/dates
+            # but contain the same essential content
+            one_day_ago = timezone.now() - timezone.timedelta(days=1)
+            
+            # Check if there's a similar email with the same content in the last day
+            # We only check recent emails to avoid performance issues with larger databases
+            recent_emails = Email.objects.filter(created_at__gte=one_day_ago)
+            
+            for recent_email in recent_emails:
+                recent_content = f"{recent_email.subject}{recent_email.body_text}"
+                recent_hash = hashlib.md5(recent_content.encode('utf-8')).hexdigest()
+                
+                # If content is very similar (we can adjust the comparison as needed)
+                if content_hash == recent_hash:
+                    self.stdout.write(f"[SKIP] Email with identical content detected: {subject} matches ID: {recent_email.id}")
+                    logger.info(f"[SKIP] Email with identical content detected: {subject} matches ID: {recent_email.id}")
+                    return False  # Indicate that the email was not processed
+
+            # Create email object
             email_obj = Email.objects.create(
                 subject=subject,
                 sender=sender,
@@ -259,65 +310,85 @@ class Command(BaseCommand):
                 body_text=body_text,
                 body_html=body_html,
                 status='pending',
-                has_attachments=False  # Başlangıçta FALSE olarak ayarla, böylece auto_analyze_email sinyali tetiklenmez
+                has_attachments=False  # Will be updated if attachments are found
             )
-            
-            # Ekleri oluştur ve kaydet
-            attachment_count = 0
-            with transaction.atomic():
-                for attach_data in attachment_data:
-                    try:
-                        # Ek nesnesini oluştur
-                        attachment = EmailAttachment(
-                            email=email_obj,
-                            filename=attach_data['filename'],
-                            content_type=attach_data['content_type'],
-                            size=attach_data['size']
-                        )
-                        
-                        # Dosyayı kaydet
-                        content_file = ContentFile(attach_data['payload'])
-                        attachment.file.save(attach_data['filename'], content_file, save=True)
-                        
-                        # Başarıyı logla
-                        logger.info(f"Saved attachment: {attach_data['filename']} for email: {message_id}")
-                        attachment_count += 1
-                        
-                    except Exception as attach_err:
-                        logger.error(f"Error saving attachment {attach_data['filename']}: {str(attach_err)}", exc_info=True)
-            
-            # Tüm ekler kaydedildikten sonra email.has_attachments'i güncelle
-            if attachment_count > 0:
-                email_obj.has_attachments = True
-                email_obj.save(update_fields=['has_attachments', 'updated_at'])
-                self.stdout.write(f"Saved {attachment_count} attachment(s) for email: {subject}")
-                
-                # Veritabanına değişikliklerin yazılması için commit'i zorla
-                transaction.commit()
-                
-                # Kısa bir bekleme ekle (opsiyonel)
-                time.sleep(0.5)
 
-            # Son olarak, AI analizi tetiklemek için status'u güncelleyerek auto_analyze_email sinyalini zorlayalım
-            # Bu noktada has_attachments değeri doğru ve ekler tam kaydedilmiş durumda
-            email_obj.refresh_from_db()  # Güncel verileri al
-            logger.info(f"FINAL EMAIL STATE: Email {email_obj.id} has has_attachments={email_obj.has_attachments}, real attachment count={email_obj.attachments.count()}")
-            
-            # AI analizi için bir sinyal tetikle
-            # (has_attachments doğru olduğunda, auto_analyze_email ekleri doğru işleyecek)
-            if email_obj.status == 'pending':  # Sadece ilk kez için
-                email_obj.status = 'pending_analysis'  # Farklı bir durum belirterek güncelleme yapalım
-                email_obj.save(update_fields=['status', 'updated_at'])
-                logger.info(f"Triggered AI analysis for email {email_obj.id} with has_attachments={email_obj.has_attachments}")
-            
-            # E-posta nesnesini döndür
-            logger.info("Email processing logic completed successfully.")
+            try:
+                # Process attachments
+                has_attachments = False
+                attachment_count = 0
+                
+                if email_message.is_multipart():
+                    for part in email_message.walk():
+                        content_disposition = str(part.get("Content-Disposition"))
+                        
+                        # Process only attachments
+                        if "attachment" not in content_disposition:
+                            continue
+                            
+                        # Extract attachment filename
+                        filename = part.get_filename()
+                        if not filename:
+                            # Generate a filename if none is provided
+                            ext = mimetypes.guess_extension(part.get_content_type())
+                            if not ext:
+                                ext = '.bin'  # Default extension
+                            filename = f'attachment-{uuid.uuid4().hex}{ext}'
+                        
+                        # Clean up the filename
+                        filename = os.path.basename(filename)
+                        
+                        # Get attachment content
+                        payload = part.get_payload(decode=True)
+                        if not payload:
+                            logger.warning(f"Empty attachment payload for {filename} in email: {message_id}")
+                            continue
+                        
+                        try:
+                            # Extract Content-ID if present
+                            content_id = part.get('Content-ID', '')
+                            if content_id:
+                                # Remove angle brackets if present
+                                content_id = content_id.strip('<>')
+                            
+                            # Create attachment object
+                            attachment = EmailAttachment(
+                                email=email_obj,
+                                filename=filename,
+                                content_type=part.get_content_type(),
+                                size=len(payload) if payload else 0,
+                                content_id=content_id  # Store the Content-ID
+                            )
+                            
+                            # Save attachment file
+                            content_file = ContentFile(payload)
+                            attachment.file.save(filename, content_file, save=True)
+                            
+                            # Log success
+                            logger.info(f"Saved attachment: {filename} for email: {message_id}")
+                            attachment_count += 1
+                            has_attachments = True
+                            
+                        except Exception as attach_err:
+                            logger.error(f"Error saving attachment {filename}: {str(attach_err)}", exc_info=True)
+                
+                # Update email has_attachments flag if attachments were found
+                if has_attachments:
+                    email_obj.has_attachments = True
+                    email_obj.save(update_fields=['has_attachments'])
+                    self.stdout.write(f"Saved {attachment_count} attachment(s) for email: {subject}")
+                
+            except Exception as e:
+                logger.error(f"An error occurred: {e}", exc_info=True)
+                self.stdout.write(self.style.ERROR(f"Error during email processing: {str(e)}"))
+            finally:
+                logger.info("Processing logic completed.")
+                
             return email_obj
             
         except Exception as e:
             logger.error(f"An error occurred: {e}", exc_info=True)
             self.stdout.write(self.style.ERROR(f"Error during email processing: {str(e)}"))
-            return None
     
     def decode_email_header(self, header):
         """Decode email header"""

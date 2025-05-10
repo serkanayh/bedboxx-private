@@ -12,6 +12,8 @@ urlpatterns = [
     path('attachment/<int:attachment_id>/', views.email_attachment_view, name='email_attachment_view'),
     path('row/<int:row_id>/approve/', views.approve_row, name='approve_row'),
     path('row/<int:row_id>/reject/', views.reject_row, name='reject_row'),
+    path('row/<int:row_id>/reject-hotel-not-found/', views.reject_row_hotel_not_found, name='reject_row_hotel_not_found'),
+    path('row/<int:row_id>/reject-room-not-found/', views.reject_row_room_not_found, name='reject_row_room_not_found'),
     path('row/<int:row_id>/send-to-robot/', views.send_to_robot, name='send_to_robot'),
     path('row/<int:row_id>/match-hotel/', views.match_hotel, name='match_hotel'),
     path('row/<int:row_id>/match-room/', views.match_room, name='match_room'),
@@ -30,5 +32,29 @@ urlpatterns = [
     # Bulk action endpoints
     path('bulk_action/approve/', views.email_bulk_approve, name='email_bulk_approve'),
     path('bulk_action/reject/', views.email_bulk_reject, name='email_bulk_reject'),
+    path('bulk_action/reject-hotel-not-found/', views.email_bulk_reject_hotel_not_found, name='email_bulk_reject_hotel_not_found'),
+    path('bulk_action/reject-room-not-found/', views.email_bulk_reject_room_not_found, name='email_bulk_reject_room_not_found'),
     path('bulk_action/delete/', views.email_bulk_delete, name='email_bulk_delete'),
+    
+    # Bulk actions for rows (rules)
+    path('bulk_action_rows/<str:action>/', views.bulk_action_rows, name='bulk_action_rows'),
+    
+    # Single email approve/reject
+    path('<int:email_id>/approve/', views.approve_email, name='approve_email'),
+    path('<int:email_id>/reject/', views.reject_email, name='reject_email'),
+    path('<int:email_id>/reject-hotel-not-found/', views.reject_email_hotel_not_found, name='reject_email_hotel_not_found'),
+    path('<int:email_id>/reject-room-not-found/', views.reject_email_room_not_found, name='reject_email_room_not_found'),
+    
+    # Mark as processed in Juniper
+    path('<int:email_id>/mark-juniper-manual/', views.mark_email_juniper_manual, name='mark_email_juniper_manual'),
+    path('<int:email_id>/mark-juniper-robot/', views.mark_email_juniper_robot, name='mark_email_juniper_robot'),
+    
+    # AI suggestions
+    path('apply_suggestion/<int:row_id>/', views.apply_suggestion, name='apply_suggestion'),
+    
+    # Real-time email notification API endpoint
+    path('api/check-new-emails/', views.check_new_emails_api, name='check_new_emails_api'),
+    
+    # Attachment download
+    path('attachment/<int:attachment_id>/download/', views.download_attachment, name='download_attachment'),
 ]

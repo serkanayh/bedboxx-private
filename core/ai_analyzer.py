@@ -2,6 +2,7 @@ import json
 import re
 import anthropic
 import logging
+import difflib  # Eklendi: email analizi için metin benzerliği hesaplama
 from typing import Dict, Any, List, Optional, Union, Tuple
 from django.conf import settings
 from datetime import datetime, date, timedelta
@@ -31,61 +32,7 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
-# --- Unified System Prompt --- 
-UNIFIED_SYSTEM_PROMPT = """
-You are an AI analyzing email content to extract hotel stop/open sale rules.
-The user will provide the email content structured like this:
-SUBJECT: <Email Subject Here>
-BODY:
-<Cleaned Email Body Here>
-
-Your primary goal is to return a JSON list of rule objects based on the SUBJECT and BODY provided.
-
-**EXTREMELY IMPORTANT RULES FOR HOTEL NAME:**
-1. **USE THE SUBJECT LINE FIRST** to identify the hotel name. The subject often follows patterns like "<Hotel Name> STOP SALE" or "STOP SALE: <Hotel Name>". Extract ONLY the actual hotel name, not the entire subject.
-2. **If no clear hotel name is found in the subject**, THEN look in the BODY (e.g., near company signatures, headers, or letterhead).
-3. **USE THE SAME HOTEL NAME FOR ALL RULES** unless there is explicit indication of multiple hotels.
-4. **NEVER use room type codes as hotel names** (e.g., don't use codes like "DROOF", "DLV", "DSEA", "DLAGE" as hotel names).
-5. **WATCH FOR SIGNATURES at the end of emails** which often contain the official hotel name.
-
-For each rule found, extract:
-- hotel_name: The name of the hotel following the critical rules above.
-- room_type: Specific room type or 'All Room' (for general terms like 'all rooms', 'tüm odalar').
-- markets: List of markets, or ["ALL"] if unspecified.
-- start_date: YYYY-MM-DD format.
-- end_date: YYYY-MM-DD format. (Use start_date if only one date given).
-- sale_status: 'stop' or 'open'.
-
-ADDITIONAL INSTRUCTIONS:
-- If the BODY looks like a table/list from an attachment, treat each row/item as a separate rule.
-- ALWAYS format dates as YYYY-MM-DD. Assume current year if missing.
-- Output ONLY the valid JSON list. No extra text, explanations, or markdown.
-
-Example JSON Output:
-```json
-[
-  {
-    "hotel_name": "Example Hotel Name",
-    "room_type": "Standard Room",
-    "markets": ["UK", "DE"],
-    "start_date": "2025-05-10",
-    "end_date": "2025-05-15",
-    "sale_status": "stop"
-  },
-  {
-    "hotel_name": "Example Hotel Name",
-    "room_type": "All Room",
-    "markets": ["ALL"],
-    "start_date": "2025-06-01",
-    "end_date": "2025-06-01",
-    "sale_status": "open"
-  }
-]
-```
-
-Now, analyze the following structured content:
-"""
-# --- End Unified System Prompt --- 
+# Sabit prompt tamamen kaldırıldı. Artık veritabanından yüklenecek
 
 
 class ClaudeAnalyzer:
@@ -100,7 +47,28 @@ class ClaudeAnalyzer:
         Initialize the analyzer with API credentials and a system prompt
         """
         self.api_key = api_key or getattr(settings, 'ANTHROPIC_API_KEY', '')
-        self.system_prompt = prompt or UNIFIED_SYSTEM_PROMPT # Use unified prompt
+        
+        # Eğer prompt parametre olarak verilmezse, veritabanından yükle
+        if prompt is not None:
+            # Direkt olarak verilen prompt içeriğini kullan
+            self.system_prompt = prompt
+        else:
+            # Veritabanından aktif prompt'u yüklemeye çalış
+            try:
+                from emails.models import Prompt
+                active_prompt = Prompt.objects.filter(active=True).first()
+                if active_prompt:
+                    self.system_prompt = active_prompt.content
+                    logger.info(f"Using active prompt from database: {active_prompt.title}")
+                else:
+                    logger.error("No active prompt found in database.")
+                    self.system_prompt = ""
+            except Exception as e:
+                logger.error(f"Error loading prompt from database: {str(e)}")
+                self.system_prompt = ""
+                
+        if not self.system_prompt:
+            logger.error("No system prompt available. Analysis will likely fail.")
         
         # Configure Anthropic client
         try:
@@ -252,7 +220,8 @@ class ClaudeAnalyzer:
     
     # --- Email Body Cleaning --- 
     def clean_email_body(self, email_html: str, email_text: str) -> str:
-        """Cleans email content, preferring HTML if available."""
+        """Cleans email content, preferring HTML if available. 
+        Enhanced to preserve table structures and date formats."""
         content_to_clean = email_html if email_html else email_text
         if not content_to_clean:
             return ""
@@ -270,9 +239,8 @@ class ClaudeAnalyzer:
                     element.extract()
 
                 # Define common reply/forward markers
-                REPLY_FORWARD_MARKERS_REGEX = r'(from:|sent:|to:|subject:|date:|cc:|bcc:|forwarded message|original message|begin forwarded message|on .* wrote:)'
+                REPLY_FORWARD_MARKERS_REGEX = r'(from:|sent:|to:|subject:|cc:|bcc:|forwarded message|original message|begin forwarded message|on .* wrote:)'
                 
-                # --- NEW "Last Marker" Logic ---
                 # Find ALL markers in the email content
                 marker_elements = []
                 
@@ -282,118 +250,226 @@ class ClaudeAnalyzer:
                     if parent:
                         marker_elements.append(parent)
                 
-                # Also search style attributes that might indicate a quote separator
-                quote_style_pattern = r'border-left:solid|border-left: solid|border-top:solid|border-top: solid'
-                for element in soup.find_all(attrs={"style": re.compile(quote_style_pattern, re.IGNORECASE)}):
-                    marker_elements.append(element)
-                
-                # Also check for common separator div IDs used by email clients
-                for element in soup.find_all(id=re.compile(r'divRplyFwdMsg|mailRplyFwd|mailQuote', re.IGNORECASE)):
-                    marker_elements.append(element)
-                
-                # Find the last marker in document order (if any exist)
-                last_marker_element = None
                 if marker_elements:
-                    # Convert to a list of tag indices to find the last one in document order
-                    all_tags = list(soup.find_all())
-                    marker_indices = [(all_tags.index(elem) if elem in all_tags else -1) for elem in marker_elements]
-                    valid_indices = [idx for idx in marker_indices if idx >= 0]
+                    # Find the first marker element
+                    first_marker = marker_elements[0]
+                    logger.info(f"Found first marker element: {first_marker.name}")
                     
-                    if valid_indices:
-                        last_marker_idx = max(valid_indices)
-                        last_marker_element = all_tags[last_marker_idx]
-                        
-                        logger.info(f"Found last email marker element: {last_marker_element.name}")
-                        
-                        # Get all elements that follow the last marker in document order
-                        nodes_to_remove = [last_marker_element] + list(last_marker_element.find_all_next())
-                        
-                        # Remove all the identified elements
-                        for node in nodes_to_remove:
-                            node.decompose()
-                        
-                        logger.info(f"Removed last marker and {len(nodes_to_remove)-1} subsequent elements")
-                
-                # --- End NEW Logic ---
+                    # --- IMPORTANT CHANGE: Don't remove tables before the last marker ---
+                    # Instead of removing everything after the marker, extract only the content before the marker
+                    # but preserve tables with date information
                     
-                # Remove common footer/disclaimer patterns more aggressively
-                # (Add more patterns specific to your emails if needed)
-                footer_patterns = [
-                    r'confidentiality notice',
-                    r'legal disclaimer',
-                    r'unsubscribe',
-                    r'view in browser',
-                    r'sent from my iphone', 
-                    r'sent from mobile',
-                    r'powered by',
-                    r'follow us on',
-                    # Add regex patterns for specific signatures if identifiable
-                ]
-                for pattern in footer_patterns:
-                    for element in soup.find_all(string=re.compile(pattern, re.IGNORECASE | re.DOTALL)):
-                         # Try removing parent or grandparent elements if they seem like footers
-                         parent = element.find_parent()
-                         if parent and len(parent.get_text(strip=True)) < 300: # Heuristic: shorter elements are more likely footers
-                              parent.extract()
-                         elif parent and parent.find_parent() and len(parent.find_parent().get_text(strip=True)) < 300:
-                              parent.find_parent().extract()
+                    # Check if there are any tables in the email
+                    tables = soup.find_all('table')
+                    tables_with_date = []
+                    
+                    # Look for tables containing date information (especially 'Tek Gece' or 'One Night')
+                    date_patterns = ['Tek Gece', 'One Night', 'Single Day', r'\d{2}\.\d{2}\.\d{4}', r'\d{2}/\d{2}/\d{4}']
+                    for table in tables:
+                        table_text = table.get_text()
+                        if any(re.search(pattern, table_text, re.IGNORECASE) for pattern in date_patterns):
+                            tables_with_date.append(table)
+                            logger.info(f"Found table with date information: {table_text[:100]}...")
+                    
+                    # Extract content before the marker
+                    content_before_marker = []
+                    for element in first_marker.previous_siblings:
+                        content_before_marker.append(str(element))
+                    content_before_marker.reverse()  # Reverse to get correct order
+                    
+                    # Add the content from important tables
+                    table_content = []
+                    for table in tables_with_date:
+                        # Only keep tables that are not already in content_before_marker
+                        if str(table) not in ''.join(content_before_marker):
+                            table_content.append(str(table))
+                            logger.info(f"Adding date table to content: {str(table)[:100]}...")
+                    
+                    # Combine content
+                    combined_html = ''.join(content_before_marker) + ''.join(table_content)
+                    
+                    # Create a new soup from the combined content
+                    new_soup = BeautifulSoup(combined_html, 'html.parser')
+                    cleaned_content = new_soup.get_text(separator=' ', strip=True)
+                else:
+                    # No markers found, use the whole content
+                    cleaned_content = soup.get_text(separator=' ', strip=True)
                 
-                # Special handling for tables (convert to text representation)
-                for table in soup.find_all('table'):
-                    table_text = "\n--- TABLE START ---\n"
-                    try:
-                        for row in table.find_all('tr'):
-                            row_text = []
-                            for cell in row.find_all(['td', 'th']):
-                                cell_text = ' '.join(cell.get_text(strip=True, separator=' ').split())
-                                row_text.append(cell_text)
-                            table_text += " | ".join(row_text) + "\n"
-                        table_text += "--- TABLE END ---\n"
-                        # Replace table with text version
-                        table.replace_with(BeautifulSoup(table_text, 'html.parser')) 
-                    except Exception as table_err:
-                         logger.warning(f"Error processing table in email body: {table_err}")
-                         table_text += "--- TABLE PARSE ERROR ---\n"
-                         table.replace_with(BeautifulSoup(table_text, 'html.parser'))
-                         
-                # Get text, trying to preserve some structure
-                cleaned_content = soup.get_text(separator='\n', strip=True)
-                
-                # Final check: If cleaning resulted in empty content but original wasn't empty
-                if not cleaned_content.strip() and content_to_clean.strip():
-                    logger.warning("HTML cleaning resulted in empty content. Returning original content.")
-                    return content_to_clean
+                # --- SPECIAL HANDLING FOR TABLES WITH DATES ---
+                # Add special table annotation for better AI processing
+                if tables_with_date:
+                    # Extract actual table content in a more structured format for AI
+                    structured_tables = []
+                    for table in tables_with_date:
+                        rows = table.find_all('tr')
+                        table_data = []
+                        for row in rows:
+                            cols = row.find_all(['td', 'th'])
+                            if cols:  # Skip empty rows
+                                row_data = [col.get_text(strip=True) for col in cols]
+                                # Filter out empty cells
+                                row_data = [cell for cell in row_data if cell]
+                                if row_data:  # Only add non-empty rows
+                                    table_data.append(' | '.join(row_data))
+                        
+                        if table_data:
+                            structured_table = "\n--------TABLE:--------\n" + "\n".join(table_data)
+                            structured_tables.append(structured_table)
+                    
+                    # Append structured tables to cleaned content
+                    if structured_tables:
+                        cleaned_content += "\n\n" + "\n\n".join(structured_tables)
+                        logger.info(f"Added {len(structured_tables)} structured tables to content")
                 
             except Exception as e:
-                logger.error(f"Error cleaning HTML email body: {e}. Falling back to text body.", exc_info=True)
-                # Fallback to text cleaning if HTML fails
-                cleaned_content = self._clean_plain_text(email_text)
+                logger.error(f"Error cleaning HTML email: {e}", exc_info=True)
+                # Fallback to plain text
+                cleaned_content = self._clean_plain_text(email_text if email_text else email_html)
         else:
+            # Plain text cleaning
              cleaned_content = self._clean_plain_text(content_to_clean)
         
-        # Final whitespace cleanup
-        cleaned_content = re.sub(r'\n{3,}', '\n\n', cleaned_content) # Limit consecutive newlines
-        cleaned_content = re.sub(r'[ \t]{2,}', ' ', cleaned_content) # Replace multiple spaces/tabs with one
+        # Ensure any content with "Tek Gece" or "One Night" is preserved
+        special_date_patterns = [
+            (r'(\d{2}\.\d{2}\.\d{4})\s*\(Tek Gece\)', r'\1 (Tek Gece)'),
+            (r'(\d{2}\.\d{2}\.\d{4})\s*\(One Night\)', r'\1 (One Night)'),
+            (r'(\d{2}/\d{2}/\d{4})\s*\(Tek Gece\)', r'\1 (Tek Gece)'),
+            (r'(\d{2}/\d{2}/\d{4})\s*\(One Night\)', r'\1 (One Night)'),
+        ]
         
-        return cleaned_content.strip()
+        # Search for these patterns in the original content
+        special_dates = []
+        for pattern, _ in special_date_patterns:
+            matches = re.findall(pattern, content_to_clean, re.IGNORECASE)
+            special_dates.extend(matches)
+        
+        # If special dates found but not in cleaned content, explicitly add them
+        if special_dates and not any(date in cleaned_content for date in special_dates):
+            special_date_section = "\n\nSPECIAL DATES SECTION:\n"
+            for date in special_dates:
+                special_date_section += f"{date} (Tek Gece / One Night)\n"
+            cleaned_content += special_date_section
+            logger.info(f"Added special dates section with: {special_dates}")
+        
+        logger.debug(f"Cleaned email content: {cleaned_content[:500]}...")
+        return cleaned_content
     
     def _clean_plain_text(self, text_content: str) -> str:
-        """Basic cleaning for plain text content."""
+        """Cleans plain text email content, enhanced to preserve date formats."""
         if not text_content:
              return ""
-        # Add basic cleaning rules if needed (e.g., remove common reply headers)
-        lines = text_content.splitlines()
-        cleaned_lines = []
-        skip_patterns = [r'^>+', r'^On.*wrote:$', r'^From:.*$', r'^Sent:.*$', r'^To:.*$', r'^Subject:.*$']
-        for line in lines:
-             line_stripped = line.strip()
-             if not any(re.match(p, line_stripped, re.IGNORECASE) for p in skip_patterns):
-                  cleaned_lines.append(line_stripped)
-                  
-        cleaned_text = '\n'.join(cleaned_lines)
-        # Remove excessive whitespace/newlines (apply again)
-        cleaned_text = re.sub(r'\n{3,}', '\n\n', cleaned_text)
-        cleaned_text = re.sub(r'[ \t]{2,}', ' ', cleaned_text)
+            
+        # Replace multiple newlines with a single newline
+        cleaned_text = re.sub(r'\n{3,}', '\n\n', text_content)
+        
+        # Try to identify and remove quoted content
+        quote_markers = [
+            r'^>.*$',  # Basic quoting ">"
+            r'^On .* wrote:.*$',  # "On DATE, NAME wrote:"
+            r'^From:.*$',  # Email headers in quotes
+            r'^Sent:.*$',
+            r'^To:.*$',
+            r'^Subject:.*$'
+        ]
+        
+        # Only apply quote removal if we've identified proper sections
+        # Don't blindly remove text matching these patterns from the body
+        quote_pattern = '|'.join(f'({m})' for m in quote_markers)
+        quote_lines = [line for line in cleaned_text.split('\n') if re.match(quote_pattern, line.strip(), re.IGNORECASE)]
+        
+        # Only apply quote removal if we have confirmed quote lines
+        if quote_lines and len(quote_lines) > 3:  # Heuristic: at least 3 confirmed quote lines
+            # Try to split at the first quote marker
+            quote_split_pattern = re.compile(f"({quote_pattern})", re.MULTILINE | re.IGNORECASE)
+            match = quote_split_pattern.search(cleaned_text)
+            if match:
+                # Take only the content before the quote
+                cleaned_text = cleaned_text[:match.start()]
+        
+        # Preserve any tables, especially those with dates
+        # Look for patterns that might indicate tabular data
+        table_markers = [
+            "OTEL/HOTEL", "TARİH/DATE", "ODA TİPİ/ROOM TYPE", "PAZARI/MARKET",  # Common headers
+            r"\d{2}\.\d{2}\.\d{4}", r"\d{2}/\d{2}/\d{4}",  # Date formats
+            "Tek Gece", "One Night"  # Special date indicators
+        ]
+        
+        # Extract potential tables
+        lines = cleaned_text.split('\n')
+        potential_table_lines = []
+        in_potential_table = False
+        table_start_index = 0
+        
+        for i, line in enumerate(lines):
+            # Check if line contains table markers
+            if any(re.search(marker, line, re.IGNORECASE) for marker in table_markers):
+                if not in_potential_table:
+                    in_potential_table = True
+                    table_start_index = i
+            # End of table detection: empty line after table data
+            elif in_potential_table and not line.strip():
+                # Save this potential table section
+                table_section = lines[table_start_index:i]
+                if len(table_section) >= 2:  # At least two lines to be considered a table
+                    potential_table_lines.extend(table_section)
+                in_potential_table = False
+        
+        # If in_potential_table is still True at the end, include the last section
+        if in_potential_table:
+            potential_table_lines.extend(lines[table_start_index:])
+        
+        # Format identified table sections
+        if potential_table_lines:
+            formatted_tables = []
+            current_table = []
+            
+            for line in potential_table_lines:
+                current_table.append(line)
+                # New table starts with an empty line
+                if not line.strip() and current_table:
+                    if len(current_table) > 1:  # Minimum 2 lines for a table
+                        formatted_tables.append("\n".join(current_table))
+                    current_table = []
+            
+            # Add any remaining table
+            if current_table and len(current_table) > 1:
+                formatted_tables.append("\n".join(current_table))
+            
+            # Create a special table section
+            if formatted_tables:
+                table_section = "\n\n--------TABLE:--------\n" + "\n".join(formatted_tables)
+                
+                # Check if we need to add this section (might already be in the text)
+                if table_section.strip() not in cleaned_text:
+                    cleaned_text += f"\n\n{table_section}"
+                    logger.info(f"Added formatted table section from plain text")
+        
+        # Special handling for date formats with "Tek Gece" or "One Night"
+        date_patterns = [
+            r'(\d{2}\.\d{2}\.\d{4})\s*\(Tek Gece\s*//?\s*One Night\)',
+            r'(\d{2}\.\d{2}\.\d{4})\s*\(Tek Gece\)',
+            r'(\d{2}\.\d{2}\.\d{4})\s*\(One Night\)',
+            r'(\d{2}/\d{2}/\d{4})\s*\(Tek Gece\)',
+            r'(\d{2}/\d{2}/\d{4})\s*\(One Night\)'
+        ]
+        
+        # Check if any special date formats exist in the text
+        special_dates = []
+        for pattern in date_patterns:
+            matches = re.findall(pattern, cleaned_text, re.IGNORECASE)
+            special_dates.extend(matches)
+        
+        # If special dates found, add a dedicated section to make sure AI recognizes them
+        if special_dates:
+            special_date_section = "\n\nSPECIAL DATES SECTION:\n"
+            for date in special_dates:
+                special_date_section += f"{date} (Tek Gece / One Night)\n"
+            
+            # Check if this section needs to be added
+            if special_date_section not in cleaned_text:
+                cleaned_text += special_date_section
+                logger.info(f"Added special dates section in plain text: {special_dates}")
+        
         return cleaned_text.strip()
         
     # --- Main AI Analysis Method --- 
@@ -418,6 +494,9 @@ class ClaudeAnalyzer:
              logger.warning("No text content provided for analysis.")
              result_template['error'] = 'No content provided'
              return result_template
+        
+        # Store the context subject for potential fallback use
+        self.last_subject = context_subject
              
         # Limit content size before sending to AI
         max_chars = 150000 # Adjust based on typical token limits and safety margin
@@ -442,9 +521,29 @@ class ClaudeAnalyzer:
                     if hasattr(block, 'text'):
                         raw_response += block.text
             
+            # Store the raw response globally for the instance to help fallback mechanisms
+            self.last_raw_response = raw_response
+            
             result_template['raw_ai_response'] = raw_response
             logger.debug(f"Raw response from Claude analysis: {raw_response}")
-            logger.info(f"[RAW AI RESPONSE DUMP] Email ID {instance.id if 'instance' in locals() else 'N/A'}:\n{raw_response}")
+            
+            # Add debug logging for special date formats in raw response
+            date_patterns = [
+                r'(\d{2}\.\d{2}\.\d{4})\s*\(Tek Gece\s*//?\s*One Night\)',
+                r'(\d{2}\.\d{2}\.\d{4})\s*\(Tek Gece\)',
+                r'(\d{2}\.\d{2}\.\d{4})\s*\(One Night\)'
+            ]
+            
+            for pattern in date_patterns:
+                special_dates = re.findall(pattern, text_content, re.IGNORECASE)
+                if special_dates:
+                    logger.info(f"Found special date formats in input: {special_dates} (pattern: {pattern})")
+                
+                matches = re.findall(pattern, raw_response, re.IGNORECASE)
+                if matches:
+                    logger.info(f"Special date format found in AI response: {matches} (pattern: {pattern})")
+            
+            logger.info(f"[RAW AI RESPONSE DUMP] Subject: {context_subject}:\n{raw_response[:1000]}")
             
             # Parse JSON response
             parsed_data = self._safe_json_parse(raw_response)
@@ -453,6 +552,11 @@ class ClaudeAnalyzer:
                 logger.error("Failed to parse JSON response from Claude analysis.")
                 result_template['error'] = 'Failed to parse AI response'
                 return result_template
+            
+            # Add raw response to each rule for potential fallback extraction
+            for rule in parsed_data:
+                if isinstance(rule, dict):
+                    rule['raw_response'] = raw_response
             
             # Post-process data (normalize dates, validate, etc.)
             processed_rows = self.post_process_ai_rules(parsed_data)
@@ -596,6 +700,101 @@ class ClaudeAnalyzer:
             end_date_str = rule.get('end_date')     # Expect YYYY-MM-DD
             sale_status = rule.get('sale_status') # Expect 'stop' or 'open'
             ai_markets_list = rule.get('markets', ['ALL']) # Expect list or ['ALL']
+            
+            # Special handling for 'one night' cases where AI returned null dates
+            if ((start_date_str is None or end_date_str is None) and 
+                rule.get('one_night_date') or rule.get('tek_gece_date') or rule.get('single_night_date')):
+                # Try to use the special date field
+                special_date = rule.get('one_night_date') or rule.get('tek_gece_date') or rule.get('single_night_date')
+                if special_date:
+                    logger.info(f"Found special 'one night' date field: {special_date}")
+                    start_date_str = special_date
+                    end_date_str = special_date
+
+            # Fallback: If both dates are still null, check raw data for date patterns
+            if not start_date_str or not end_date_str:
+                # Look for "Tek Gece" patterns in raw response
+                raw_response = rule.get('raw_response', '')
+                if not raw_response and hasattr(self, 'last_raw_response'):
+                    raw_response = self.last_raw_response
+                
+                if raw_response:
+                    date_patterns = [
+                        r'(\d{2}\.\d{2}\.\d{4})\s*\(Tek Gece\s*//?\s*One Night\)',
+                        r'(\d{2}\.\d{2}\.\d{4})\s*\(Tek Gece\)',
+                        r'(\d{2}\.\d{2}\.\d{4})\s*\(One Night\)',
+                        r'(\d{1,2}\.\d{1,2}\.\d{4}).*?(tek gece|one night)',
+                        r'(\d{1,2}/\d{1,2}/\d{4}).*?(tek gece|one night)'
+                    ]
+                    
+                    for pattern in date_patterns:
+                        matches = re.findall(pattern, raw_response, re.IGNORECASE)
+                        if matches:
+                            date_str = matches[0][0] if isinstance(matches[0], tuple) else matches[0]
+                            logger.info(f"Found date in raw response using pattern '{pattern}': {date_str}")
+                            
+                            # Convert date to YYYY-MM-DD format
+                            try:
+                                if '.' in date_str:
+                                    # DD.MM.YYYY format
+                                    parts = date_str.split('.')
+                                    if len(parts) == 3:
+                                        normalized_date = f"{parts[2]}-{parts[1]}-{parts[0]}"
+                                        start_date_str = normalized_date
+                                        end_date_str = normalized_date
+                                        logger.info(f"Normalized date to: {normalized_date}")
+                                elif '/' in date_str:
+                                    # DD/MM/YYYY format
+                                    parts = date_str.split('/')
+                                    if len(parts) == 3:
+                                        normalized_date = f"{parts[2]}-{parts[1]}-{parts[0]}"
+                                        start_date_str = normalized_date
+                                        end_date_str = normalized_date
+                                        logger.info(f"Normalized date to: {normalized_date}")
+                            except Exception as e:
+                                logger.error(f"Error normalizing date '{date_str}': {e}")
+                            
+                            # If we found a date, break out of the loop
+                            if start_date_str and end_date_str:
+                                break
+
+            # Check for date in email subject
+            if (not start_date_str or not end_date_str) and hasattr(self, 'last_subject'):
+                subject = self.last_subject
+                date_patterns = [
+                    r'(\d{2}\.\d{2}\.\d{4})',
+                    r'(\d{2}/\d{2}/\d{4})'
+                ]
+                
+                for pattern in date_patterns:
+                    matches = re.findall(pattern, subject)
+                    if matches:
+                        date_str = matches[0]
+                        logger.info(f"Found date in subject: {date_str}")
+                        
+                        # Convert date to YYYY-MM-DD format
+                        try:
+                            if '.' in date_str:
+                                # DD.MM.YYYY format
+                                parts = date_str.split('.')
+                                if len(parts) == 3:
+                                    normalized_date = f"{parts[2]}-{parts[1]}-{parts[0]}"
+                                    start_date_str = normalized_date
+                                    end_date_str = normalized_date
+                                    logger.info(f"Normalized date from subject to: {normalized_date}")
+                            elif '/' in date_str:
+                                # DD/MM/YYYY format
+                                parts = date_str.split('/')
+                                if len(parts) == 3:
+                                    normalized_date = f"{parts[2]}-{parts[1]}-{parts[0]}"
+                                    start_date_str = normalized_date
+                                    end_date_str = normalized_date
+                                    logger.info(f"Normalized date from subject to: {normalized_date}")
+                        except Exception as e:
+                            logger.error(f"Error normalizing date from subject '{date_str}': {e}")
+                        
+                        if start_date_str and end_date_str:
+                            break
 
             if not all([hotel_name, start_date_str, end_date_str, sale_status]):
                 logger.warning(f"Skipping rule #{rule_index} due to missing required fields (hotel, dates, status): {rule}")
@@ -1038,102 +1237,429 @@ class ClaudeAnalyzer:
         
         return cleaned_content.strip()
         
-    def analyze_email_content(self, email_content: str, email_subject: str = '') -> Dict:
+    def analyze_email_content(self, email_content, email_subject=None, email_html=None):
         """
-        Analyzes email content using Claude, returning structured data.
-        Sends both subject and cleaned body to the AI.
+        Analyzes the provided email content with the AI model.
+        This function handles all AI model specific logic.
+        
+        Args:
+            email_content (str): The raw text content of the email to analyze  
+            email_subject (str, optional): The email subject for additional context
+            email_html (str, optional): The HTML version of the email if available
+        
+        Returns:
+            dict: Analysis result containing extracted data or error
+                {
+                    'rows': [{'hotel_name': '...', 'room_type': '...', 'start_date': '...', 'end_date': '...', 'markets': ['...', '...']}, {...}],
+                    'error': str or None,
+                    'should_analyze_attachments': bool  # Indicates if attachments should be analyzed
+                }
         """
-        logger.info("Proceeding with AI analysis for email content (including subject).")
+        if not email_content:
+            return {'error': 'No email content provided for analysis', 'rows': [], 'raw_ai_response': None, 'has_sale_info': False, 'should_analyze_attachments': True}
         
-        if not self.claude_client:
-            logger.error("Claude client not initialized.")
-            # Ensure consistent return structure on error
-            return {'error': 'AI Analyzer not configured', 'rows': [], 'raw_ai_response': None, 'has_sale_info': False, 'should_analyze_attachments': False} 
+        # Check if email references attachments
+        has_attachment_references = self.check_for_attachment_references(email_content)
         
-        # Prepare content for Claude
-        cleaned_content = self.clean_email_content(email_content)
+        # Determine if we should extract stop sale info from content or suggest checking attachments
+        # 1. If content has stop sale info directly, we'll try to extract it
+        # 2. If content refers to attachments AND doesn't have clear stop sale info in the body,
+        #    we'll suggest checking the attachments instead
         
-        # --- Construct the input string including SUBJECT and BODY ---
-        content_to_send = f"SUBJECT: {email_subject}\nBODY:\n{cleaned_content}"
-        # --- End content construction ---
-        
-        # Limit content size (applied to combined string)
-        max_tokens_approx = 100000  # Example limit, adjust based on model
-        if len(content_to_send) > max_tokens_approx * 4: # Rough estimate: 1 token ~ 4 chars
-            original_len = len(content_to_send)
-            # Truncate primarily from the body part to preserve the subject
-            subject_len = len(f"SUBJECT: {email_subject}\nBODY:\n")
-            max_body_len = (max_tokens_approx * 4) - subject_len
-            if max_body_len > 0:
-                 content_to_send = f"SUBJECT: {email_subject}\nBODY:\n{cleaned_content[:max_body_len]}"
-            else: # If subject itself is too long, truncate the whole thing
-                 content_to_send = content_to_send[:max_tokens_approx * 4]
-            logger.warning(f"Content truncated for AI analysis. Original length: {original_len}, Truncated length: {len(content_to_send)}")
-            
-        # Log the exact content being sent at INFO level for easier debugging
-        logger.info(f"""[AI INPUT DUMP] Sending structured content to Claude:
-SUBJECT: {email_subject}
-BODY (first 1000 chars):
-{cleaned_content[:1000]}...""")
+        prompt_text = self.system_prompt
         
         try:
-            message = self.claude_client.messages.create(
+            # Use Claude API to analyze the content
+            logger.debug(f"Calling Claude API with text length: {len(email_content)}")
+            
+            # Add the subject if available for better context
+            content_to_analyze = email_content
+            if email_subject:
+                content_to_analyze = f"Subject: {email_subject}\n\n{email_content}"
+            
+            # Call the AI API for analysis
+            response = self.claude_client.messages.create(
                 model="claude-3-haiku-20240307",
                 max_tokens=4096,
                 temperature=0.1,
-                system=self.system_prompt, # Use the updated prompt
+                system=prompt_text,
                 messages=[
-                    {
-                        "role": "user",
-                        "content": content_to_send # Send combined subject and body
-                    }
+                    {"role": "user", "content": content_to_analyze}
                 ]
             )
             
-            # Extract response content
-            raw_response_content = ""
-            if message.content and isinstance(message.content, list):
-                for block in message.content:
-                    if hasattr(block, 'text'):
-                        raw_response_content += block.text
+            # Get the raw response text
+            raw_response = response.content[0].text
             
-            # Corrected multiline f-string for the second debug log
-            logger.debug(f"""Raw response from Claude:
-{raw_response_content}""")
+            # Try to parse the JSON from the response
+            try:
+                # Extract JSON part from the response
+                json_match = re.search(r'```json\s*(.*?)\s*```', raw_response, re.DOTALL)
+                
+                if json_match:
+                    json_str = json_match.group(1)
+                    ai_result = json.loads(json_str)
+                else:
+                    # No JSON block found, try to extract any JSON
+                    json_match = re.search(r'\{\s*"rows"\s*:', raw_response)
+                    if json_match:
+                        # Extract from the beginning of the match to the end
+                        json_str = raw_response[json_match.start():]
+                        # Attempt to parse, may fail if there's text after the JSON
+                        ai_result = json.loads(json_str)
+                    else:
+                        # Fallback: Try to parse the entire response as JSON
+                        ai_result = json.loads(raw_response)
+                
+                # Check if we need to also analyze attachments
+                should_analyze_attachments = has_attachment_references
+                has_sale_info = False
+                
+                # Check if any rows were extracted
+                if 'rows' in ai_result and len(ai_result['rows']) > 0:
+                    # Found data in the body, mark as having sale info
+                    has_sale_info = True
+                    
+                    # Extract stop sale dates from body
+                    sale_dates = []
+                    for row in ai_result['rows']:
+                        if 'start_date' in row and 'end_date' in row:
+                            try:
+                                # Check if dates are in future - generally indicates stop sale info
+                                start_date = datetime.strptime(row['start_date'], '%Y-%m-%d').date()
+                                today = datetime.now().date()
+                                if start_date >= today:
+                                    sale_dates.append((row['start_date'], row['end_date']))
+                            except (ValueError, TypeError):
+                                # Date parsing failed, just count it anyway
+                                sale_dates.append((row.get('start_date'), row.get('end_date')))
+                    
+                    # If found concrete stop sale dates, we may not need to check attachments,
+                    # even if there are attachment references
+                    if len(sale_dates) > 0:
+                        # If clear data in body, only check attachments if specifically suggested
+                        # by certain phrases that indicate important info is ONLY in the attachment
+                        should_analyze_attachments = (
+                            has_attachment_references and 
+                            any(phrase in email_content.lower() for phrase in [
+                                'ayrıntılar ekte', 'detaylar ekte', 'details in attachment',
+                                'ekteki tarihlerin', 'tarihleri ekte', 'dates in attachment'
+                            ])
+                        )
+                else:
+                    # No rows found in body, check attachments if references exist
+                    should_analyze_attachments = has_attachment_references
+                
+                return {
+                    'rows': ai_result.get('rows', []),
+                    'error': None,
+                    'raw_ai_response': raw_response,
+                    'has_sale_info': has_sale_info,
+                    'should_analyze_attachments': should_analyze_attachments
+                }
+                
+            except json.JSONDecodeError as json_err:
+                logger.error(f"JSON parsing error: {json_err}. Raw response: {raw_response[:200]}...")
+                return {'error': f'Failed to parse AI response: {json_err}', 'rows': [], 'raw_ai_response': raw_response, 'has_sale_info': False, 'should_analyze_attachments': has_attachment_references}
             
-            # Add the raw response dump log here for easier debugging
-            logger.info(f"[RAW AI RESPONSE DUMP] Email Subject: {email_subject}\nResponse:\n{raw_response_content}")
-
-            # Parse JSON response
-            parsed_data = self._safe_json_parse(raw_response_content)
-            
-            if parsed_data is None:
-                logger.error("Failed to parse JSON response from Claude.")
-                # Ensure consistent return structure
-                return {'error': 'Failed to parse AI response', 'rows': [], 'raw_ai_response': raw_response_content, 'has_sale_info': True, 'should_analyze_attachments': False} 
-            
-            # Post-process data (normalize dates, etc.)
-            # Assuming post_process_data correctly handles the format from AI
-            processed_result = self.post_process_data(parsed_data) 
-            
-            # Add raw response and flags to the final result
-            processed_result['raw_ai_response'] = raw_response_content
-            # Determine these flags based on whether rows were actually processed
-            processed_result['has_sale_info'] = bool(processed_result.get('rows')) 
-            processed_result['should_analyze_attachments'] = not bool(processed_result.get('rows')) # Suggest attachment if no rows
-
-            logger.info(f"AI analysis successful. Extracted {len(processed_result.get('rows', []))} rows.")
-            return processed_result
-            
-        except anthropic.APIConnectionError as e:
-            logger.error(f"Claude API connection error: {e}", exc_info=True)
-            return {'error': f'AI API connection error: {e}', 'rows': [], 'raw_ai_response': None, 'has_sale_info': False, 'should_analyze_attachments': True} # Suggest attachment on error
-        except anthropic.RateLimitError as e:
-            logger.error(f"Claude API rate limit exceeded: {e}", exc_info=True)
-            return {'error': f'AI API rate limit exceeded: {e}', 'rows': [], 'raw_ai_response': None, 'has_sale_info': False, 'should_analyze_attachments': True}
-        except anthropic.APIStatusError as e:
-            logger.error(f"Claude API status error: {e.status_code} - {e.response}", exc_info=True)
-            return {'error': f'AI API status error: {e.status_code}', 'rows': [], 'raw_ai_response': None, 'has_sale_info': False, 'should_analyze_attachments': True}
         except Exception as e:
             logger.error(f"An unexpected error occurred during AI analysis: {e}", exc_info=True)
-            return {'error': f'Unexpected AI analysis error: {e}', 'rows': [], 'raw_ai_response': None, 'has_sale_info': False, 'should_analyze_attachments': True}
+            return {'error': f'Unexpected AI analysis error: {e}', 'rows': [], 'raw_ai_response': None, 'has_sale_info': False, 'should_analyze_attachments': has_attachment_references}
+
+    def check_for_attachment_references(self, text):
+        """
+        E-posta içeriğinden eklere referans olup olmadığını kontrol eder.
+        Örneğin: "ekte belirtilen", "ekte gönderilen", "ekli dosyada" gibi ifadeleri arar.
+        
+        Args:
+            text (str): E-posta içerik metni
+            
+        Returns:
+            bool: Eğer ekli dosyalara referans varsa True, yoksa False
+        """
+        if not text:
+            return False
+            
+        text = text.lower()
+        attachment_keywords = [
+            'ekte', 'ekli', 'ekteki', 'ek olarak', 'attachment', 
+            'attached', 'enclosed', 'ek dosya', 'ekli dosya',
+            'ekte belirtilen', 'ekte gönderilen', 'ekte yer alan',
+            'ektedir', 'eklerde', 'eklerde belirtilen'
+        ]
+        
+        for keyword in attachment_keywords:
+            if keyword in text:
+                return True
+                
+        return False
+        
+    def is_stop_sale_chart_file(self, filename):
+        """
+        Dosya adının stop sale özeti veya grafiği olup olmadığını kontrol eder.
+        Bu dosyalar genellikle işleme alınmamalıdır çünkü önceki stop sale'lerin özeti olabilir.
+        
+        Args:
+            filename (str): Kontrol edilecek dosya adı
+            
+        Returns:
+            bool: Eğer dosya adı stop sale chart/özet dosyasına benziyorsa True, yoksa False
+        """
+        if not filename:
+            return False
+            
+        filename_lower = filename.lower()
+        patterns = [
+            'stop sale chart', 
+            'stopsale chart', 
+            'stop-sale-chart',
+            'chart of stop', 
+            'report of stop',
+            'özet', 'summary',
+            'tüm stop', 'all stop',
+            'genel stop', 'general stop'
+        ]
+        
+        for pattern in patterns:
+            if pattern in filename_lower:
+                return True
+                
+        return False
+
+    def smart_clean_email_body(self, email_html: str, email_text: str, sender: str = None) -> str:
+        """Cleans email content with smarter handling of forwarded messages and reply chains.
+        Preserves important date information and tables while removing clutter."""
+        # Check if email is from ecctur.com domain - if so, skip cleaning to preserve forwarded content
+        if sender and '@ecctur.com' in sender.lower():
+            logger.info(f"Email from ecctur.com domain detected, skipping cleaning: {sender}")
+            return email_html if email_html else email_text
+            
+        content_to_clean = email_html if email_html else email_text
+        if not content_to_clean:
+            logger.warning("No email content to clean")
+            return "EMPTY EMAIL CONTENT"  # Return a non-empty string to avoid ValueErrors
+            
+        is_html = bool(email_html) and bool(re.search(r'<html|<body|<table|<div|<p>', email_html, re.IGNORECASE))
+        
+        cleaned_content = ""
+        
+        if is_html:
+            try:
+                soup = BeautifulSoup(email_html, 'html.parser')
+                
+                # Remove script, style, head elements
+                for element in soup(["script", "style", "head", "title", "meta", "link"]):
+                    element.extract()
+
+                # First try the existing method
+                try:
+                    # Try standard cleaning approach
+                    # Define common reply/forward markers
+                    REPLY_FORWARD_MARKERS_REGEX = r'(from:|sent:|to:|subject:|cc:|bcc:|forwarded message|original message|begin forwarded message|on .* wrote:)'
+                    
+                    # Find ALL markers in the email content
+                    marker_elements = []
+                    
+                    # Search text nodes
+                    for element in soup.find_all(string=re.compile(REPLY_FORWARD_MARKERS_REGEX, re.IGNORECASE | re.DOTALL)):
+                        parent = element.parent
+                        if parent:
+                            marker_elements.append(parent)
+                    
+                    if marker_elements:
+                        logger.info(f"Original method found {len(marker_elements)} markers")
+                        # Keep the original cleaning logic but ensure content is never empty
+                        first_marker = marker_elements[0]
+                        logger.info(f"Found first marker element: {first_marker.name}")
+                        
+                        # Extract content before the marker
+                        content_before_marker = []
+                        for element in first_marker.previous_siblings:
+                            content_before_marker.append(str(element))
+                        content_before_marker.reverse()  # Reverse to get correct order
+                        
+                        # ÖNEMLİ KONTROL: İşaretçi öncesi içerik boş mu?
+                        if not content_before_marker:
+                            logger.warning("No content before marker, using full email")
+                            cleaned_content = soup.get_text(separator=' ', strip=True)
+                            if not cleaned_content.strip():
+                                cleaned_content = "EMPTY CONTENT AFTER CLEANING - USING RAW HTML"
+                                logger.warning("Empty cleaned content, using raw HTML")
+                        else:
+                            combined_html = ''.join(content_before_marker)
+                            new_soup = BeautifulSoup(combined_html, 'html.parser')
+                            cleaned_content = new_soup.get_text(separator=' ', strip=True)
+                            
+                            # Check if we've lost content
+                            if not cleaned_content.strip():
+                                logger.warning("Empty content after cleaning, using full email")
+                                cleaned_content = soup.get_text(separator=' ', strip=True)
+                    else:
+                        # No markers found, use the whole content
+                        cleaned_content = soup.get_text(separator=' ', strip=True)
+                except Exception as e:
+                    logger.error(f"Error in original HTML cleaning: {e}", exc_info=True)
+                    cleaned_content = soup.get_text(separator=' ', strip=True)
+                
+                # Special handling for tables with dates
+                try:
+                    # Check for tables with date information
+                    date_patterns = ['Tek Gece', 'One Night', 'Single Day', r'\d{2}\.\d{2}\.\d{4}', r'\d{2}/\d{2}/\d{4}']
+                    tables = soup.find_all('table')
+                    date_tables = []
+                    
+                    for table in tables:
+                        table_text = table.get_text()
+                        if any(re.search(pattern, table_text, re.IGNORECASE) for pattern in date_patterns):
+                            date_tables.append(table)
+                            logger.info(f"Found table with date information")
+                    
+                    # Add formatted table content
+                    if date_tables:
+                        table_texts = []
+                        for table in date_tables:
+                            rows = table.find_all('tr')
+                            table_text = []
+                            for row in rows:
+                                cells = row.find_all(['td', 'th'])
+                                if cells:
+                                    row_text = ' | '.join(cell.get_text(strip=True) for cell in cells if cell.get_text(strip=True))
+                                    if row_text:
+                                        table_text.append(row_text)
+                            if table_text:
+                                table_texts.append("\n-------TABLE:-------\n" + "\n".join(table_text))
+                        
+                        # Append table texts to cleaned content
+                        if table_texts:
+                            cleaned_content += "\n\n" + "\n\n".join(table_texts)
+                            logger.info(f"Added {len(table_texts)} structured tables to content")
+                except Exception as e:
+                    logger.error(f"Error processing tables: {e}", exc_info=True)
+                
+                # Check for date information in the full HTML that might have been lost
+                try:
+                    full_text = soup.get_text()
+                    date_patterns = [
+                        r'(\d{2}\.\d{2}\.\d{4}).*?(Tek Gece|One Night)',
+                        r'(\d{2}/\d{2}/\d{4}).*?(Tek Gece|One Night)'
+                    ]
+                    
+                    date_info = []
+                    for pattern in date_patterns:
+                        matches = re.findall(pattern, full_text, re.IGNORECASE)
+                        for match in matches:
+                            if isinstance(match, tuple):
+                                date_str = ' '.join(match)
+                            else:
+                                date_str = match
+                            # Check if this date info is already in cleaned_content
+                            if date_str not in cleaned_content:
+                                date_info.append(date_str)
+                    
+                    if date_info:
+                        logger.info(f"Adding date information that was lost: {date_info}")
+                        cleaned_content += "\n\nIMPORTANT DATES:\n" + "\n".join(date_info)
+                except Exception as e:
+                    logger.error(f"Error extracting date information: {e}", exc_info=True)
+            
+            except Exception as e:
+                logger.error(f"Error in smart HTML cleaning: {e}", exc_info=True)
+                # Fallback to plain text
+                cleaned_content = self._clean_plain_text_smart(email_text if email_text else email_html)
+        else:
+            # Plain text cleaning
+            cleaned_content = self._clean_plain_text_smart(content_to_clean)
+        
+        # Ensure content is not empty
+        if not cleaned_content or not cleaned_content.strip():
+            logger.warning("Smart cleaning produced empty content, using original content")
+            # Try to extract text with basic BeautifulSoup
+            if is_html:
+                try:
+                    soup = BeautifulSoup(content_to_clean, 'html.parser')
+                    cleaned_content = soup.get_text(separator=' ', strip=True)
+                except Exception:
+                    cleaned_content = content_to_clean
+            else:
+                cleaned_content = content_to_clean
+        
+        # Final safety check to ensure we always return some content
+        if not cleaned_content or not cleaned_content.strip():
+            logger.warning("All cleaning attempts produced empty content, returning fixed string")
+            cleaned_content = "RAW EMAIL CONTENT COULD NOT BE PROCESSED - PLEASE CHECK MANUALLY"
+        
+        logger.debug(f"Smart cleaned email content (first 200 chars): {cleaned_content[:200]}")
+        return cleaned_content
+
+    def _clean_plain_text_smart(self, text_content: str) -> str:
+        """Smarter cleaning of plain text emails with better handling of forwarded content."""
+        if not text_content:
+            return "EMPTY TEXT CONTENT"
+        
+        # Define common forwarded message markers
+        FORWARD_MARKERS = [
+            r'^-{3,}.*?forwarded message.*?-{3,}$',
+            r'^_{3,}.*?forwarded message.*?_{3,}$',
+            r'^={3,}.*?forwarded message.*?={3,}$',
+            r'^>{3,}.*?forwarded message.*?<{3,}$',
+            r'^begin forwarded message:$',
+            r'^-+\s*original message\s*-+$',
+            r'^from:.*$\s*^sent:.*$\s*^to:.*$\s*^subject:.*$',  # Header block pattern
+            r'^on\s+.*?wrote:$',  # Reply introduction
+        ]
+        
+        # Join patterns for a single regex search
+        forward_pattern = '|'.join(FORWARD_MARKERS)
+        
+        # Split into lines for processing
+        lines = text_content.splitlines()
+        cleaned_lines = []
+        in_forwarded_section = False
+        
+        for i, line in enumerate(lines):
+            # Check if this line starts a forwarded section
+            if re.search(forward_pattern, line, re.IGNORECASE | re.MULTILINE):
+                in_forwarded_section = True
+                logger.info(f"Found forwarded message marker: '{line}'")
+                # If we found a forward marker, only keep content before it
+                break
+            
+            # For lines before the forward marker
+            if not in_forwarded_section:
+                # Skip common quote markers at line start
+                if not line.strip().startswith('>'):
+                    cleaned_lines.append(line)
+        
+        # If we haven't found any forwarded content, use the original text
+        if not in_forwarded_section or not cleaned_lines:
+            cleaned_lines = lines
+        
+        # Combine lines back into text
+        cleaned_text = '\n'.join(cleaned_lines)
+        
+        # Look for date information in the original text that might have been lost
+        date_patterns = [
+            r'\d{2}\.\d{2}\.\d{4}.*?(Tek Gece|One Night)',
+            r'\d{2}/\d{2}/\d{4}.*?(Tek Gece|One Night)'
+        ]
+        
+        date_info = []
+        for pattern in date_patterns:
+            matches = re.findall(pattern, text_content, re.IGNORECASE)
+            if matches:
+                for match in matches:
+                    if isinstance(match, tuple):
+                        match = ' '.join(match)
+                    if match not in cleaned_text:
+                        date_info.append(match)
+        
+        # Add any found date information
+        if date_info:
+            logger.info(f"Adding date information that was lost: {date_info}")
+            cleaned_text += "\n\nIMPORTANT DATES:\n" + "\n".join(date_info)
+        
+        # If still empty, return original
+        if not cleaned_text.strip():
+            return text_content
+            
+        return cleaned_text

@@ -1,3 +1,5 @@
+import os
+
 INSTALLED_APPS = [
     # ... existing apps ...
     'django.contrib.admin',
@@ -16,4 +18,9 @@ INSTALLED_APPS = [
     'emails.apps.EmailsConfig',  # Explicit AppConfig
     'core',
     'api', # Added api app
-] 
+]
+
+X_FRAME_OPTIONS = 'ALLOWALL'
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')

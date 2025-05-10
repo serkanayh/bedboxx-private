@@ -8,6 +8,7 @@ urlpatterns = [
     path('emails/', views.EmailListAPI.as_view(), name='email_list_api'),
     path('emails/<int:pk>/', views.EmailDetailAPI.as_view(), name='email_detail_api'),
     path('emails/<int:email_id>/rows/', views.EmailRowListAPI.as_view(), name='email_row_list_api'),
+    path('emails/<int:email_id>/status/', views.get_email_status, name='get_email_status'),
     path('email-rows/<int:pk>/', views.EmailRowDetailAPI.as_view(), name='email_row_detail_api'),
     path('email-rows/<int:row_id>/approve/', views.approve_row_api, name='approve_row_api'),
     path('email-rows/<int:row_id>/send-to-robot/', views.send_to_robot_api, name='send_to_robot_api'),

@@ -49,6 +49,7 @@
                                 <th>Start Date</th>
                                 <th>End Date</th>
                                 <th>Sale Type</th>
+                                <th>Contract Name</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -71,10 +72,11 @@
                                     <span class="badge bg-success">Open Sale</span>
                                     {% endif %}
                                 </td>
+                                <td>{{ row.contract_name }}</td>
                             </tr>
                             {% empty %}
                             <tr>
-                                <td colspan="7" class="text-center">No data extracted from attachments</td>
+                                <td colspan="8" class="text-center">No data extracted from attachments</td>
                             </tr>
                             {% endfor %}
                         </tbody>

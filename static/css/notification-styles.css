@@ -1,0 +1,156 @@
+/* Email Notification Styles */
+
+#email-notification-container {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    z-index: 9999;
+    width: 350px;
+    max-width: 100%;
+}
+
+.email-notification {
+    background-color: #fff;
+    border-left: 4px solid #4a6bdf;
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    margin-top: 10px;
+    padding: 15px;
+    opacity: 0;
+    transform: translateX(50px);
+    transition: all 0.3s ease;
+}
+
+.email-notification.show {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.email-notification.hide {
+    opacity: 0;
+    transform: translateX(50px);
+}
+
+.email-notification .notification-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.email-notification .notification-title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+}
+
+.email-notification .close-notification {
+    background: none;
+    border: none;
+    color: #999;
+    cursor: pointer;
+    padding: 0;
+    font-size: 18px;
+}
+
+.email-notification .close-notification:hover {
+    color: #555;
+}
+
+.email-notification .notification-subject {
+    margin: 8px 0 10px;
+    font-size: 14px;
+    color: #555;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.email-notification .notification-meta {
+    font-size: 12px;
+    color: #777;
+    display: flex;
+    justify-content: space-between;
+}
+
+.email-notification .notification-actions {
+    margin-top: 10px;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.email-notification .view-email {
+    color: #4a6bdf;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.email-notification .view-email:hover {
+    text-decoration: underline;
+}
+
+/* Status Colors */
+.email-notification.status-pending {
+    border-left-color: #ff9800;
+}
+
+.email-notification.status-approved {
+    border-left-color: #4caf50;
+}
+
+.email-notification.status-error {
+    border-left-color: #f44336;
+}
+
+/* Unread Badge Styles */
+#unread-email-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #f44336;
+    color: white;
+    border-radius: 50%;
+    height: 18px;
+    min-width: 18px;
+    font-size: 11px;
+    font-weight: bold;
+    padding: 0 4px;
+    position: absolute;
+    top: -5px;
+    right: -5px;
+}
+
+/* Notification Settings Button */
+.notification-settings-btn {
+    background: none;
+    border: none;
+    color: #4a6bdf;
+    cursor: pointer;
+    padding: 0 8px;
+}
+
+.notification-settings-btn:hover {
+    color: #3949ab;
+}
+
+/* Notification Controls in Header */
+.notification-controls {
+    display: inline-flex;
+    align-items: center;
+    margin-right: 15px;
+    position: relative;
+}
+
+/* Responsive Styles */
+@media (max-width: 767px) {
+    #email-notification-container {
+        width: calc(100% - 30px);
+        right: 15px;
+        bottom: 15px;
+    }
+    
+    .email-notification {
+        padding: 12px;
+    }
+} 
