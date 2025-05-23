@@ -60,6 +60,13 @@ def dashboard(request):
         'juniper_market_codes': JuniperMarketCode.objects.count(),
         'juniper_contracts': JuniperContractMarket.objects.count(),
         'juniper_m_emails': Email.objects.filter(status='juniper_manual').count(),
+        # Robot istatistikleri
+        'robot_pending': Email.objects.filter(robot_status='pending').count(),
+        'robot_processing': Email.objects.filter(robot_status='processing').count(),
+        'robot_processed': Email.objects.filter(robot_status='processed').count(),
+        'robot_error': Email.objects.filter(robot_status='error').count(),
+        'sent_to_robot': Email.objects.filter(status='sent_to_robot').count(),
+        'robot_processed_status': Email.objects.filter(status='robot_processed').count(),
     }
     
     # Calculate rates

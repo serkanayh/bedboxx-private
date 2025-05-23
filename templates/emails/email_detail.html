@@ -339,7 +339,7 @@
             <ol class="breadcrumb bg-transparent p-0 mb-0">
                 <li class="breadcrumb-item"><a href="{% url 'core:dashboard' %}">Ana Sayfa</a></li>
                 <li class="breadcrumb-item"><a href="{% url 'emails:email_list' %}">Emails</a></li>
-                <li class="breadcrumb-item active" aria-current="page">{{ email.subject|truncatechars:30 }}</li>
+                <li class="breadcrumb-item active" aria-current="page">{{ email.subject }}</li>
             </ol>
         </nav>
     </div>
@@ -359,10 +359,10 @@
                 <i class="bi bi-box-arrow-up-right me-1"></i> Juniper'da Aç
             </a>
             {% endif %}
-            {% if email.status == 'approved' %}
-             <a href="#" class="btn btn-sm" style="background-color: #673ab7; color: white;" title="Send Approved Rows to Robot"> {# Add URL when available #}
+            {% if has_approved_rows or email.status == 'approved' %}
+             <button onclick="sendToRobot({{ email.id }})" class="btn btn-sm" style="background-color: #673ab7; color: white;" title="Send Approved Rows to Robot">
                 <i class="bi bi-robot"></i> Robot İşle
-            </a>
+            </button>
             {% endif %}
             <span class="badge {% if email.robot_status == 'processed' %}bg-success{% elif email.robot_status == 'error' %}bg-danger{% else %}bg-secondary{% endif %} ms-2">
                 <i class="bi {% if email.robot_status == 'processed' %}bi-check-circle{% elif email.robot_status == 'error' %}bi-exclamation-triangle{% else %}bi-hourglass{% endif %}"></i> Robot: {{ email.get_robot_status_display|default:"Bekliyor" }}
@@ -390,13 +390,13 @@
                 </button>
                 <ul class="dropdown-menu">
                     <li><a class="dropdown-item reject-email-link" href="#" data-url="{% url 'emails:reject_email' email.id %}">Reddet (Genel)</a></li>
-                    <li><a class="dropdown-item reject-email-link" href="#" data-url="{% url 'emails:reject_email_hotel_not_found' email.id %}">JP Otel Yok</a></li>
+                    <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#hotelNotFoundModal">JP Otel Yok</a></li>
                     <li><a class="dropdown-item reject-email-link" href="#" data-url="{% url 'emails:reject_email_room_not_found' email.id %}">JP Oda Yok</a></li>
                 </ul>
             </div>
             {% endif %}
             
-            {% if email.status == 'approved' or email.status == 'processing' or email.status == 'processed' or email.status == 'robot_processed' %}
+            {% if email.status == 'approved' or email.status == 'processing' or email.status == 'processed' or email.status == 'robot_processed' or has_approved_rows %}
             <div class="btn-group">
                 <button type="button" class="btn btn-info btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
                     <i class="bi bi-box-arrow-up-right"></i> Juniper İşleme
@@ -458,198 +458,705 @@
                   {% for attachment in email.attachments.all %}
                     <li class="nav-item" role="presentation">
                       <button class="nav-link {% if forloop.first %}active{% endif %}" id="attachment-tab-{{ forloop.counter }}" data-bs-toggle="tab" data-bs-target="#attachment-{{ forloop.counter }}" type="button" role="tab" aria-controls="attachment-{{ forloop.counter }}" aria-selected="{% if forloop.first %}true{% else %}false{% endif %}">
-                        <i class="bi bi-paperclip"></i> {{ attachment.filename|truncatechars:20 }}
+                        <i class="bi {{ attachment.icon_class }}"></i> {{ attachment.pretty_filename|truncatechars:20 }}
                       </button>
                     </li>
                   {% endfor %}
                 </ul>
                 <div class="tab-content h-100" id="attachmentTabContent" style="height: 100%; min-height: 0;">
+                  {% if not has_analyzed_attachments %}
+                  <div class="d-flex justify-content-end mb-2">
+                    <a href="{% url 'emails:analyze_email_attachments' email.id %}" class="btn btn-primary btn-sm">
+                      <i class="bi bi-file-earmark-text"></i> Ekleri Analiz Et
+                    </a>
+                  </div>
+                  {% endif %}
                   {% for attachment in email.attachments.all %}
                     <div class="tab-pane fade {% if forloop.first %}show active{% endif %}" id="attachment-{{ forloop.counter }}" role="tabpanel" aria-labelledby="attachment-tab-{{ forloop.counter }}" style="height: 100%; min-height: 0; display: flex; flex-direction: column;">
                       <div class="mb-2 d-flex justify-content-between align-items-center p-2">
-                        <span><i class="bi bi-paperclip"></i> {{ attachment.filename }}</span>
-                        <a href="{{ attachment.file.url }}" class="btn btn-sm btn-outline-primary">İndir</a>
+                        <span><i class="bi {{ attachment.icon_class }}"></i> {{ attachment.pretty_filename }}</span>
+                        <a href="{{ attachment.file.url }}" class="btn btn-sm btn-outline-primary" download>
+                          <i class="bi bi-download"></i> İndir
+                        </a>
                       </div>
-                      {% with ext=attachment.filename|lower %}
-                        {% if ext|slice:'-4:' == '.pdf' %}
-                          <div class="pdf-container" id="pdf-container-{{ forloop.counter }}"></div>
-                          <script>
-                            document.addEventListener("DOMContentLoaded", function() {
-                              PDFObject.embed("{{ attachment.file.url }}", "#pdf-container-{{ forloop.counter }}", {
-                                pdfOpenParams: {
-                                  navpanes: 1,
-                                  toolbar: 1,
-                                  statusbar: 1,
-                                  view: "FitH"
-                                }
-                              });
-                            });
-                          </script>
-                        {% elif ext|slice:'-4:' == '.doc' or ext|slice:'-5:' == '.docx' or ext|slice:'-4:' == '.xls' or ext|slice:'-5:' == '.xlsx' %}
-                          <div style="flex: 1 1 0; min-height: 0;">
-                            <iframe src="https://view.officeapps.live.com/op/embed.aspx?src={{ attachment.file.url }}" width="100%" height="100%" frameborder="0" style="min-height: 400px; height: 100%;"></iframe>
+                      {% if attachment.is_pdf %}
+                        <div class="pdf-viewer-container" style="flex: 1; min-height: 500px; display: flex; flex-direction: column;">
+                          <div class="pdf-toolbar mb-2 bg-light p-2 rounded d-flex justify-content-between align-items-center">
+                            <div class="pdf-nav-buttons">
+                              <button class="btn btn-sm btn-outline-secondary pdf-prev" title="Önceki Sayfa">
+                                <i class="bi bi-chevron-left"></i>
+                              </button>
+                              <span class="pdf-page-info mx-2">
+                                <span class="pdf-page-num">0</span> / <span class="pdf-page-count">0</span>
+                              </span>
+                              <button class="btn btn-sm btn-outline-secondary pdf-next" title="Sonraki Sayfa">
+                                <i class="bi bi-chevron-right"></i>
+                              </button>
+                            </div>
+                            <div class="pdf-zoom-buttons">
+                              <button class="btn btn-sm btn-outline-secondary pdf-zoom-out" title="Küçült">
+                                <i class="bi bi-dash-lg"></i>
+                              </button>
+                              <span class="pdf-scale-value mx-2">100%</span>
+                              <button class="btn btn-sm btn-outline-secondary pdf-zoom-in" title="Büyüt">
+                                <i class="bi bi-plus-lg"></i>
+                              </button>
+                            </div>
                           </div>
-                        {% endif %}
-                        
-                        <!-- Çıkarılan Metin Görüntüleme Bölümü -->
-                        <div class="mt-3">
-                          <ul class="nav nav-tabs" id="attachment-content-tab-{{ forloop.counter }}" role="tablist">
-                            <li class="nav-item" role="presentation">
-                              <button class="nav-link active" id="attachment-preview-tab-{{ forloop.counter }}" data-bs-toggle="tab" data-bs-target="#attachment-preview-{{ forloop.counter }}" type="button" role="tab" aria-selected="true">
-                                <i class="bi bi-eye"></i> Önizleme
-                              </button>
-                            </li>
-                            <li class="nav-item" role="presentation">
-                              <button class="nav-link" id="attachment-extracted-text-tab-{{ forloop.counter }}" data-bs-toggle="tab" data-bs-target="#attachment-extracted-text-{{ forloop.counter }}" type="button" role="tab" aria-selected="false">
-                                <i class="bi bi-file-text"></i> Çıkarılan İçerik
-                              </button>
-                            </li>
-                            <li class="nav-item" role="presentation">
-                              <button class="nav-link" id="attachment-html-view-tab-{{ forloop.counter }}" data-bs-toggle="tab" data-bs-target="#attachment-html-view-{{ forloop.counter }}" type="button" role="tab" aria-selected="false">
-                                <i class="bi bi-code"></i> HTML Görünüm
-                              </button>
-                            </li>
-                          </ul>
-                          
-                          <div class="tab-content" id="attachment-content-tabContent-{{ forloop.counter }}">
-                            <!-- Önizleme Sekmesi (yukarıdaki mevcut önizleme) -->
-                            <div class="tab-pane fade show active" id="attachment-preview-{{ forloop.counter }}" role="tabpanel">
-                              <!-- Boş - önizleme zaten yukarıda gösteriliyor -->
-                              {% if not ext|slice:'-4:' == '.pdf' and not ext|slice:'-4:' == '.doc' and not ext|slice:'-5:' == '.docx' and not ext|slice:'-4:' == '.xls' and not ext|slice:'-5:' == '.xlsx' %}
-                                <div class="alert alert-info mt-3">
-                                  <i class="bi bi-info-circle"></i> Bu dosya tipi için yerleşik önizleme bulunmuyor. Dosyayı indirip görüntüleyebilirsiniz.
-                                </div>
-                              {% endif %}
-                            </div>
+                          <div class="pdf-container" style="flex: 1; min-height: 450px; border: 1px solid #dee2e6; overflow: auto;" id="pdf-container-{{ forloop.counter }}"></div>
+                        </div>
+                        <script>
+                          document.addEventListener("DOMContentLoaded", function() {
+                            // Initialize PDF viewer with PDF.js
+                            var container = document.getElementById("pdf-container-{{ forloop.counter }}");
+                            var pdfDoc = null;
+                            var pageNum = 1;
+                            var pageRendering = false;
+                            var pageNumPending = null;
+                            var scale = 1.0;
+                            var canvas = document.createElement('canvas');
+                            var ctx = canvas.getContext('2d');
+                            container.appendChild(canvas);
                             
-                            <!-- Çıkarılan Metin Sekmesi -->
-                            <div class="tab-pane fade" id="attachment-extracted-text-{{ forloop.counter }}" role="tabpanel">
-                              {% if attachment.extracted_text %}
-                                <div class="border rounded p-3 mt-3 bg-light">
-                                  <pre style="white-space: pre-wrap; max-height: 400px; overflow-y: auto;">{{ attachment.extracted_text }}</pre>
-                                </div>
-                              {% else %}
-                                <div class="alert alert-warning mt-3">
-                                  <i class="bi bi-exclamation-triangle"></i> Bu ek için çıkarılmış metin bulunmuyor. Analiz edilmemiş olabilir.
-                                </div>
-                              {% endif %}
-                            </div>
+                            // PDF viewer control elements
+                            var prevButton = container.parentNode.querySelector('.pdf-prev');
+                            var nextButton = container.parentNode.querySelector('.pdf-next');
+                            var pageNumSpan = container.parentNode.querySelector('.pdf-page-num');
+                            var pageCountSpan = container.parentNode.querySelector('.pdf-page-count');
+                            var zoomInButton = container.parentNode.querySelector('.pdf-zoom-in');
+                            var zoomOutButton = container.parentNode.querySelector('.pdf-zoom-out');
+                            var scaleSpan = container.parentNode.querySelector('.pdf-scale-value');
                             
-                            <!-- HTML Görünüm Sekmesi -->
-                            <div class="tab-pane fade" id="attachment-html-view-{{ forloop.counter }}" role="tabpanel">
-                              {% if attachment.extracted_text %}
-                                <div class="border rounded p-3 mt-3 bg-white" style="max-height: 400px; overflow-y: auto;">
-                                  <div id="formatted-html-content-{{ forloop.counter }}">
-                                    <div class="text-center p-3">
-                                      <div class="spinner-border text-primary" role="status">
-                                        <span class="visually-hidden">Loading...</span>
-                                      </div>
-                                      <p class="mt-2">HTML formatı oluşturuluyor...</p>
-                                    </div>
-                                  </div>
-                                </div>
+                            // Load PDF.js from CDN if not already loaded
+                            if (typeof pdfjsLib === 'undefined') {
+                              var script = document.createElement('script');
+                              script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.12.313/pdf.min.js';
+                              script.onload = function() {
+                                // Set workerSrc property after PDF.js is loaded
+                                pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.12.313/pdf.worker.min.js';
+                                loadPdf();
+                              };
+                              document.head.appendChild(script);
+                            } else {
+                              loadPdf();
+                            }
+                            
+                            function loadPdf() {
+                              var url = "{% url 'emails:email_attachment_view' attachment.id %}?force_preview=true";
+                              pdfjsLib.getDocument(url).promise.then(function(pdfDoc_) {
+                                pdfDoc = pdfDoc_;
+                                pageCountSpan.textContent = pdfDoc.numPages;
+                                // Initial/first page rendering
+                                renderPage(pageNum);
+                              }).catch(function(error) {
+                                console.error('Error loading PDF:', error);
+                                container.innerHTML = '<div class="alert alert-danger m-3">PDF yüklenirken hata oluştu: ' + error.message + '</div>';
+                              });
+                            }
+                            
+                            function renderPage(num) {
+                              pageRendering = true;
+                              // Using promise to fetch the page
+                              pdfDoc.getPage(num).then(function(page) {
+                                var viewport = page.getViewport({scale: scale});
+                                canvas.height = viewport.height;
+                                canvas.width = viewport.width;
                                 
-                                <script>
-                                document.addEventListener('DOMContentLoaded', function() {
-                                  const attachmentText = "{{ attachment.extracted_text|escapejs }}";
-                                  const formattedDiv = document.getElementById('formatted-html-content-{{ forloop.counter }}');
-                                  
-                                  // Tablo formatı oluşturma yardımcı fonksiyonu
-                                  function formatTableHTML(rows) {
-                                    if (!rows || rows.length === 0) return '';
-                                    
-                                    let tableHTML = '<table class="table table-bordered table-sm table-striped">';
-                                    
-                                    // Başlık satırı (ilk satır)
-                                    const headerCells = rows[0].split('|').filter(cell => cell.trim());
-                                    tableHTML += '<thead><tr>';
-                                    for (const cell of headerCells) {
-                                      tableHTML += `<th>${cell.trim()}</th>`;
-                                    }
-                                    tableHTML += '</tr></thead><tbody>';
-                                    
-                                    // Veri satırları (ilk satırdan sonrakiler)
-                                    for (let i = 1; i < rows.length; i++) {
-                                      const cells = rows[i].split('|').filter(cell => cell.trim());
-                                      tableHTML += '<tr>';
-                                      for (const cell of cells) {
-                                        tableHTML += `<td>${cell.trim()}</td>`;
-                                      }
-                                      tableHTML += '</tr>';
-                                    }
-                                    
-                                    tableHTML += '</tbody></table>';
-                                    return tableHTML;
-                                  }
-                                  
-                                  if (attachmentText && formattedDiv) {
-                                    // Metni biçimlendir
-                                    let html = '';
-                                    const lines = attachmentText.split(/\r?\n/);
-                                    
-                                    // Geçici tablo biriktiricisi
-                                    let tableRows = [];
-                                    let inTable = false;
-                                    
-                                    for (let i = 0; i < lines.length; i++) {
-                                      const line = lines[i].trim();
-                                      
-                                      // Boş satır kontrolü
-                                      if (!line) {
-                                        if (inTable) {
-                                          // Tablo bitişi
-                                          html += formatTableHTML(tableRows);
-                                          tableRows = [];
-                                          inTable = false;
-                                        }
-                                        html += '<br>';
-                                        continue;
-                                      }
-                                      
-                                      // Tablo satırı kontrolü (| karakteri içeren)
-                                      if (line.includes('|')) {
-                                        if (!inTable) inTable = true;
-                                        tableRows.push(line);
-                                        continue;
-                                      } else if (inTable) {
-                                        // Tablo bitti, işle
-                                        html += formatTableHTML(tableRows);
-                                        tableRows = [];
-                                        inTable = false;
-                                      }
-                                      
-                                      // Başlık kontrolü
-                                      if (line.startsWith('#') || line.startsWith('==') || line.startsWith('--')) {
-                                        html += `<h4 class="mt-3 border-bottom pb-2">${line.replace(/^[#=-]+\s*/, '')}</h4>`;
-                                      } 
-                                      // Liste öğesi kontrolü
-                                      else if (line.startsWith('*') || line.startsWith('-') || line.startsWith('+')) {
-                                        html += `<ul><li>${line.substring(1).trim()}</li></ul>`;
-                                      }
-                                      // Normal paragraf
-                                      else {
-                                        html += `<p>${line}</p>`;
-                                      }
-                                    }
-                                    
-                                    // Kalan tablo varsa işle
-                                    if (inTable && tableRows.length > 0) {
-                                      html += formatTableHTML(tableRows);
-                                    }
-                                    
-                                    formattedDiv.innerHTML = html;
+                                // Render PDF page into canvas context
+                                var renderContext = {
+                                  canvasContext: ctx,
+                                  viewport: viewport
+                                };
+                                var renderTask = page.render(renderContext);
+                                
+                                // Wait for rendering to finish
+                                renderTask.promise.then(function() {
+                                  pageRendering = false;
+                                  if (pageNumPending !== null) {
+                                    // New page rendering is pending
+                                    renderPage(pageNumPending);
+                                    pageNumPending = null;
                                   }
                                 });
-                                </script>
-                              {% else %}
-                                <div class="alert alert-warning mt-3">
-                                  <i class="bi bi-exclamation-triangle"></i> Bu ek için HTML görünüm oluşturulamadı. Önce metin çıkarılması gerekiyor.
-                                </div>
-                              {% endif %}
+                              }).catch(function(error) {
+                                console.error('Error rendering page:', error);
+                              });
+                              
+                              // Update page counters
+                              pageNumSpan.textContent = num;
+                            }
+                            
+                            function queueRenderPage(num) {
+                              if (pageRendering) {
+                                pageNumPending = num;
+                              } else {
+                                renderPage(num);
+                              }
+                            }
+                            
+                            function onPrevPage() {
+                              if (pageNum <= 1) {
+                                return;
+                              }
+                              pageNum--;
+                              queueRenderPage(pageNum);
+                            }
+                            
+                            function onNextPage() {
+                              if (pageNum >= pdfDoc.numPages) {
+                                return;
+                              }
+                              pageNum++;
+                              queueRenderPage(pageNum);
+                            }
+                            
+                            function zoomIn() {
+                              scale += 0.1;
+                              scale = Math.min(scale, 3.0); // Max zoom level
+                              updateScale();
+                              queueRenderPage(pageNum);
+                            }
+                            
+                            function zoomOut() {
+                              scale -= 0.1;
+                              scale = Math.max(scale, 0.5); // Min zoom level
+                              updateScale();
+                              queueRenderPage(pageNum);
+                            }
+                            
+                            function updateScale() {
+                              scaleSpan.textContent = Math.round(scale * 100) + '%';
+                            }
+                            
+                            // Event listeners for PDF controls
+                            prevButton.addEventListener('click', onPrevPage);
+                            nextButton.addEventListener('click', onNextPage);
+                            zoomInButton.addEventListener('click', zoomIn);
+                            zoomOutButton.addEventListener('click', zoomOut);
+                            
+                            // Also add keyboard shortcuts
+                            document.addEventListener('keydown', function(e) {
+                              if (!container.contains(document.activeElement) && !container.parentNode.contains(document.activeElement)) {
+                                return; // Only process keyboard events when PDF viewer is focused
+                              }
+                              
+                              if (e.key === 'ArrowLeft') {
+                                onPrevPage();
+                                e.preventDefault();
+                              } else if (e.key === 'ArrowRight') {
+                                onNextPage();
+                                e.preventDefault();
+                              } else if (e.key === '+' || e.key === '=') {
+                                zoomIn();
+                                e.preventDefault();
+                              } else if (e.key === '-' || e.key === '_') {
+                                zoomOut();
+                                e.preventDefault();
+                              }
+                            });
+                            
+                            // Fallback if PDF.js fails (after 3 seconds)
+                            var fallbackTimer = setTimeout(function() {
+                              if (!pdfDoc && container.children.length <= 1) {
+                                console.log("PDF.js failed, using embed fallback for attachment {{ attachment.id }}");
+                                container.innerHTML = '<embed src="{% url "emails:email_attachment_view" attachment.id %}?force_preview=true" type="application/pdf" style="width:100%; height:100%;">';
+                              }
+                            }, 3000);
+                          });
+                        </script>
+                      {% elif attachment.is_word %}
+                        <div class="doc-viewer-container" style="flex: 1; min-height: 400px; display: flex; flex-direction: column;">
+                          <div class="doc-toolbar mb-2 bg-light p-2 rounded d-flex justify-content-between align-items-center">
+                            <div class="doc-info">
+                              <span class="badge bg-primary">Word Dokümanı</span>
+                            </div>
+                            <div class="doc-zoom-buttons">
+                              <button class="btn btn-sm btn-outline-secondary doc-zoom-out" title="Küçült">
+                                <i class="bi bi-dash-lg"></i>
+                              </button>
+                              <span class="doc-scale-value mx-2">100%</span>
+                              <button class="btn btn-sm btn-outline-secondary doc-zoom-in" title="Büyüt">
+                                <i class="bi bi-plus-lg"></i>
+                              </button>
+                            </div>
+                          </div>
+                          <div class="word-container" style="flex: 1; min-height: 400px; overflow-y: auto; border: 1px solid #dee2e6; padding: 15px;" id="word-container-{{ forloop.counter }}">
+                            <div class="text-center p-3">
+                              <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                              </div>
+                              <p class="mt-2">Word içeriği yükleniyor...</p>
                             </div>
                           </div>
                         </div>
-                      {% endwith %}
+                        <script>
+                          document.addEventListener("DOMContentLoaded", function() {
+                            const container = document.getElementById("word-container-{{ forloop.counter }}");
+                            const zoomInBtn = container.parentNode.querySelector('.doc-zoom-in');
+                            const zoomOutBtn = container.parentNode.querySelector('.doc-zoom-out');
+                            const scaleValue = container.parentNode.querySelector('.doc-scale-value');
+                            let scale = 1.0;
+                            
+                            // Load document content
+                            fetch("{% url 'emails:get_attachment_content' attachment.id %}")
+                              .then(response => response.json())
+                              .then(data => {
+                                if (data.error) {
+                                  container.innerHTML = `<div class="alert alert-warning">
+                                    <i class="bi bi-exclamation-triangle me-2"></i>${data.error}
+                                  </div>`;
+                                } else {
+                                  container.innerHTML = `<div class="word-content" style="transform-origin: top left; transform: scale(1.0);">${data.html_content}</div>`;
+                                  
+                                  // Apply styles to the Word content
+                                  const contentElement = container.querySelector('.word-content');
+                                  if (contentElement) {
+                                    // Enhance table styling
+                                    const tables = contentElement.querySelectorAll('table');
+                                    tables.forEach(table => {
+                                      table.classList.add('table', 'table-bordered', 'table-sm');
+                                      table.style.width = '100%';
+                                      table.style.marginBottom = '1rem';
+                                    });
+                                    
+                                    // Enhance image scaling
+                                    const images = contentElement.querySelectorAll('img');
+                                    images.forEach(img => {
+                                      img.style.maxWidth = '100%';
+                                      img.classList.add('img-fluid');
+                                    });
+                                    
+                                    // Enhance headings
+                                    const headings = contentElement.querySelectorAll('h1, h2, h3, h4, h5, h6');
+                                    headings.forEach(heading => {
+                                      heading.style.marginTop = '1.5rem';
+                                      heading.style.marginBottom = '1rem';
+                                      heading.style.fontWeight = 'bold';
+                                    });
+                                    
+                                    // Enhance paragraphs
+                                    const paragraphs = contentElement.querySelectorAll('p');
+                                    paragraphs.forEach(p => {
+                                      p.style.marginBottom = '0.75rem';
+                                      p.style.lineHeight = '1.5';
+                                    });
+                                  }
+                                }
+                              })
+                              .catch(error => {
+                                container.innerHTML = `<div class="alert alert-danger">
+                                  <i class="bi bi-x-circle me-2"></i>Hata oluştu: ${error}
+                                </div>`;
+                              });
+                            
+                            // Zoom functions
+                            function zoomIn() {
+                              scale += 0.1;
+                              scale = Math.min(scale, 3.0); // Max zoom level
+                              updateScale();
+                            }
+                            
+                            function zoomOut() {
+                              scale -= 0.1;
+                              scale = Math.max(scale, 0.5); // Min zoom level
+                              updateScale();
+                            }
+                            
+                            function updateScale() {
+                              const content = container.querySelector('.word-content');
+                              if (content) {
+                                content.style.transform = `scale(${scale})`;
+                                scaleValue.textContent = Math.round(scale * 100) + '%';
+                              }
+                            }
+                            
+                            // Event listeners
+                            zoomInBtn.addEventListener('click', zoomIn);
+                            zoomOutBtn.addEventListener('click', zoomOut);
+                          });
+                        </script>
+                      {% elif attachment.is_excel %}
+                        <div class="excel-viewer-container" style="flex: 1; min-height: 400px; display: flex; flex-direction: column;">
+                          <div class="excel-toolbar mb-2 bg-light p-2 rounded d-flex justify-content-between align-items-center">
+                            <div class="excel-info">
+                              <span class="badge bg-success">Excel Tablosu</span>
+                            </div>
+                            <div class="excel-zoom-buttons">
+                              <button class="btn btn-sm btn-outline-secondary excel-zoom-out" title="Küçült">
+                                <i class="bi bi-dash-lg"></i>
+                              </button>
+                              <span class="excel-scale-value mx-2">100%</span>
+                              <button class="btn btn-sm btn-outline-secondary excel-zoom-in" title="Büyüt">
+                                <i class="bi bi-plus-lg"></i>
+                              </button>
+                            </div>
+                          </div>
+                          <div class="excel-container" style="flex: 1; min-height: 400px; overflow: auto; border: 1px solid #dee2e6; padding: 15px;" id="excel-container-{{ forloop.counter }}">
+                            <div class="text-center p-3">
+                              <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                              </div>
+                              <p class="mt-2">Excel içeriği yükleniyor...</p>
+                            </div>
+                          </div>
+                        </div>
+                        <script>
+                          document.addEventListener("DOMContentLoaded", function() {
+                            const container = document.getElementById("excel-container-{{ forloop.counter }}");
+                            const zoomInBtn = container.parentNode.querySelector('.excel-zoom-in');
+                            const zoomOutBtn = container.parentNode.querySelector('.excel-zoom-out');
+                            const scaleValue = container.parentNode.querySelector('.excel-scale-value');
+                            let scale = 1.0;
+                            
+                            // Load spreadsheet content
+                            fetch("{% url 'emails:get_attachment_content' attachment.id %}")
+                              .then(response => response.json())
+                              .then(data => {
+                                if (data.error) {
+                                  container.innerHTML = `<div class="alert alert-warning">
+                                    <i class="bi bi-exclamation-triangle me-2"></i>${data.error}
+                                  </div>`;
+                                } else {
+                                  container.innerHTML = `<div class="excel-content" style="transform-origin: top left; transform: scale(1.0);">${data.html_content}</div>`;
+                                  
+                                  // Apply enhanced styling to tables
+                                  const contentElement = container.querySelector('.excel-content');
+                                  if (contentElement) {
+                                    // Add responsive table wrapper
+                                    const tables = contentElement.querySelectorAll('table');
+                                    tables.forEach(table => {
+                                      const wrapper = document.createElement('div');
+                                      wrapper.classList.add('table-responsive');
+                                      table.parentNode.insertBefore(wrapper, table);
+                                      wrapper.appendChild(table);
+                                      
+                                      // Apply Bootstrap table styling
+                                      table.classList.add('table', 'table-bordered', 'table-striped', 'table-sm');
+                                      
+                                      // Fix table width
+                                      table.style.minWidth = '100%';
+                                      table.style.width = 'auto';
+                                      
+                                      // Style table headers
+                                      const headers = table.querySelectorAll('thead th');
+                                      headers.forEach(header => {
+                                        header.style.position = 'sticky';
+                                        header.style.top = '0';
+                                        header.style.backgroundColor = '#f8f9fa';
+                                        header.style.zIndex = '1';
+                                      });
+                                    });
+                                  }
+                                }
+                              })
+                              .catch(error => {
+                                container.innerHTML = `<div class="alert alert-danger">
+                                  <i class="bi bi-x-circle me-2"></i>Hata oluştu: ${error}
+                                </div>`;
+                              });
+                            
+                            // Zoom functions
+                            function zoomIn() {
+                              scale += 0.1;
+                              scale = Math.min(scale, 3.0);
+                              updateScale();
+                            }
+                            
+                            function zoomOut() {
+                              scale -= 0.1;
+                              scale = Math.max(scale, 0.5);
+                              updateScale();
+                            }
+                            
+                            function updateScale() {
+                              const content = container.querySelector('.excel-content');
+                              if (content) {
+                                content.style.transform = `scale(${scale})`;
+                                scaleValue.textContent = Math.round(scale * 100) + '%';
+                              }
+                            }
+                            
+                            // Event listeners
+                            zoomInBtn.addEventListener('click', zoomIn);
+                            zoomOutBtn.addEventListener('click', zoomOut);
+                          });
+                        </script>
+                      {% else %}
+                        <div class="generic-viewer-container" style="flex: 1; min-height: 400px; display: flex; flex-direction: column;">
+                          <div class="generic-toolbar mb-2 bg-light p-2 rounded d-flex justify-content-between align-items-center">
+                            <div class="generic-info">
+                              {% if attachment.is_pdf %}
+                                <span class="badge bg-danger">PDF Dosyası</span>
+                              {% elif attachment.is_text %}
+                                <span class="badge bg-secondary">Metin Dosyası</span>
+                              {% elif attachment.is_image %}
+                                <span class="badge bg-info">Resim Dosyası</span>
+                              {% else %}
+                                <span class="badge bg-dark">{{ attachment.content_type|default:attachment.file_extension }}</span>
+                              {% endif %}
+                            </div>
+                            <div class="generic-zoom-buttons">
+                              <button class="btn btn-sm btn-outline-secondary generic-zoom-out" title="Küçült">
+                                <i class="bi bi-dash-lg"></i>
+                              </button>
+                              <span class="generic-scale-value mx-2">100%</span>
+                              <button class="btn btn-sm btn-outline-secondary generic-zoom-in" title="Büyüt">
+                                <i class="bi bi-plus-lg"></i>
+                              </button>
+                              <a href="{{ attachment.file.url }}" class="btn btn-sm btn-outline-primary ms-3" download>
+                                <i class="bi bi-download"></i> İndir
+                              </a>
+                            </div>
+                          </div>
+                          <div class="generic-container" style="flex: 1; min-height: 400px; overflow: auto; border: 1px solid #dee2e6; padding: 15px;" id="generic-container-{{ forloop.counter }}">
+                            {% if attachment.is_image %}
+                              <div class="text-center" style="transform-origin: center; transform: scale(1.0);">
+                                <img src="{% url 'emails:email_attachment_view' attachment.id %}?force_preview=true" class="img-fluid" style="max-height: 80vh;" alt="{{ attachment.filename }}">
+                              </div>
+                            {% elif attachment.is_text %}
+                              <div class="text-content" style="transform-origin: top left; transform: scale(1.0); font-family: monospace; white-space: pre-wrap; overflow-x: auto;">
+                                <div class="spinner-border text-primary" role="status">
+                                  <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <p class="mt-2">İçerik yükleniyor...</p>
+                              </div>
+                              <script>
+                                document.addEventListener("DOMContentLoaded", function() {
+                                  const container = document.getElementById("generic-container-{{ forloop.counter }}");
+                                  const textContentDiv = container.querySelector('.text-content');
+                                  
+                                  // Fetch text content
+                                  fetch("{% url 'emails:email_attachment_view' attachment.id %}?force_preview=true")
+                                    .then(response => response.text())
+                                    .then(text => {
+                                      // Syntax highlight based on file extension
+                                      {% if attachment.file_extension == '.json' %}
+                                        try {
+                                          const json = JSON.parse(text);
+                                          textContentDiv.innerHTML = JSON.stringify(json, null, 2);
+                                          // Add syntax highlighting classes if you have a syntax highlighter
+                                        } catch (e) {
+                                          textContentDiv.textContent = text;
+                                        }
+                                      {% else %}
+                                        textContentDiv.textContent = text;
+                                      {% endif %}
+                                    })
+                                    .catch(error => {
+                                      textContentDiv.innerHTML = `<div class="alert alert-danger">
+                                        <i class="bi bi-x-circle me-2"></i>Hata oluştu: ${error}
+                                      </div>`;
+                                    });
+                                  
+                                  // Zoom functionality will be added by the generic zoom code below
+                                });
+                              </script>
+                            {% else %}
+                              <div class="alert alert-info">
+                                <i class="bi bi-info-circle me-2"></i>
+                                <span>Bu dosya türü (.{{ attachment.file_extension }}) için sistem önizleme sağlayamıyor. İçeriği görmek için dosyayı indirin.</span>
+                              </div>
+                              <div class="text-center my-4">
+                                <a href="{{ attachment.file.url }}" class="btn btn-primary" download>
+                                  <i class="bi bi-download me-2"></i> {{ attachment.filename }} Dosyasını İndir
+                                </a>
+                              </div>
+                            {% endif %}
+                          </div>
+                        </div>
+                        <script>
+                          document.addEventListener("DOMContentLoaded", function() {
+                            const container = document.getElementById("generic-container-{{ forloop.counter }}");
+                            const zoomInBtn = container.parentNode.querySelector('.generic-zoom-in');
+                            const zoomOutBtn = container.parentNode.querySelector('.generic-zoom-out');
+                            const scaleValue = container.parentNode.querySelector('.generic-scale-value');
+                            let scale = 1.0;
+                            
+                            // Skip zoom functionality for unsupported file types
+                            {% if not attachment.is_image and not attachment.is_text %}
+                              return;
+                            {% endif %}
+                            
+                            function zoomIn() {
+                              scale += 0.1;
+                              scale = Math.min(scale, 3.0);
+                              updateScale();
+                            }
+                            
+                            function zoomOut() {
+                              scale -= 0.1;
+                              scale = Math.max(scale, 0.5);
+                              updateScale();
+                            }
+                            
+                            function updateScale() {
+                              // Find the right element to zoom (image or text content)
+                              {% if attachment.is_image %}
+                                const content = container.querySelector('div');
+                                if (content) {
+                                  content.style.transform = `scale(${scale})`;
+                                  scaleValue.textContent = Math.round(scale * 100) + '%';
+                                }
+                              {% elif attachment.is_text %}
+                                const content = container.querySelector('.text-content');
+                                if (content) {
+                                  content.style.transform = `scale(${scale})`;
+                                  scaleValue.textContent = Math.round(scale * 100) + '%';
+                                }
+                              {% endif %}
+                            }
+                            
+                            // Event listeners
+                            zoomInBtn.addEventListener('click', zoomIn);
+                            zoomOutBtn.addEventListener('click', zoomOut);
+                          });
+                        </script>
+                      {% endif %}
+                      
+                      <!-- Raw Text/HTML view options -->
+                      <div class="mt-3">
+                        <ul class="nav nav-tabs" id="attachment-content-tab-{{ forloop.counter }}" role="tablist">
+                          <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="attachment-preview-tab-{{ forloop.counter }}" data-bs-toggle="tab" data-bs-target="#attachment-preview-{{ forloop.counter }}" type="button" role="tab" aria-selected="true">
+                              <i class="bi bi-eye"></i> Önizleme
+                            </button>
+                          </li>
+                          {% if attachment.extracted_text %}
+                          <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="attachment-extracted-text-tab-{{ forloop.counter }}" data-bs-toggle="tab" data-bs-target="#attachment-extracted-text-{{ forloop.counter }}" type="button" role="tab" aria-selected="false">
+                              <i class="bi bi-file-text"></i> Çıkarılan İçerik
+                            </button>
+                          </li>
+                          <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="attachment-html-view-tab-{{ forloop.counter }}" data-bs-toggle="tab" data-bs-target="#attachment-html-view-{{ forloop.counter }}" type="button" role="tab" aria-selected="false">
+                              <i class="bi bi-code"></i> HTML Görünüm
+                            </button>
+                          </li>
+                          {% endif %}
+                        </ul>
+                        
+                        <div class="tab-content" id="attachment-content-tabContent-{{ forloop.counter }}">
+                          <!-- Önizleme Sekmesi - Boş çünkü yukarıda zaten gösteriliyor -->
+                          <div class="tab-pane fade show active" id="attachment-preview-{{ forloop.counter }}" role="tabpanel">
+                          </div>
+                          
+                          {% if attachment.extracted_text %}
+                          <!-- Çıkarılan Metin Sekmesi -->
+                          <div class="tab-pane fade" id="attachment-extracted-text-{{ forloop.counter }}" role="tabpanel">
+                            <div class="border rounded p-3 mt-3 bg-light">
+                              <pre style="white-space: pre-wrap; max-height: 400px; overflow-y: auto;">{{ attachment.extracted_text }}</pre>
+                            </div>
+                          </div>
+                          
+                          <!-- HTML Görünüm Sekmesi -->
+                          <div class="tab-pane fade" id="attachment-html-view-{{ forloop.counter }}" role="tabpanel">
+                            <div class="border rounded p-3 mt-3 bg-white" style="max-height: 400px; overflow-y: auto;">
+                              <div id="formatted-html-content-{{ forloop.counter }}">
+                                <div class="text-center p-3">
+                                  <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                  </div>
+                                  <p class="mt-2">HTML formatı oluşturuluyor...</p>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <script>
+                            document.addEventListener('DOMContentLoaded', function() {
+                              const attachmentText = "{{ attachment.extracted_text|escapejs }}";
+                              const formattedDiv = document.getElementById('formatted-html-content-{{ forloop.counter }}');
+                              
+                              // Tablo formatı oluşturma yardımcı fonksiyonu
+                              function formatTableHTML(rows) {
+                                if (!rows || rows.length === 0) return '';
+                                
+                                let tableHTML = '<table class="table table-bordered table-sm table-striped">';
+                                
+                                // Başlık satırı (ilk satır)
+                                const headerCells = rows[0].split('|').filter(cell => cell.trim());
+                                tableHTML += '<thead><tr>';
+                                for (const cell of headerCells) {
+                                  tableHTML += `<th>${cell.trim()}</th>`;
+                                }
+                                tableHTML += '</tr></thead><tbody>';
+                                
+                                // Veri satırları (ilk satırdan sonrakiler)
+                                for (let i = 1; i < rows.length; i++) {
+                                  const cells = rows[i].split('|').filter(cell => cell.trim());
+                                  tableHTML += '<tr>';
+                                  for (const cell of cells) {
+                                    tableHTML += `<td>${cell.trim()}</td>`;
+                                  }
+                                  tableHTML += '</tr>';
+                                }
+                                
+                                tableHTML += '</tbody></table>';
+                                return tableHTML;
+                              }
+                              
+                              if (attachmentText && formattedDiv) {
+                                // Metni biçimlendir
+                                let html = '';
+                                const lines = attachmentText.split(/\r?\n/);
+                                
+                                // Geçici tablo biriktiricisi
+                                let tableRows = [];
+                                let inTable = false;
+                                
+                                for (let i = 0; i < lines.length; i++) {
+                                  const line = lines[i].trim();
+                                  
+                                  // Boş satır kontrolü
+                                  if (!line) {
+                                    if (inTable) {
+                                      // Tablo bitişi
+                                      html += formatTableHTML(tableRows);
+                                      tableRows = [];
+                                      inTable = false;
+                                    }
+                                    html += '<br>';
+                                    continue;
+                                  }
+                                  
+                                  // Tablo satırı kontrolü (| karakteri içeren)
+                                  if (line.includes('|')) {
+                                    if (!inTable) inTable = true;
+                                    tableRows.push(line);
+                                    continue;
+                                  } else if (inTable) {
+                                    // Tablo bitti, işle
+                                    html += formatTableHTML(tableRows);
+                                    tableRows = [];
+                                    inTable = false;
+                                  }
+                                  
+                                  // Başlık kontrolü
+                                  if (line.startsWith('#') || line.startsWith('==') || line.startsWith('--')) {
+                                    html += `<h4 class="mt-3 border-bottom pb-2">${line.replace(/^[#=-]+\s*/, '')}</h4>`;
+                                  } 
+                                  // Liste öğesi kontrolü
+                                  else if (line.startsWith('*') || line.startsWith('-') || line.startsWith('+')) {
+                                    html += `<ul><li>${line.substring(1).trim()}</li></ul>`;
+                                  }
+                                  // Normal paragraf
+                                  else {
+                                    html += `<p>${line}</p>`;
+                                  }
+                                }
+                                
+                                // Kalan tablo varsa işle
+                                if (inTable && tableRows.length > 0) {
+                                  html += formatTableHTML(tableRows);
+                                }
+                                
+                                formattedDiv.innerHTML = html;
+                              }
+                            });
+                            </script>
+                          </div>
+                          {% endif %}
+                        </div>
+                      </div>
                     </div>
                   {% endfor %}
                 </div>
@@ -671,6 +1178,9 @@
       <div class="card-header d-flex justify-content-between align-items-center">
         <span><i class="bi bi-list-check"></i> Çıkarılan Kurallar</span>
         <div>
+          <button type="button" class="btn btn-sm btn-success me-2" data-bs-toggle="modal" data-bs-target="#addManualRuleModal">
+            <i class="bi bi-plus-circle"></i> Manuel Kural Ekle
+          </button>
           {% if has_analyzed_attachments %}
           <span class="badge bg-info me-1" title="Some rows extracted from attachments">
             <i class="bi bi-file-earmark-text"></i> Eklerden Çıkarıldı
@@ -731,9 +1241,9 @@
                         <i class="bi bi-x-circle"></i> Seçilenleri Reddet
                     </button>
                     <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" id="bulkReject" href="#">Reddet (Genel)</a></li>
-                        <li><a class="dropdown-item" id="bulkRejectHotelNotFound" href="#">JP Otel Yok</a></li>
-                        <li><a class="dropdown-item" id="bulkRejectRoomNotFound" href="#">JP Oda Yok</a></li>
+                        <li><a class="dropdown-item" id="bulkReject" href="javascript:void(0)">Reddet (Genel)</a></li>
+                        <li><a class="dropdown-item" id="bulkRejectHotelNotFound" href="javascript:void(0)">JP Otel Yok</a></li>
+                        <li><a class="dropdown-item" id="bulkRejectRoomNotFound" href="javascript:void(0)">JP Oda Yok</a></li>
                     </ul>
                 </div>
                 <button id="bulkSmartMatch" class="btn btn-primary btn-sm">
@@ -864,9 +1374,13 @@
                                 {% endif %}
                             </p>
                             <p><strong>Kontrat(lar):</strong> 
-                                {% with contracts=row.get_matching_contracts_info %}
-                                    {{ contracts.0|default:"-" }} <span class="text-muted">{{ contracts.1 }}</span>
-                                {% endwith %}
+                                {% if row.selected_contracts %}
+                                    {{ row.selected_contracts }}
+                                {% else %}
+                                    {% with contracts=row.get_matching_contracts_info %}
+                                        {{ contracts.0|default:"-" }} <span class="text-muted">{{ contracts.1 }}</span>
+                                    {% endwith %}
+                                {% endif %}
                             </p>
                         </div>
                         <div class="juniper-match p-2 mb-3 {% if match_status == 'success' %}bg-success-light{% elif match_status == 'warning' %}bg-warning-light{% else %}bg-danger-light{% endif %}">
@@ -977,195 +1491,320 @@
   </div>
 </div>
 
-{% endblock %}
+<!-- Sayfanın en sonuna modal ekleyelim -->
+<!-- Manuel Kural Ekleme Modal -->
+<div class="modal fade" id="addManualRuleModal" tabindex="-1" aria-labelledby="addManualRuleModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="addManualRuleModalLabel">Manuel Kural Ekle</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form method="post" id="manualRuleForm" action="{% url 'emails:add_manual_rule_to_email' email.id %}">
+          {% csrf_token %}
+          <div class="row">
+            <div class="col-md-6">
+              <div class="form-group mb-3">
+                <label for="hotel_id">Otel*</label>
+                <select class="form-control" id="hotel_id" name="hotel_id" required>
+                  <option value="">Otel Seçin</option>
+                  {% for hotel in hotels %}
+                  <option value="{{ hotel.id }}">{{ hotel.juniper_hotel_name }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="form-group mb-3">
+                <label>Oda Tipi*</label>
+                <div class="custom-control custom-checkbox mb-2">
+                  <input type="checkbox" class="custom-control-input" id="all_rooms" name="room_types" value="all">
+                  <label class="custom-control-label" for="all_rooms"><strong>Tüm Odalar</strong></label>
+                </div>
+                <div id="roomTypesContainer">
+                  <select class="form-control" id="room_types" name="room_types" multiple size="5" disabled>
+                    <option>Önce otel seçin</option>
+                  </select>
+                  <small class="form-text text-muted">Birden fazla oda tipi seçmek için CTRL tuşuna basılı tutun</small>
+                </div>
+              </div>
+            </div>
+          </div>
 
-{% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" />
+          <div class="row">
+            <div class="col-md-6">
+              <div class="form-group mb-3">
+                <label for="market_ids">Pazar*</label>
+                <select class="form-control" id="market_ids" name="market_ids" multiple size="5" required>
+                  {% for market in markets %}
+                  <option value="{{ market.id }}">{{ market.name }}</option>
+                  {% endfor %}
+                </select>
+                <small class="form-text text-muted">Birden fazla pazar seçmek için CTRL tuşuna basılı tutun</small>
+                <!-- Original market name (for learning) -->
+                <input type="hidden" name="original_market_name" id="original_market_name" value="ALL">
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="form-group mb-3">
+                <label for="contracts">Kontratlar</label>
+                <select class="form-control" id="contracts" name="contracts" multiple size="5" disabled>
+                  <option>Önce otel seçin</option>
+                </select>
+                <small class="form-text text-muted">Birden fazla kontrat seçmek için CTRL tuşuna basılı tutun</small>
+              </div>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-4">
+              <div class="form-group mb-3">
+                <label for="start_date">Başlangıç Tarihi*</label>
+                <input type="date" class="form-control" id="start_date" name="start_date" required>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="form-group mb-3">
+                <label for="end_date">Bitiş Tarihi*</label>
+                <input type="date" class="form-control" id="end_date" name="end_date" required>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="form-group mb-3">
+                <label for="sale_type">Satış Durumu*</label>
+                <select class="form-control" id="sale_type" name="sale_type" required>
+                  <option value="stop">Stop Sale</option>
+                  <option value="open">Open Sale</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+        <button type="submit" form="manualRuleForm" class="btn btn-primary">Kural Ekle</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Sayfanın sonuna modal ekleyelim -->
+<!-- Otel Bulunamadı Modal -->
+<div class="modal fade" id="hotelNotFoundModal" tabindex="-1" aria-labelledby="hotelNotFoundModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="hotelNotFoundModalLabel">Otel Bulunamadı - Bloklama Seçeneği</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-warning">
+          <i class="bi bi-exclamation-triangle-fill me-2"></i>
+          <strong>Uyarı:</strong> Bu e-postada belirtilen otel Juniper sisteminde bulunamadı.
+        </div>
+        <p>Bu e-posta ve benzer içerikli e-postalar gelecekte tekrar analiz edilmesin mi?</p>
+        <form id="rejectHotelNotFoundForm" action="{% url 'emails:reject_email_hotel_not_found' email.id %}" method="post">
+          {% csrf_token %}
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="blockEmailCheck" name="block_email" value="true">
+            <label class="form-check-label" for="blockEmailCheck">
+              <strong>Bu e-postayı blokla</strong> - Benzer e-postalar gelecekte otomatik olarak "Juniper Otel Yok" olarak işaretlenecek
+            </label>
+          </div>
+          <div class="alert alert-info mt-3">
+            <small>
+              <i class="bi bi-info-circle-fill me-2"></i>
+              <strong>Not:</strong> Bloklama işlemini daha sonra admin panelinden kaldırabilirsiniz.
+            </small>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+        <button type="button" class="btn btn-danger" id="confirmRejectHotelNotFound">Reddet ve İşle</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
-// Breadcrumb içindeki Emails linkine tıklandığında aynı sekmede açılmasını sağlar
+// Otel bulunamadı reddetme işlemi
 document.addEventListener('DOMContentLoaded', function() {
-  const emailsBreadcrumbLink = document.querySelector("#content > div > div.d-flex.justify-content-between.align-items-center.mb-3 > div:nth-child(1) > nav > ol > li:nth-child(2) > a");
-  if (emailsBreadcrumbLink) {
-    emailsBreadcrumbLink.addEventListener('click', function(e) {
-      e.preventDefault();
-      window.location.href = this.href;
-    });
-  }
-  
-  // Make "Akıllı Eşleştir", "Oda Eşleştir", and "Manuel Düzenle" links open in the same tab
-  const sameTabLinks = document.querySelectorAll('a[href*="smart_match"], a[href*="smart-match"], a[href*="match-room"], a[href*="manual-mapping"]');
-  sameTabLinks.forEach(function(link) {
-    link.addEventListener('click', function(e) {
-      e.preventDefault();
-      window.location.href = this.href;
-    });
-  });
-  
-  // Make bulk action buttons and their dropdown items open in the same tab
-  const bulkActionsContainer = document.querySelector('.bulk-actions');
-  if (bulkActionsContainer) {
-    const bulkActionLinks = bulkActionsContainer.querySelectorAll('a');
-    bulkActionLinks.forEach(function(link) {
-      link.addEventListener('click', function(e) {
-        if (this.href && !this.href.includes('#')) {
-          e.preventDefault();
-          window.location.href = this.href;
-        }
-      });
-    });
-  }
+    // Debug için yardımcı fonksiyon
+    function debugLog(message, data) {
+        console.log(`[Manuel Kural] ${message}`, data || '');
+    }
+
+    // Otel seçimi değiştiğinde odaları ve kontratları güncelle
+    const hotelSelect = document.getElementById('hotel_id');
+    const roomTypesSelect = document.getElementById('room_types');
+    const contractsSelect = document.getElementById('contracts');
+    const allRoomsCheckbox = document.getElementById('all_rooms');
+
+    // Tüm checkbox'ların, select'lerin ve form alanlarının varlığını kontrol et
+    if (hotelSelect && roomTypesSelect && contractsSelect && allRoomsCheckbox) {
+        debugLog('Modal DOM Loaded, event listeners attaching');
+
+        // Tüm odalar checkbox değişimi
+        allRoomsCheckbox.addEventListener('change', function() {
+            debugLog('All rooms checkbox changed', this.checked);
+            if (this.checked) {
+                roomTypesSelect.disabled = true;
+            } else {
+                roomTypesSelect.disabled = false;
+            }
+        });
+
+        // Otel değişimi
+        hotelSelect.addEventListener('change', function() {
+            const hotelId = this.value;
+            debugLog('Hotel selected', hotelId);
+            
+            // Odaları yükle
+            if (hotelId) {
+                const roomsUrl = `{% url 'emails:get_rooms_by_hotel' 0 %}`.replace('0', hotelId);
+                debugLog('Fetching rooms from URL', roomsUrl);
+                
+                fetch(roomsUrl)
+                    .then(response => {
+                        debugLog('Room fetch response status', response.status);
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! Status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        debugLog('Rooms data received', data);
+                        roomTypesSelect.innerHTML = '';
+                        roomTypesSelect.disabled = allRoomsCheckbox.checked;
+                        
+                        if (data.rooms && data.rooms.length > 0) {
+                            data.rooms.forEach(room => {
+                                debugLog('Processing room', room);
+                                const option = document.createElement('option');
+                                option.value = room.id;
+                                option.textContent = room.juniper_room_type || room.name;
+                                roomTypesSelect.appendChild(option);
+                            });
+                        } else {
+                            roomTypesSelect.innerHTML = '<option>Bu otele ait oda bulunamadı</option>';
+                        }
+                    })
+                    .catch(error => {
+                        debugLog('Error loading rooms', error);
+                        roomTypesSelect.innerHTML = '<option>Odalar yüklenirken hata oluştu</option>';
+                    });
+                    
+                // Kontratları yükle
+                const contractsUrl = `{% url 'emails:get_contracts_by_hotel' 0 %}`.replace('0', hotelId);
+                debugLog('Fetching contracts from URL', contractsUrl);
+                
+                fetch(contractsUrl)
+                    .then(response => {
+                        debugLog('Contract fetch response status', response.status);
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! Status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        debugLog('Contracts data received', data);
+                        contractsSelect.innerHTML = '';
+                        contractsSelect.disabled = false;
+                        
+                        if (data.contracts && data.contracts.length > 0) {
+                            data.contracts.forEach(contract => {
+                                debugLog('Processing contract', contract);
+                                const option = document.createElement('option');
+                                option.value = contract;
+                                option.textContent = contract;
+                                contractsSelect.appendChild(option);
+                            });
+                        } else {
+                            contractsSelect.innerHTML = '<option>Bu otele ait kontrat bulunamadı</option>';
+                        }
+                    })
+                    .catch(error => {
+                        debugLog('Error loading contracts', error);
+                        contractsSelect.innerHTML = '<option>Kontratlar yüklenirken hata oluştu</option>';
+                    });
+            } else {
+                roomTypesSelect.innerHTML = '<option>Önce otel seçin</option>';
+                roomTypesSelect.disabled = true;
+                contractsSelect.innerHTML = '<option>Önce otel seçin</option>';
+                contractsSelect.disabled = true;
+            }
+        });
+
+        // Tarih alanları için bugünü varsayılan olarak ayarla
+        const today = new Date().toISOString().split('T')[0];
+        const startDateInput = document.getElementById('start_date');
+        const endDateInput = document.getElementById('end_date');
+        if (startDateInput) startDateInput.value = today;
+        if (endDateInput) endDateInput.value = today;
+        
+        debugLog('Modal init complete');
+    }
+
+    // Otel bulunamadı reddetme işlemi
+    const confirmRejectButton = document.getElementById('confirmRejectHotelNotFound');
+    if (confirmRejectButton) {
+        confirmRejectButton.addEventListener('click', function() {
+            // Form'u doğrudan submit et
+            document.getElementById('rejectHotelNotFoundForm').submit();
+        });
+    }
 });
 
-function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
+// Özellikle "JP Otel Yok" butonu için
+const jpOtelYokButtons = document.querySelectorAll('a[data-bs-toggle="modal"][data-bs-target="#hotelNotFoundModal"]');
+jpOtelYokButtons.forEach(function(button) {
+  button.addEventListener('click', function(e) {
+    e.preventDefault(); // Sayfanın yenilenmesini engelle
+    // Modalı manuel olarak aç
+    const hotelNotFoundModal = new bootstrap.Modal(document.getElementById('hotelNotFoundModal'));
+    hotelNotFoundModal.show();
+  });
+});
+
+// Sayfa yüklendiğinde global bir event listener ekle - tüm event listener'lardan önce çalışacak
+document.addEventListener('DOMContentLoaded', function() {
+    // Global event listener - bütün tıklamaları izle ve #bulkRejectHotelNotFound ID'sine sahip öğeleri yakala
+    document.body.addEventListener('click', function(e) {
+        // Tıklanan öğe veya üst öğelerinden biri #bulkRejectHotelNotFound ID'sine sahipse
+        let target = e.target;
+        while (target && target !== document.body) {
+            if (target.id === 'bulkRejectHotelNotFound') {
+                console.log('bulkRejectHotelNotFound tıklaması yakalandı');
+                e.preventDefault();
+                e.stopPropagation();
+                
+                // Modal'ı göster
+                const hotelNotFoundModal = new bootstrap.Modal(document.getElementById('hotelNotFoundModal'));
+                hotelNotFoundModal.show();
+                
+                return false;
             }
+            target = target.parentNode;
         }
-    }
-    return cookieValue;
-}
-
-// Function to update email status in UI
-function updateEmailStatusUI(status, statusDisplay) {
-    console.log(`Updating email status UI to: ${status} (display: ${statusDisplay})`);
-    const emailStatusBadge = document.getElementById('email-status-badge');
-    
-    if (!emailStatusBadge) {
-        console.error("Email status badge element not found!");
-        return;
-    }
-    
-    // Clear the badge content
-    emailStatusBadge.innerHTML = '';
-    
-    // Remove all existing background classes
-    emailStatusBadge.classList.remove('bg-warning', 'bg-success', 'bg-danger', 'bg-info', 'bg-secondary', 'bg-primary');
-    
-    // Create icon element
-    const iconElement = document.createElement('i');
-    iconElement.classList.add('bi');
-    
-    // Add appropriate icon and class based on status
-    let badgeText = statusDisplay || '';
-    
-    if (status === 'pending') {
-        emailStatusBadge.classList.add('bg-warning');
-        iconElement.classList.add('bi-hourglass');
-        if (!badgeText) badgeText = 'Pending';
-    } else if (status === 'approved') {
-        emailStatusBadge.classList.add('bg-success');
-        iconElement.classList.add('bi-check-circle');
-        if (!badgeText) badgeText = 'Approved';
-    } else if (status === 'rejected_hotel_not_found') {
-        emailStatusBadge.classList.add('bg-danger');
-        iconElement.classList.add('bi-x-circle');
-        if (!badgeText) badgeText = 'JP Otel Yok';
-    } else if (status === 'rejected_room_not_found') {
-        emailStatusBadge.classList.add('bg-danger');
-        iconElement.classList.add('bi-x-circle');
-        if (!badgeText) badgeText = 'JP Oda Yok';
-    } else if (status === 'rejected') {
-        emailStatusBadge.classList.add('bg-danger');
-        iconElement.classList.add('bi-x-circle');
-        if (!badgeText) badgeText = 'Rejected';
-    } else if (status === 'processing') {
-        emailStatusBadge.classList.add('bg-primary');
-        iconElement.classList.add('bi-gear-fill');
-        if (!badgeText) badgeText = 'Processing';
-    } else if (status === 'juniper_manual') {
-        emailStatusBadge.classList.add('bg-info');
-        iconElement.classList.add('bi-person-check');
-        if (!badgeText) badgeText = 'Juniper(M)';
-    } else if (status === 'juniper_robot') {
-        emailStatusBadge.classList.add('bg-info');
-        iconElement.classList.add('bi-robot');
-        if (!badgeText) badgeText = 'Juniper(R)';
-    } else {
-        emailStatusBadge.classList.add('bg-secondary');
-        iconElement.classList.add('bi-info-circle');
-        if (!badgeText) badgeText = status.replace('_', ' ');
-    }
-    
-    // Add icon to badge
-    emailStatusBadge.appendChild(iconElement);
-    
-    // Add a space
-    emailStatusBadge.appendChild(document.createTextNode(' '));
-    
-    // Add text content
-    emailStatusBadge.appendChild(document.createTextNode(badgeText));
-    
-    console.log("Status UI updated to:", status, "with text:", badgeText);
-}
-
-// Function to check email status via AJAX
-function checkEmailStatus() {
-    const emailId = {{ email.id }};
-    console.log(`Fetching current status for email ID: ${emailId}...`);
-    
-    fetch(`/api/emails/${emailId}/status/`)
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
-            return response.json();
-        })
-        .then(data => {
-            console.log('Email status API response:', data);
-            // Update UI with the current status and display text from API
-            updateEmailStatusUI(data.status, data.status_display);
-        })
-        .catch(error => {
-            console.error('Error fetching email status:', error);
-        });
-}
-
-// Function to update email status through API
-function updateEmailStatus(status) {
-    const emailId = {{ email.id }};
-    const csrftoken = getCookie('csrftoken');
-    
-    console.log(`Updating email ${emailId} status to "${status}" via API...`);
-    
-    // First update the UI immediately to show processing
-    updateEmailStatusUI('processing', 'Processing');
-    
-    // Then make API call to update in database
-    fetch(`/api/emails/${emailId}/status/`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': csrftoken
-        },
-        body: JSON.stringify({ status: status })
-    })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status}`);
-        }
-        return response.json();
-    })
-    .then(data => {
-        console.log('Status updated successfully via API:', data);
-        // Update UI again with confirmed status from server
-        updateEmailStatusUI(data.status, data.status_display);
-    })
-    .catch(error => {
-        console.error('Error updating status via API:', error);
-        // In case of error, refresh status from server
-        checkEmailStatus();
-    });
-}
+    }, true); // Capture phase'de çalış - event bubbling'den önce
+});
 
 $(document).ready(function() {
+    // JP Otel Yok butonu için doğrudan ve kesin bir çözüm
+    $(document).on('click', 'a[data-bs-target="#hotelNotFoundModal"]', function(e) {
+        e.preventDefault();
+        e.stopPropagation(); // Olayın yayılmasını tamamen durdur
+        
+        // Modal'ı açık şekilde bul ve aç
+        const hotelNotFoundModal = new bootstrap.Modal(document.getElementById('hotelNotFoundModal'));
+        hotelNotFoundModal.show();
+        
+        return false; // Event işleme zincirini durdur
+    });
+    
     var triggerTabList = [].slice.call(document.querySelectorAll('#contentTab button'))
     triggerTabList.forEach(function (triggerEl) {
       var tabTrigger = new bootstrap.Tab(triggerEl)
@@ -1219,8 +1858,44 @@ $(document).ready(function() {
         bulkAction('reject');
     });
     
-    $('#bulkRejectHotelNotFound').on('click', function() {
-        bulkAction('reject-hotel-not-found');
+    $('#bulkRejectHotelNotFound').on('click', function(e) {
+        // Yeni sekme açılmasını önle
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // Seçili satırları bul
+        const selectedIds = [];
+        $('.rule-checkbox:checked').each(function() {
+            selectedIds.push($(this).data('id'));
+        });
+        
+        if (selectedIds.length === 0) {
+            toastr.warning('Lütfen işlem yapmak için en az bir kural seçin.');
+            return false;
+        }
+        
+        // Modal'ı göster
+        const hotelNotFoundModal = new bootstrap.Modal(document.getElementById('hotelNotFoundModal'));
+        
+        // Form submission handler'ı değiştir
+        $('#confirmRejectHotelNotFound').off('click').on('click', function() {
+            // Checkbox durumunu al
+            const blockEmail = $('#blockEmailCheck').prop('checked');
+            
+            // CSRF token al
+            const csrftoken = getCookie('csrftoken');
+            
+            // Bulk action'ı çağır
+            bulkAction('reject-hotel-not-found', selectedIds, blockEmail);
+            
+            // Modal'ı kapat
+            hotelNotFoundModal.hide();
+        });
+        
+        hotelNotFoundModal.show();
+        
+        // Event işleme zincirini tamamen durdur
+        return false;
     });
     
     $('#bulkRejectRoomNotFound').on('click', function() {
@@ -1232,11 +1907,14 @@ $(document).ready(function() {
     });
     
     // Seçilen kuralları işlemek için AJAX fonksiyonu
-    function bulkAction(action) {
-        const selectedIds = [];
-        $('.rule-checkbox:checked').each(function() {
-            selectedIds.push($(this).data('id'));
-        });
+    function bulkAction(action, selectedIds = null, blockEmail = false) {
+        // Eğer selectedIds verilmediyse, tüm seçili checkboxları al
+        if (!selectedIds) {
+            selectedIds = [];
+            $('.rule-checkbox:checked').each(function() {
+                selectedIds.push($(this).data('id'));
+            });
+        }
         
         if (selectedIds.length === 0) {
             toastr.warning('Lütfen işlem yapmak için en az bir kural seçin.');
@@ -1249,11 +1927,20 @@ $(document).ready(function() {
             confirmMessage = `${selectedIds.length} adet seçili kuralı onaylamak istediğinizden emin misiniz?`;
         } else if (action === 'reject') {
             confirmMessage = `${selectedIds.length} adet seçili kuralı reddetmek istediğinizden emin misiniz?`;
+        } else if (action === 'reject-hotel-not-found') {
+            // Bu durumda modal kullandığımız için confirm işlemi yapmayacağız
+            if (blockEmail) {
+                confirmMessage = 'Otomatik bloklamalı işlem';
+            } else {
+                confirmMessage = 'JP Otel Yok işlemi';
+            }
+        } else if (action === 'reject-room-not-found') {
+            confirmMessage = `${selectedIds.length} adet seçili kuralı "JP Oda Yok" olarak işaretlemek istediğinizden emin misiniz?`;
         } else if (action === 'smartmatch') {
             confirmMessage = `${selectedIds.length} adet seçili kural için akıllı eşleştirme yapmak istediğinizden emin misiniz?`;
         }
         
-        if (!confirm(confirmMessage)) {
+        if (action !== 'reject-hotel-not-found' && !confirm(confirmMessage)) {
             return;
         }
         
@@ -1276,10 +1963,19 @@ $(document).ready(function() {
         }, 100);
         
         // İşlemi başlat
+        const requestData = { 
+            ids: selectedIds 
+        };
+        
+        // JP Otel Yok işlemi için bloklanma bilgisini ekle
+        if (action === 'reject-hotel-not-found' && blockEmail) {
+            requestData.block_email = true;
+        }
+        
         $.ajax({
             url: `/emails/bulk_action_rows/${action}/`,
             type: 'POST',
-            data: JSON.stringify({ ids: selectedIds }),
+            data: JSON.stringify(requestData),
             contentType: 'application/json',
             headers: {
                 'X-CSRFToken': csrftoken
@@ -1315,7 +2011,7 @@ $(document).ready(function() {
                 // Sayfayı yenile
                 setTimeout(function() {
                     location.reload();
-                }, 3000);
+                }, 2000);
             },
             error: function(error) {
                 // Hata oluştu
@@ -1395,28 +2091,21 @@ $(document).ready(function() {
         const status = $(this).text().trim();
         
         if (confirm(`Bu e-postayı "${status}" olarak işaretlemek istediğinizden emin misiniz?`)) {
-            $.ajax({
-                url: url,
-                type: 'POST',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRFToken': getCookie('csrftoken')
-                },
-                success: function(response) {
-                    // Update the status badge
-                    updateStatusBadge(response.status);
-                    // Show a success message
-                    showAlert('success', response.message || 'E-posta durumu güncellendi.');
-                    // Reload page after a short delay to reflect changes
-                    setTimeout(function() {
-                        location.reload();
-                    }, 1500);
-                },
-                error: function(xhr) {
-                    console.error('Error updating email status:', xhr);
-                    showAlert('danger', 'E-posta durumu güncellenirken bir hata oluştu.');
-                }
-            });
+            // Form oluştur ve post et - sayfa yenilenecek, AJAX yerine normal post
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = url;
+            
+            // CSRF token ekle
+            const csrfToken = document.createElement('input');
+            csrfToken.type = 'hidden';
+            csrfToken.name = 'csrfmiddlewaretoken';
+            csrfToken.value = getCookie('csrftoken');
+            form.appendChild(csrfToken);
+            
+            // Formu sayfaya ekle ve gönder
+            document.body.appendChild(form);
+            form.submit();
         }
     });
     
@@ -1427,28 +2116,613 @@ $(document).ready(function() {
         const status = $(this).text().trim();
         
         if (confirm(`Bu e-postayı "${status}" olarak işaretlemek istediğinizden emin misiniz?`)) {
-            $.ajax({
-                url: url,
-                type: 'POST',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRFToken': getCookie('csrftoken')
-                },
-                success: function(response) {
-                    // Update the status badge
-                    updateStatusBadge(response.status);
-                    // Show a success message
-                    showAlert('success', response.message || 'E-posta Juniper durumu güncellendi.');
-                    // Reload page after a short delay to reflect changes
-                    setTimeout(function() {
-                        location.reload();
-                    }, 1500);
-                },
-                error: function(xhr) {
-                    console.error('Error updating Juniper status:', xhr);
-                    showAlert('danger', 'Juniper durumu güncellenirken bir hata oluştu.');
-                }
+            // Form oluştur ve post et - sayfa yenilenecek, AJAX yerine normal post
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = url;
+            
+            // CSRF token ekle
+            const csrfToken = document.createElement('input');
+            csrfToken.type = 'hidden';
+            csrfToken.name = 'csrfmiddlewaretoken';
+            csrfToken.value = getCookie('csrftoken');
+            form.appendChild(csrfToken);
+            
+            // Formu sayfaya ekle ve gönder
+            document.body.appendChild(form);
+            form.submit();
+        }
+    });
+});
+</script>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" />
+<script>
+// Breadcrumb içindeki Emails linkine tıklandığında aynı sekmede açılmasını sağlar
+document.addEventListener('DOMContentLoaded', function() {
+  const emailsBreadcrumbLink = document.querySelector("#content > div > div.d-flex.justify-content-between.align-items-center.mb-3 > div:nth-child(1) > nav > ol > li:nth-child(2) > a");
+  if (emailsBreadcrumbLink) {
+    emailsBreadcrumbLink.addEventListener('click', function(e) {
+      e.preventDefault();
+      window.location.href = this.href;
+    });
+  }
+  
+  // Make "Akıllı Eşleştir", "Oda Eşleştir", and "Manuel Düzenle" links open in the same tab
+  const sameTabLinks = document.querySelectorAll('a[href*="smart_match"], a[href*="smart-match"], a[href*="match-room"], a[href*="manual-mapping"], a[data-bs-toggle="modal"], .dropdown-item');
+  sameTabLinks.forEach(function(link) {
+    link.addEventListener('click', function(e) {
+      // Modal toggle özelliği varsa, sayfanın yenilenmesini engelleme ama modal'ı açmaya izin ver
+      if (this.getAttribute('data-bs-toggle') === 'modal') {
+        return; // Normal davranışını sürdürsün
+      }
+      
+      // Diğer linkler için sayfayı yenileme
+      if (this.href && !this.href.includes('#')) {
+        e.preventDefault();
+        window.location.href = this.href;
+      }
+    });
+  });
+  
+  // Make bulk action buttons and their dropdown items open in the same tab
+  const bulkActionsContainer = document.querySelector('.bulk-actions');
+  if (bulkActionsContainer) {
+    const bulkActionLinks = bulkActionsContainer.querySelectorAll('a');
+    bulkActionLinks.forEach(function(link) {
+      link.addEventListener('click', function(e) {
+        if (this.href && !this.href.includes('#')) {
+          e.preventDefault();
+          window.location.href = this.href;
+        }
+      });
+    });
+  }
+});
+
+// Robot İşleme Fonksiyonu - Onaylanan e-postadaki kuralları JSON formatında dosyaya export eder
+function sendToRobot(emailId) {
+  if (!confirm('Onaylanan kuralları robota göndermek istediğinizden emin misiniz?')) {
+    return;
+  }
+  
+  // CSRF token'ı al
+  const csrftoken = getCookie('csrftoken');
+  
+  // İşlem başladı bildirimi
+  toastr.info('Kurallar hazırlanıyor...', 'Lütfen bekleyin');
+  
+  // AJAX isteği gönder
+  $.ajax({
+    url: '/emails/export_rules_for_robot/' + emailId + '/',
+    type: 'POST',
+    headers: {
+      'X-CSRFToken': csrftoken,
+      'X-Requested-With': 'XMLHttpRequest'
+    },
+    success: function(response) {
+      if (response.success) {
+        toastr.success(response.message, 'Başarılı');
+        
+        // Başarılı ise sayfayı 2 saniye sonra yenile
+        setTimeout(function() {
+          location.reload();
+        }, 2000);
+      } else {
+        toastr.error(response.error || 'Bir hata oluştu', 'Hata');
+      }
+    },
+    error: function(xhr, status, error) {
+      console.error('Error exporting rules:', xhr);
+      let errorMsg = 'Kurallar robota gönderilirken bir hata oluştu';
+      
+      try {
+        // Try to get more detailed error message from response
+        const responseText = xhr.responseText;
+        console.log('Server response:', responseText);
+        
+        if (responseText) {
+          const errorData = JSON.parse(responseText);
+          if (errorData && errorData.error) {
+            errorMsg += ': ' + errorData.error;
+          }
+        }
+      } catch (e) {
+        console.error('Error parsing error response:', e);
+      }
+      
+      toastr.error(errorMsg, 'Hata');
+    }
+  });
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function updateEmailStatusUI(status, statusDisplay) {
+    console.log(`Updating email status UI to: ${status} (display: ${statusDisplay})`);
+    const emailStatusBadge = document.getElementById('email-status-badge');
+    
+    if (!emailStatusBadge) {
+        console.error("Email status badge element not found!");
+        return;
+    }
+    
+    // Clear the badge content
+    emailStatusBadge.innerHTML = '';
+    
+    // Remove all existing background classes
+    emailStatusBadge.classList.remove('bg-warning', 'bg-success', 'bg-danger', 'bg-info', 'bg-secondary', 'bg-primary');
+    
+    // Create icon element
+    const iconElement = document.createElement('i');
+    iconElement.classList.add('bi');
+    
+    // Add appropriate icon and class based on status
+    let badgeText = statusDisplay || '';
+    
+    if (status === 'pending') {
+        emailStatusBadge.classList.add('bg-warning');
+        iconElement.classList.add('bi-hourglass');
+        if (!badgeText) badgeText = 'Pending';
+    } else if (status === 'approved') {
+        emailStatusBadge.classList.add('bg-success');
+        iconElement.classList.add('bi-check-circle');
+        if (!badgeText) badgeText = 'Approved';
+    } else if (status === 'rejected_hotel_not_found') {
+        emailStatusBadge.classList.add('bg-danger');
+        iconElement.classList.add('bi-x-circle');
+        if (!badgeText) badgeText = 'JP Otel Yok';
+    } else if (status === 'rejected_room_not_found') {
+        emailStatusBadge.classList.add('bg-danger');
+        iconElement.classList.add('bi-x-circle');
+        if (!badgeText) badgeText = 'JP Oda Yok';
+    } else if (status === 'rejected') {
+        emailStatusBadge.classList.add('bg-danger');
+        iconElement.classList.add('bi-x-circle');
+        if (!badgeText) badgeText = 'Rejected';
+    } else if (status === 'processing') {
+        emailStatusBadge.classList.add('bg-primary');
+        iconElement.classList.add('bi-gear-fill');
+        if (!badgeText) badgeText = 'Processing';
+    } else if (status === 'juniper_manual') {
+        emailStatusBadge.classList.add('bg-info');
+        iconElement.classList.add('bi-person-check');
+        if (!badgeText) badgeText = 'Juniper(M)';
+    } else if (status === 'juniper_robot') {
+        emailStatusBadge.classList.add('bg-info');
+        iconElement.classList.add('bi-robot');
+        if (!badgeText) badgeText = 'Juniper(R)';
+    } else {
+        emailStatusBadge.classList.add('bg-secondary');
+        iconElement.classList.add('bi-info-circle');
+        if (!badgeText) badgeText = status.replace('_', ' ');
+    }
+    
+    // Add icon to badge
+    emailStatusBadge.appendChild(iconElement);
+    
+    // Add a space
+    emailStatusBadge.appendChild(document.createTextNode(' '));
+    
+    // Add text content
+    emailStatusBadge.appendChild(document.createTextNode(badgeText));
+    
+    console.log("Status UI updated to:", status, "with text:", badgeText);
+}
+
+function checkEmailStatus() {
+    const emailId = {{ email.id }};
+    console.log(`Fetching current status for email ID: ${emailId}...`);
+    
+    fetch(`/api/emails/${emailId}/status/`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Email status API response:', data);
+            // Update UI with the current status and display text from API
+            updateEmailStatusUI(data.status, data.status_display);
+        })
+        .catch(error => {
+            console.error('Error fetching email status:', error);
+        });
+}
+
+function updateEmailStatus(status) {
+    const emailId = {{ email.id }};
+    const csrftoken = getCookie('csrftoken');
+    
+    console.log(`Updating email ${emailId} status to "${status}" via API...`);
+    
+    // First update the UI immediately to show processing
+    updateEmailStatusUI('processing', 'Processing');
+    
+    // Then make API call to update in database
+    fetch(`/api/emails/${emailId}/status/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrftoken
+        },
+        body: JSON.stringify({ status: status })
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('Status updated successfully via API:', data);
+        // Update UI again with confirmed status from server
+        updateEmailStatusUI(data.status, data.status_display);
+    })
+    .catch(error => {
+        console.error('Error updating status via API:', error);
+        // In case of error, refresh status from server
+        checkEmailStatus();
+    });
+}
+
+$(document).ready(function() {
+    // JP Otel Yok butonu için doğrudan ve kesin bir çözüm
+    $(document).on('click', 'a[data-bs-target="#hotelNotFoundModal"]', function(e) {
+        e.preventDefault();
+        e.stopPropagation(); // Olayın yayılmasını tamamen durdur
+        
+        // Modal'ı açık şekilde bul ve aç
+        const hotelNotFoundModal = new bootstrap.Modal(document.getElementById('hotelNotFoundModal'));
+        hotelNotFoundModal.show();
+        
+        return false; // Event işleme zincirini durdur
+    });
+    
+    var triggerTabList = [].slice.call(document.querySelectorAll('#contentTab button'))
+    triggerTabList.forEach(function (triggerEl) {
+      var tabTrigger = new bootstrap.Tab(triggerEl)
+    
+      triggerEl.addEventListener('click', function (event) {
+        event.preventDefault()
+        tabTrigger.show()
+      })
+    })
+    
+    // Çoklu Seçim ve Toplu İşlemler için JavaScript
+    const bulkActions = $('.bulk-actions');
+    const selectAllCheckbox = $('#selectAllRules');
+    const ruleCheckboxes = $('.rule-checkbox');
+    
+    // Seçili öğelerin sayısını kontrol eden ve duruma göre bulk action barını gösteren/gizleyen fonksiyon
+    function updateBulkActionsVisibility() {
+        const selectedCount = $('.rule-checkbox:checked').length;
+        if (selectedCount > 0) {
+            bulkActions.addClass('show');
+        } else {
+            bulkActions.removeClass('show');
+        }
+    }
+    
+    // Checkbox'ların tıklama işlevlerini ayarlama
+    selectAllCheckbox.on('change', function() {
+        const isChecked = $(this).prop('checked');
+        ruleCheckboxes.prop('checked', isChecked);
+        $('.rule-item').toggleClass('selected', isChecked);
+        updateBulkActionsVisibility();
+    });
+    
+    $(document).on('change', '.rule-checkbox', function() {
+        const isChecked = $(this).prop('checked');
+        $(this).closest('.rule-item').toggleClass('selected', isChecked);
+        
+        // Tüm kurallar seçili mi kontrol et
+        const allChecked = $('.rule-checkbox:checked').length === $('.rule-checkbox').length;
+        selectAllCheckbox.prop('checked', allChecked);
+        
+        updateBulkActionsVisibility();
+    });
+    
+    // Toplu İşlem Butonlarının İşlevleri
+    $('#bulkApprove').on('click', function() {
+        bulkAction('approve');
+    });
+    
+    $('#bulkReject').on('click', function() {
+        bulkAction('reject');
+    });
+    
+    $('#bulkRejectHotelNotFound').on('click', function(e) {
+        // Yeni sekme açılmasını önle
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // Seçili satırları bul
+        const selectedIds = [];
+        $('.rule-checkbox:checked').each(function() {
+            selectedIds.push($(this).data('id'));
+        });
+        
+        if (selectedIds.length === 0) {
+            toastr.warning('Lütfen işlem yapmak için en az bir kural seçin.');
+            return false;
+        }
+        
+        // Modal'ı göster
+        const hotelNotFoundModal = new bootstrap.Modal(document.getElementById('hotelNotFoundModal'));
+        
+        // Form submission handler'ı değiştir
+        $('#confirmRejectHotelNotFound').off('click').on('click', function() {
+            // Checkbox durumunu al
+            const blockEmail = $('#blockEmailCheck').prop('checked');
+            
+            // CSRF token al
+            const csrftoken = getCookie('csrftoken');
+            
+            // Bulk action'ı çağır
+            bulkAction('reject-hotel-not-found', selectedIds, blockEmail);
+            
+            // Modal'ı kapat
+            hotelNotFoundModal.hide();
+        });
+        
+        hotelNotFoundModal.show();
+        
+        // Event işleme zincirini tamamen durdur
+        return false;
+    });
+    
+    $('#bulkRejectRoomNotFound').on('click', function() {
+        bulkAction('reject-room-not-found');
+    });
+    
+    $('#bulkSmartMatch').on('click', function() {
+        bulkAction('smartmatch');
+    });
+    
+    // Seçilen kuralları işlemek için AJAX fonksiyonu
+    function bulkAction(action, selectedIds = null, blockEmail = false) {
+        // Eğer selectedIds verilmediyse, tüm seçili checkboxları al
+        if (!selectedIds) {
+            selectedIds = [];
+            $('.rule-checkbox:checked').each(function() {
+                selectedIds.push($(this).data('id'));
             });
+        }
+        
+        if (selectedIds.length === 0) {
+            toastr.warning('Lütfen işlem yapmak için en az bir kural seçin.');
+            return;
+        }
+        
+        // İşlemin onayını iste
+        let confirmMessage = '';
+        if (action === 'approve') {
+            confirmMessage = `${selectedIds.length} adet seçili kuralı onaylamak istediğinizden emin misiniz?`;
+        } else if (action === 'reject') {
+            confirmMessage = `${selectedIds.length} adet seçili kuralı reddetmek istediğinizden emin misiniz?`;
+        } else if (action === 'reject-hotel-not-found') {
+            // Bu durumda modal kullandığımız için confirm işlemi yapmayacağız
+            if (blockEmail) {
+                confirmMessage = 'Otomatik bloklamalı işlem';
+            } else {
+                confirmMessage = 'JP Otel Yok işlemi';
+            }
+        } else if (action === 'reject-room-not-found') {
+            confirmMessage = `${selectedIds.length} adet seçili kuralı "JP Oda Yok" olarak işaretlemek istediğinizden emin misiniz?`;
+        } else if (action === 'smartmatch') {
+            confirmMessage = `${selectedIds.length} adet seçili kural için akıllı eşleştirme yapmak istediğinizden emin misiniz?`;
+        }
+        
+        if (action !== 'reject-hotel-not-found' && !confirm(confirmMessage)) {
+            return;
+        }
+        
+        // CSRF tokenını al
+        const csrftoken = getCookie('csrftoken');
+        
+        // İlerleme çubuğunu ve sonuç alanını hazırla
+        $('.bulk-action-progress').show();
+        $('.bulk-action-result').hide();
+        
+        // İlerleme çubuğunu animasyon ile göster
+        let progress = 0;
+        const progressInterval = setInterval(function() {
+            progress += 5;
+            if (progress > 90) {
+                clearInterval(progressInterval);
+            }
+            $('.bulk-action-progress .progress-bar').css('width', progress + '%');
+            $('.bulk-action-progress .progress-bar').attr('aria-valuenow', progress);
+        }, 100);
+        
+        // İşlemi başlat
+        const requestData = { 
+            ids: selectedIds 
+        };
+        
+        // JP Otel Yok işlemi için bloklanma bilgisini ekle
+        if (action === 'reject-hotel-not-found' && blockEmail) {
+            requestData.block_email = true;
+        }
+        
+        $.ajax({
+            url: `/emails/bulk_action_rows/${action}/`,
+            type: 'POST',
+            data: JSON.stringify(requestData),
+            contentType: 'application/json',
+            headers: {
+                'X-CSRFToken': csrftoken
+            },
+            beforeSend: function() {
+                // İşlem başlatıldı
+                $('.bulk-action-progress .progress-bar').css('width', '10%');
+            },
+            success: function(response) {
+                // İşlem tamamlandı
+                clearInterval(progressInterval);
+                $('.bulk-action-progress .progress-bar').css('width', '100%');
+                
+                // Sonuç mesajını göster
+                $('.bulk-action-result').removeClass('alert-success alert-danger alert-warning').addClass('alert-success');
+                $('.bulk-action-message').text(response.message || 'İşlem başarıyla tamamlandı.');
+                $('.bulk-action-result').show();
+                
+                // İşlem detaylarını hazırla
+                let detailsHtml = '';
+                if (response.details) {
+                    detailsHtml = '<ul class="mt-2 mb-0">';
+                    if (response.details.success && response.details.success.length > 0) {
+                        detailsHtml += `<li class="text-success">${response.details.success.length} kural başarıyla işlendi.</li>`;
+                    }
+                    if (response.details.errors && response.details.errors.length > 0) {
+                        detailsHtml += `<li class="text-danger">${response.details.errors.length} kural işlenirken hata oluştu.</li>`;
+                    }
+                    detailsHtml += '</ul>';
+                    $('.bulk-action-message').after(detailsHtml);
+                }
+                
+                // Sayfayı yenile
+                setTimeout(function() {
+                    location.reload();
+                }, 2000);
+            },
+            error: function(error) {
+                // Hata oluştu
+                clearInterval(progressInterval);
+                $('.bulk-action-progress .progress-bar').css('width', '100%').addClass('bg-danger');
+                
+                // Hata mesajını göster
+                $('.bulk-action-result').removeClass('alert-success alert-danger alert-warning').addClass('alert-danger');
+                $('.bulk-action-message').text('İşlem sırasında bir hata oluştu: ' + (error.responseJSON?.error || 'Bilinmeyen hata'));
+                $('.bulk-action-result').show();
+            }
+        });
+    }
+    
+    // AI Önerileri uygulama işlevi
+    $(document).on('click', '.apply-suggestion', function() {
+        const button = $(this);
+        const hotelId = button.data('hotel-id');
+        const roomIds = button.data('room-ids').split(',');
+        const rowId = button.data('row-id');
+        
+        if (!rowId || !hotelId) {
+            toastr.error('Eksik parametre: row_id veya hotel_id bulunamadı.');
+            return;
+        }
+        
+        // Butonun durumunu güncelle
+        button.prop('disabled', true).html('<i class="bi bi-hourglass-split"></i> İşleniyor...');
+        
+        // CSRF tokenını al
+        const csrftoken = getCookie('csrftoken');
+        
+        // AJAX isteği gönder
+        $.ajax({
+            url: `/emails/apply_suggestion/${rowId}/`,
+            type: 'POST',
+            data: JSON.stringify({
+                hotel_id: hotelId,
+                room_ids: roomIds
+            }),
+            contentType: 'application/json',
+            headers: {
+                'X-CSRFToken': csrftoken
+            },
+            success: function(response) {
+                // Başarılı işlem
+                button.removeClass('btn-outline-primary').addClass('btn-success')
+                    .html('<i class="bi bi-check2-circle"></i> Uygulandı');
+                
+                toastr.success(response.message || 'Öneri başarıyla uygulandı.');
+                
+                // Sayfayı 2 saniye sonra yenile
+                setTimeout(function() {
+                    location.reload();
+                }, 2000);
+            },
+            error: function(error) {
+                // Hata durumunda
+                button.prop('disabled', false).removeClass('btn-outline-primary').addClass('btn-danger')
+                    .html('<i class="bi bi-exclamation-triangle"></i> Hata');
+                
+                toastr.error('Öneri uygulanırken hata oluştu: ' + (error.responseJSON?.error || 'Bilinmeyen hata'));
+                
+                // 3 saniye sonra butonu sıfırla
+                setTimeout(function() {
+                    button.prop('disabled', false).removeClass('btn-danger').addClass('btn-outline-primary')
+                        .html('<i class="bi bi-check2"></i> Bu Öneriyi Uygula');
+                }, 3000);
+            }
+        });
+    });
+
+    // Add click event handler for the reject email links
+    $('.reject-email-link').click(function(e) {
+        e.preventDefault();
+        const url = $(this).data('url');
+        const status = $(this).text().trim();
+        
+        if (confirm(`Bu e-postayı "${status}" olarak işaretlemek istediğinizden emin misiniz?`)) {
+            // Form oluştur ve post et - sayfa yenilenecek, AJAX yerine normal post
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = url;
+            
+            // CSRF token ekle
+            const csrfToken = document.createElement('input');
+            csrfToken.type = 'hidden';
+            csrfToken.name = 'csrfmiddlewaretoken';
+            csrfToken.value = getCookie('csrftoken');
+            form.appendChild(csrfToken);
+            
+            // Formu sayfaya ekle ve gönder
+            document.body.appendChild(form);
+            form.submit();
+        }
+    });
+    
+    // Add click event handler for the Juniper status links
+    $('.juniper-status-link').click(function(e) {
+        e.preventDefault();
+        const url = $(this).data('url');
+        const status = $(this).text().trim();
+        
+        if (confirm(`Bu e-postayı "${status}" olarak işaretlemek istediğinizden emin misiniz?`)) {
+            // Form oluştur ve post et - sayfa yenilenecek, AJAX yerine normal post
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = url;
+            
+            // CSRF token ekle
+            const csrfToken = document.createElement('input');
+            csrfToken.type = 'hidden';
+            csrfToken.name = 'csrfmiddlewaretoken';
+            csrfToken.value = getCookie('csrftoken');
+            form.appendChild(csrfToken);
+            
+            // Formu sayfaya ekle ve gönder
+            document.body.appendChild(form);
+            form.submit();
         }
     });
 });

@@ -163,6 +163,22 @@ class EmailListAPI(generics.ListAPIView):
         status = self.request.query_params.get('status')
         search = self.request.query_params.get('search')
         sort_order = self.request.query_params.get('sort', 'asc')  # Default to ascending (oldest first)
+        date_pattern = self.request.query_params.get('date_pattern')
+        start_date = self.request.query_params.get('start_date')
+        end_date = self.request.query_params.get('end_date')
+        sender = self.request.query_params.get('sender')
+        
+        # If date_pattern is provided, it overrides start_date and end_date
+        if date_pattern:
+            try:
+                from emails.filters import get_date_filter_params
+                pattern_start_date, pattern_end_date = get_date_filter_params(date_pattern)
+                if pattern_start_date and pattern_end_date:
+                    start_date = pattern_start_date
+                    end_date = pattern_end_date
+            except ImportError:
+                # If filters module is not available, just use provided dates
+                pass
         
         # Base queryset
         queryset = Email.objects.all()
@@ -173,6 +189,27 @@ class EmailListAPI(generics.ListAPIView):
         
         if search:
             queryset = queryset.filter(subject__icontains=search)
+        
+        # Apply date filters
+        if start_date:
+            try:
+                from datetime import datetime
+                start_date_obj = datetime.strptime(start_date, '%Y-%m-%d').date()
+                queryset = queryset.filter(received_date__date__gte=start_date_obj)
+            except ValueError:
+                pass
+        
+        if end_date:
+            try:
+                from datetime import datetime
+                end_date_obj = datetime.strptime(end_date, '%Y-%m-%d').date()
+                queryset = queryset.filter(received_date__date__lte=end_date_obj)
+            except ValueError:
+                pass
+        
+        # Apply sender filter
+        if sender:
+            queryset = queryset.filter(sender__icontains=sender)
         
         # Order by received date based on sort parameter
         if sort_order == 'desc':

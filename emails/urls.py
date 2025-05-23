@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from .bulk_actions import bulk_action
 
 app_name = 'emails'
 
@@ -24,12 +25,17 @@ urlpatterns = [
     path('row/<int:row_id>/select-alternative/', views.select_alternative_ajax, name='select_alternative_ajax'),
     path('row/<int:row_id>/mark-not-found/', views.mark_not_found_ajax, name='mark_not_found_ajax'),
     path('row/<int:row_id>/create-alias/', views.create_alias_ajax, name='create_alias_ajax'),
+    # Manuel kural ekleme path'leri
+    path('add-manual-rule/', views.add_manual_rule, name='add_manual_rule'),
+    path('add-manual-rule/<int:email_id>/', views.add_manual_rule, name='add_manual_rule_to_email'),
     # Row ID'si olmadan sadece otel ID'sine göre odaları getiren endpoint
-    path('get_rooms_by_hotel/<int:hotel_id>/', views.get_rooms_by_hotel_ajax, name='get_rooms_by_hotel_ajax'),
+    path('get_rooms_by_hotel/<int:hotel_id>/', views.get_rooms_by_hotel, name='get_rooms_by_hotel'),
+    path('get_contracts_by_hotel/<int:hotel_id>/', views.get_contracts_by_hotel, name='get_contracts_by_hotel'),
     # Row ID'si ile birlikte otel ID'sine göre odaları ve önerileri getiren endpoint
     path('get_rooms_by_hotel/<int:hotel_id>/<int:row_id>/', views.get_rooms_by_hotel_ajax, name='get_rooms_by_hotel_ajax_with_row'),
     
     # Bulk action endpoints
+    path('bulk-action/', bulk_action, name='bulk_action'),
     path('bulk_action/approve/', views.email_bulk_approve, name='email_bulk_approve'),
     path('bulk_action/reject/', views.email_bulk_reject, name='email_bulk_reject'),
     path('bulk_action/reject-hotel-not-found/', views.email_bulk_reject_hotel_not_found, name='email_bulk_reject_hotel_not_found'),
@@ -57,4 +63,10 @@ urlpatterns = [
     
     # Attachment download
     path('attachment/<int:attachment_id>/download/', views.download_attachment, name='download_attachment'),
+    
+    # Robot JSON export endpoint
+    path('export_rules_for_robot/<int:email_id>/', views.export_rules_for_robot, name='export_rules_for_robot'),
+    
+    path('email/<int:email_id>/analyze-attachments/', views.analyze_email_attachments, name='analyze_email_attachments'),
+    path('attachment/<int:attachment_id>/content/', views.get_attachment_content, name='get_attachment_content'),
 ]

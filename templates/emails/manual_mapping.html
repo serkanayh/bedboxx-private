@@ -23,7 +23,15 @@
                     <div class="col-md-6">
                         <p><strong>Hotel:</strong> {{ row.hotel_name }}</p>
                         <p><strong>Room Type:</strong> {{ row.room_type }}</p>
-                        <p><strong>Market:</strong> {{ row.market }}</p>
+                        <p><strong>Market:</strong> 
+                            {% if row.markets.all %}
+                                {% for market in row.markets.all %}
+                                    {{ market.name }}{% if not forloop.last %}, {% endif %}
+                                {% endfor %}
+                            {% else %}
+                                {{ row.market|default:"Not specified" }}
+                            {% endif %}
+                        </p>
                     </div>
                     <div class="col-md-6">
                         <p><strong>Start Date:</strong> {{ row.start_date }}</p>
@@ -56,39 +64,59 @@
                     </div>
                     
                     <div class="col-md-6">
-                        <label for="market_id" class="form-label"><strong>Market</strong></label>
-                        <select class="form-select" id="market_id" name="market_id" required>
-                            <option value="">-- Select Market --</option>
+                        <label class="form-label"><strong>Markets</strong> (Multiple Selection)</label>
+                        <select class="form-select" id="market_ids" name="market_ids" multiple required size="5">
                             {% for market in markets %}
-                            <option value="{{ market.id }}" {% if row.market == market.name %}selected{% endif %}>
+                            <option value="{{ market.id }}" {% if market.id in selected_market_ids %}selected{% endif %}>
                                 {{ market.name }}
                             </option>
                             {% endfor %}
                         </select>
+                        <small class="text-muted">Hold Ctrl/Cmd key to select multiple markets</small>
                     </div>
                 </div>
                 
                 <div class="row mb-3">
-                    <div class="col-md-12">
+                    <div class="col-md-6">
                         <label class="form-label"><strong>Room Types</strong></label>
-                        <div id="room-types-container" class="border rounded p-3">
+                        <div id="room-types-container" class="border rounded p-3" style="max-height: 200px; overflow-y: auto;">
                             <div class="form-check mb-2">
-                                <input class="form-check-input" type="checkbox" id="all-rooms" name="room_types" value="all">
+                                <input class="form-check-input" type="checkbox" id="all-rooms" name="room_types" value="all" {% if is_all_room %}checked{% endif %}>
                                 <label class="form-check-label" for="all-rooms">All Room Types</label>
                             </div>
                             <hr>
                             <div id="room-types-list">
                                 {% for room in rooms %}
                                 <div class="form-check">
-                                    <input class="form-check-input room-type-checkbox" type="checkbox" name="room_types" value="{{ room.id }}" id="room-{{ room.id }}" {% if row.juniper_room.id == room.id %}checked{% endif %}>
+                                    <input class="form-check-input room-type-checkbox" type="checkbox" name="room_types" value="{{ room.id }}" id="room-{{ room.id }}" {% if room.id in selected_room_ids %}checked{% endif %} {% if is_all_room %}disabled{% endif %}>
                                     <label class="form-check-label" for="room-{{ room.id }}">
-                                        {{ room.juniper_room_type }}
+                                        {{ room.juniper_room_type }} ({{ room.room_code }})
                                     </label>
                                 </div>
                                 {% empty %}
                                 <p class="text-muted">Select a hotel to see available room types</p>
                                 {% endfor %}
                             </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label"><strong>Contracts</strong> (Multiple Selection)</label>
+                        <div id="contracts-container" class="border rounded p-3" style="max-height: 200px; overflow-y: auto;">
+                            {% if available_contracts %}
+                                {% for contract in available_contracts %}
+                                <div class="form-check">
+                                    <input class="form-check-input contract-checkbox" type="checkbox" name="contracts" 
+                                          value="{{ contract }}" id="contract-{{ forloop.counter }}" 
+                                          {% if contract in selected_contracts %} checked {% endif %}>
+                                    <label class="form-check-label" for="contract-{{ forloop.counter }}">
+                                        {{ contract }}
+                                    </label>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <p class="text-muted">Select a hotel to see available contracts</p>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -139,6 +167,9 @@
 
 {% block extra_js %}
 <script>
+    // Seçili kontratları JSON'dan alıp JavaScript'e aktar
+    var selectedContracts = JSON.parse('{{ selected_contracts_json|escapejs }}');
+    
     $(document).ready(function() {
         // Handle hotel selection change
         $('#hotel_id').change(function() {
@@ -149,7 +180,7 @@
                 
                 // Fetch room types for selected hotel
                 $.ajax({
-                    url: `/api/hotels/${hotelId}/rooms/`,
+                    url: `/emails/get_rooms_by_hotel/${hotelId}/`,
                     type: 'GET',
                     dataType: 'json',
                     success: function(data) {
@@ -160,7 +191,7 @@
                                     <div class="form-check">
                                         <input class="form-check-input room-type-checkbox" type="checkbox" name="room_types" value="${room.id}" id="room-${room.id}">
                                         <label class="form-check-label" for="room-${room.id}">
-                                            ${room.name}
+                                            ${room.name} (${room.code || ''})
                                         </label>
                                     </div>
                                 `;
@@ -169,6 +200,9 @@
                             roomsHtml = '<p class="text-muted">No room types available for this hotel</p>';
                         }
                         $('#room-types-list').html(roomsHtml);
+                        
+                        // Also fetch contracts for this hotel
+                        fetchContracts(hotelId);
                         
                         // Reattach event handlers
                         attachRoomTypeHandlers();
@@ -179,8 +213,45 @@
                 });
             } else {
                 $('#room-types-list').html('<p class="text-muted">Select a hotel to see available room types</p>');
+                $('#contracts-container').html('<p class="text-muted">Select a hotel to see available contracts</p>');
             }
         });
+        
+        // Function to fetch contracts for a hotel
+        function fetchContracts(hotelId) {
+            $('#contracts-container').html('<p class="text-center"><i class="fas fa-spinner fa-spin"></i> Loading contracts...</p>');
+            
+            $.ajax({
+                url: `/emails/get_contracts_by_hotel/${hotelId}/`,
+                type: 'GET',
+                dataType: 'json',
+                success: function(data) {
+                    let contractsHtml = '';
+                    if (data.contracts && data.contracts.length > 0) {
+                        data.contracts.forEach(function(contract, index) {
+                            // Kontrat zaten seçili mi kontrol et
+                            const isChecked = selectedContracts.includes(contract) ? 'checked' : '';
+                            
+                            contractsHtml += `
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="contracts" 
+                                        value="${contract}" id="contract-${index}" ${isChecked}>
+                                    <label class="form-check-label" for="contract-${index}">
+                                        ${contract}
+                                    </label>
+                                </div>
+                            `;
+                        });
+                    } else {
+                        contractsHtml = '<p class="text-muted">No contracts available for this hotel</p>';
+                    }
+                    $('#contracts-container').html(contractsHtml);
+                },
+                error: function() {
+                    $('#contracts-container').html('<p class="text-danger">Error loading contracts</p>');
+                }
+            });
+        }
         
         // Function to attach event handlers to room type checkboxes
         function attachRoomTypeHandlers() {
@@ -214,6 +285,13 @@
             // Check if either "All Rooms" or at least one room type is selected
             if (!$('#all-rooms').is(':checked') && $('.room-type-checkbox:checked').length === 0) {
                 alert('Please select either "All Room Types" or at least one specific room type.');
+                e.preventDefault();
+                return false;
+            }
+            
+            // Check if at least one market is selected
+            if ($('#market_ids option:selected').length === 0) {
+                alert('Please select at least one market.');
                 e.preventDefault();
                 return false;
             }

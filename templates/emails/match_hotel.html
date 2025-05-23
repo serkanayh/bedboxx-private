@@ -32,6 +32,47 @@
         display: flex;
         justify-content: flex-end;
     }
+    
+    /* Styles for Suggestions */
+    .suggestion-section {
+        background-color: #f8f9fa;
+        border-radius: 5px;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+    
+    .best-match {
+        background-color: #d4edda;
+        border: 1px solid #c3e6cb;
+    }
+    
+    .match-score {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background-color: #3f51b5;
+        color: white;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 0.8rem;
+        font-weight: bold;
+    }
+    
+    .score-90-100 {
+        background-color: #28a745; /* Yeşil */
+    }
+    
+    .score-80-89 {
+        background-color: #4caf50; /* Açık Yeşil */
+    }
+    
+    .score-70-79 {
+        background-color: #ffc107; /* Sarı */
+    }
+    
+    .score-0-69 {
+        background-color: #ff9800; /* Turuncu */
+    }
 </style>
 {% endblock %}
 
@@ -53,6 +94,7 @@
                 <h6>E-posta Bilgisi:</h6>
                 <p><strong>Konu:</strong> {{ row.email.subject }}</p>
                 <p><strong>Gönderen:</strong> {{ row.email.sender }}</p>
+                <p><strong>Satır ID:</strong> {{ row.id }}</p>
             </div>
             <div class="col-md-6">
                 <h6>Satır Bilgisi:</h6>
@@ -63,6 +105,33 @@
         </div>
     </div>
 </div>
+
+{% if hotel_suggestions %}
+<div class="row mt-4">
+    <div class="col-md-12">
+        <!-- Otel Önerileri Bölümü -->
+        <div class="suggestion-section">
+            <h5><i class="bi bi-lightbulb"></i> Akıllı Otel Önerileri</h5>
+            
+            <div class="row">
+                {% for hotel in hotel_suggestions %}
+                <div class="col-md-6">
+                    <div class="card hotel-card {% if hotel == best_hotel_match %}best-match{% endif %} mb-3" id="suggestion-{{ hotel.id }}">
+                        <div class="card-body">
+                            <div class="match-score 
+                                {% if hotel.match_score >= 90 %}score-90-100{% elif hotel.match_score >= 80 %}score-80-89{% elif hotel.match_score >= 70 %}score-70-79{% else %}score-0-69{% endif %}
+                            ">{{ hotel.match_score }}%</div>
+                            <h6 class="mb-1">{{ hotel.juniper_hotel_name }}</h6>
+                            <p class="mb-0 text-muted"><small>Kod: {{ hotel.juniper_code }}</small></p>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
 
 <div class="row mt-4">
     <div class="col-md-12">
@@ -83,7 +152,8 @@
                         <div class="card hotel-card" id="hotel-{{ hotel.id }}">
                             <div class="card-body">
                                 <div class="form-check">
-                                    <input class="form-check-input hotel-radio" type="radio" name="hotel_id" value="{{ hotel.id }}" id="hotel-radio-{{ hotel.id }}">
+                                    <input class="form-check-input hotel-radio" type="radio" name="hotel_id" value="{{ hotel.id }}" id="hotel-radio-{{ hotel.id }}"
+                                           {% if row.juniper_hotel.id == hotel.id %}checked{% endif %}>
                                     <label class="form-check-label w-100" for="hotel-radio-{{ hotel.id }}">
                                         <h6 class="mb-1">{{ hotel.juniper_hotel_name }}</h6>
                                         <p class="mb-0 text-muted"><small>Kod: {{ hotel.juniper_code }}</small></p>
@@ -118,13 +188,16 @@ document.addEventListener('DOMContentLoaded', function() {
         const searchTerm = this.value.toLowerCase();
         
         hotelCards.forEach(function(card) {
-            const hotelName = card.querySelector('h6').textContent.toLowerCase();
-            const hotelCode = card.querySelector('.text-muted small').textContent.toLowerCase();
-            
-            if (hotelName.includes(searchTerm) || hotelCode.includes(searchTerm)) {
-                card.style.display = '';
-            } else {
-                card.style.display = 'none';
+            // Exclude suggestion cards from standard search
+            if (!card.id.startsWith('suggestion-')) {
+                const hotelName = card.querySelector('h6').textContent.toLowerCase();
+                const hotelCode = card.querySelector('.text-muted small').textContent.toLowerCase();
+                
+                if (hotelName.includes(searchTerm) || hotelCode.includes(searchTerm)) {
+                    card.style.display = '';
+                } else {
+                    card.style.display = 'none';
+                }
             }
         });
     });
@@ -149,19 +222,92 @@ document.addEventListener('DOMContentLoaded', function() {
             // Enable the match button
             matchButton.disabled = false;
         });
+        
+        // Check initial state on load
+        if (radio.checked) {
+            const cardId = 'hotel-' + radio.value;
+            const card = document.getElementById(cardId);
+            if (card) card.classList.add('selected');
+            matchButton.disabled = false;
+        }
     });
     
     // Make the entire card clickable
     hotelCards.forEach(function(card) {
-        card.addEventListener('click', function() {
+        card.addEventListener('click', function(e) {
+            // If the click is directly on the radio button, let the default behavior handle it
+            if (e.target.type === 'radio') return;
+
             const radio = this.querySelector('.hotel-radio');
-            radio.checked = true;
-            
-            // Trigger the change event manually
-            const event = new Event('change');
-            radio.dispatchEvent(event);
+            // Only check if it's not already checked
+            if (!radio.checked) {
+                radio.checked = true;
+                
+                // Trigger the change event manually
+                const event = new Event('change');
+                radio.dispatchEvent(event);
+            }
         });
     });
+    
+    // Make suggestion cards clickable
+    document.querySelectorAll('[id^="suggestion-"]:not([id^="suggestion-room-"])').forEach(function(card) {
+        card.addEventListener('click', function() {
+            const hotelId = this.id.replace('suggestion-', '');
+            const targetRadio = document.querySelector('#hotel-radio-' + hotelId);
+            
+            if (targetRadio) {
+                targetRadio.checked = true;
+                
+                // Change event'i tetikle
+                const event = new Event('change');
+                targetRadio.dispatchEvent(event);
+                
+                // Otelin olduğu karta kaydır
+                const targetCard = document.getElementById('hotel-' + hotelId);
+                if (targetCard) {
+                    targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }
+        });
+    });
+
+    // Akıllı Otel Eşleştir butonuna tıklandığında (if it exists)
+    const autoSelectHotelBtn = document.getElementById('autoSelectHotelBtn');
+    if (autoSelectHotelBtn) {
+        autoSelectHotelBtn.addEventListener('click', function() {
+            // En iyi eşleşmeyi bul ve seç
+            const bestMatch = document.querySelector('.hotel-card.best-match');
+            if (bestMatch) {
+                const hotelId = bestMatch.id.replace('suggestion-', '');
+                const targetRadio = document.querySelector('#hotel-radio-' + hotelId);
+                
+                if (targetRadio) {
+                    targetRadio.checked = true;
+                    targetRadio.dispatchEvent(new Event('change'));
+                    bestMatch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            } else {
+                // En iyi eşleşme yoksa, yüksek puanlı bir öneriye bak
+                const highScoreMatchCard = document.querySelector('.suggestion-section .hotel-card .match-score.score-90-100, .suggestion-section .hotel-card .match-score.score-80-89');
+                 if (highScoreMatchCard) {
+                    const suggestionCard = highScoreMatchCard.closest('.hotel-card');
+                    if (suggestionCard) {
+                        const hotelId = suggestionCard.id.replace('suggestion-', '');
+                        const targetRadio = document.querySelector('#hotel-radio-' + hotelId);
+                        
+                        if (targetRadio) {
+                            targetRadio.checked = true;
+                            targetRadio.dispatchEvent(new Event('change'));
+                            suggestionCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                    }
+                } else {
+                    alert('Uygun bir otel eşleşmesi bulunamadı. Lütfen manuel olarak seçin.');
+                }
+            }
+        });
+    }
 });
 </script>
 {% endblock %}

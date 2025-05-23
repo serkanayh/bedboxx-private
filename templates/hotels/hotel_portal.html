@@ -1,0 +1,462 @@
+{% extends 'admin/base_site.html' %}
+{% load static %}
+
+{% block extrahead %}
+<script type="text/javascript">
+    // Global scope'ta fonksiyonları tanımlayalım
+    function addNewRoomForm() {
+        try {
+            const roomFormset = document.getElementById('room-formset');
+            if (!roomFormset) {
+                console.error('room-formset bulunamadı!');
+                return;
+            }
+            
+            const roomTotalForms = document.getElementById('id_rooms-TOTAL_FORMS');
+            if (!roomTotalForms) {
+                console.error('id_rooms-TOTAL_FORMS bulunamadı!');
+                return;
+            }
+            
+            const currentRoomForms = roomFormset.getElementsByClassName('formset-item');
+            if (!currentRoomForms || currentRoomForms.length === 0) {
+                console.error('formset-item bulunamadı veya boş!');
+                return;
+            }
+            
+            const currentFormCount = currentRoomForms.length;
+            console.log('Mevcut oda form sayısı:', currentFormCount);
+            
+            // Clone the first empty form
+            const newForm = currentRoomForms[0].cloneNode(true);
+            console.log('Form klonlandı:', !!newForm);
+            
+            // Update form index
+            const formRegex = new RegExp('rooms-(\\d+)-', 'g');
+            newForm.innerHTML = newForm.innerHTML.replace(formRegex, function(match, index) {
+                return `rooms-${currentFormCount}-`;
+            });
+            
+            // Reset values
+            newForm.querySelectorAll('input[type="text"]').forEach(input => input.value = '');
+            newForm.querySelectorAll('input[type="checkbox"]').forEach(input => input.checked = false);
+            
+            // Update header
+            const headerElement = newForm.querySelector('h6');
+            if (headerElement) {
+                headerElement.innerText = `Yeni Oda #${currentFormCount + 1}`;
+            }
+            
+            // Append new form
+            roomFormset.appendChild(newForm);
+            console.log('Yeni form eklendi');
+            
+            // Update total forms
+            roomTotalForms.value = currentFormCount + 1;
+            console.log('Toplam form sayısı güncellendi:', roomTotalForms.value);
+            
+            // Başarı mesajı
+            alert('Yeni oda formu başarıyla eklendi!');
+        } catch (error) {
+            console.error('Oda ekleme sırasında hata oluştu:', error);
+            alert('Oda eklenirken bir hata oluştu: ' + error.message);
+        }
+    }
+    
+    function addNewContractForm() {
+        try {
+            const contractFormset = document.getElementById('contract-formset');
+            if (!contractFormset) {
+                console.error('contract-formset bulunamadı!');
+                return;
+            }
+            
+            const contractTotalForms = document.getElementById('id_contracts-TOTAL_FORMS');
+            if (!contractTotalForms) {
+                console.error('id_contracts-TOTAL_FORMS bulunamadı!');
+                return;
+            }
+            
+            const currentContractForms = contractFormset.getElementsByClassName('formset-item');
+            if (!currentContractForms || currentContractForms.length === 0) {
+                console.error('formset-item bulunamadı veya boş!');
+                return;
+            }
+            
+            const currentFormCount = currentContractForms.length;
+            console.log('Mevcut kontrat form sayısı:', currentFormCount);
+            
+            // Clone the first empty form
+            const newForm = currentContractForms[0].cloneNode(true);
+            console.log('Form klonlandı:', !!newForm);
+            
+            // Update form index
+            const formRegex = new RegExp('contracts-(\\d+)-', 'g');
+            newForm.innerHTML = newForm.innerHTML.replace(formRegex, function(match, index) {
+                return `contracts-${currentFormCount}-`;
+            });
+            
+            // Reset values
+            newForm.querySelectorAll('input[type="text"]').forEach(input => input.value = '');
+            newForm.querySelectorAll('input[type="checkbox"]').forEach(input => input.checked = false);
+            newForm.querySelectorAll('select').forEach(select => select.selectedIndex = 0);
+            
+            // Update header
+            const headerElement = newForm.querySelector('h6');
+            if (headerElement) {
+                headerElement.innerText = `Kontrat #${currentFormCount + 1}`;
+            }
+            
+            // Append new form
+            contractFormset.appendChild(newForm);
+            console.log('Yeni form eklendi');
+            
+            // Update total forms
+            contractTotalForms.value = currentFormCount + 1;
+            console.log('Toplam form sayısı güncellendi:', contractTotalForms.value);
+            
+            // Başarı mesajı
+            alert('Yeni kontrat formu başarıyla eklendi!');
+        } catch (error) {
+            console.error('Kontrat ekleme sırasında hata oluştu:', error);
+            alert('Kontrat eklenirken bir hata oluştu: ' + error.message);
+        }
+    }
+
+    // DOMContentLoaded'den önce window nesnesine fonksiyonları ata
+    window.addNewRoomForm = addNewRoomForm;
+    window.addNewContractForm = addNewContractForm;
+</script>
+{% endblock %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+    .form-row {
+        display: flex;
+        flex-wrap: wrap;
+        margin-right: -15px;
+        margin-left: -15px;
+        align-items: flex-start;
+    }
+    .card {
+        margin-bottom: 2rem;
+        border-radius: 4px;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    }
+    .card-header {
+        padding: 0.75rem 1.25rem;
+        background-color: #f8f9fa;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+    }
+    .card-body {
+        padding: 1.25rem;
+    }
+    .room-form, .contract-form {
+        padding: 15px;
+        margin-bottom: 15px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        background-color: #f9f9f9;
+    }
+    .helptext {
+        font-size: 0.875rem;
+        color: #6c757d;
+        display: block;
+        margin-top: 0.25rem;
+    }
+    .market-checklist {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 10px;
+        max-height: 200px;
+        overflow-y: auto;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+    .form-actions {
+        margin-top: 2rem;
+        text-align: right;
+    }
+    .formset-item {
+        border: 1px solid #e0e0e0;
+        border-radius: 4px;
+        padding: 15px;
+        margin-bottom: 15px;
+        background-color: #f9f9f9;
+    }
+    .delete-row {
+        margin-top: 10px;
+        display: flex;
+        align-items: center;
+    }
+    .form-group.col-md-4 {
+        flex: 0 0 40%;
+        max-width: 40%;
+    }
+    .form-group.col-md-5 {
+        flex: 0 0 41.666666%;
+        max-width: 41.666666%;
+        padding-right: 10px;
+    }
+    .form-group.col-md-2 {
+        flex: 0 0 16.666666%;
+        max-width: 16.666666%;
+        padding-right: 10px;
+    }
+    .form-group input[type="text"] {
+        min-width: 100% !important;
+        width: 100% !important;
+    }
+    .card-body button {
+        position: relative;
+        z-index: 100;
+        cursor: pointer !important;
+        pointer-events: auto !important;
+    }
+
+    /* Buton görünümünü belirginleştir */
+    .btn-outline-secondary {
+        color: #6c757d;
+        border-color: #6c757d;
+        background-color: white;
+    }
+
+    .btn-outline-secondary:hover {
+        color: white;
+        background-color: #6c757d;
+    }
+    
+    /* Butonların kesinlikle tıklanabilir olması için ekstra kurallar */
+    #add-room, #add-contract {
+        display: inline-block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        position: relative !important;
+        z-index: 1000 !important;
+        pointer-events: auto !important;
+        cursor: pointer !important;
+        user-select: none !important;
+        -webkit-user-select: none !important;
+        -moz-user-select: none !important;
+        -ms-user-select: none !important;
+    }
+    
+    /* Formset container'ların üst üste gelmemesi için */
+    #room-formset, #contract-formset {
+        position: relative !important;
+        z-index: 1 !important;
+    }
+</style>
+{% endblock %}
+
+{% block extrajs %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+<script>
+    // DOM yüklendikten sonra jQuery ile kontrol edelim
+    $(document).ready(function() {
+        console.log('Hotel portal page loaded (jQuery)');
+        
+        // jQuery ile butonlara event listener ekleyelim
+        $('#add-room').on('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('jQuery: Oda ekle butonuna tıklandı!');
+            window.addNewRoomForm();
+            return false;
+        });
+        
+        $('#add-contract').on('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('jQuery: Kontrat ekle butonuna tıklandı!');
+            window.addNewContractForm();
+            return false;
+        });
+    });
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h4>{{ title }}</h4>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="hotel-portal-form">
+                        {% csrf_token %}
+                        
+                        <!-- Hotel Information Section -->
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h5>Otel Bilgileri</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-row">
+                                    <div class="form-group col-md-6">
+                                        <label for="{{ hotel_form.juniper_hotel_name.id_for_label }}">Otel Adı</label>
+                                        {{ hotel_form.juniper_hotel_name }}
+                                        {% if hotel_form.juniper_hotel_name.errors %}
+                                            <div class="invalid-feedback">{{ hotel_form.juniper_hotel_name.errors }}</div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="form-group col-md-6">
+                                        <label for="{{ hotel_form.juniper_code.id_for_label }}">Otel Kodu</label>
+                                        {{ hotel_form.juniper_code }}
+                                        {% if hotel_form.juniper_code.errors %}
+                                            <div class="invalid-feedback">{{ hotel_form.juniper_code.errors }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Room Information Section -->
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h5>Oda Bilgileri</h5>
+                            </div>
+                            <div class="card-body">
+                                {{ room_formset.management_form }}
+                                <div id="room-formset">
+                                    {% for form in room_formset %}
+                                        <div class="formset-item">
+                                            {% if form.instance.pk %}
+                                                <h6>Oda #{{ forloop.counter }}: {{ form.instance.juniper_room_type }}</h6>
+                                            {% else %}
+                                                <h6>Yeni Oda #{{ forloop.counter }}</h6>
+                                            {% endif %}
+                                            
+                                            {% for hidden in form.hidden_fields %}
+                                                {{ hidden }}
+                                            {% endfor %}
+                                            
+                                            <div class="form-row">
+                                                <div class="form-group col-md-5">
+                                                    <label for="{{ form.juniper_room_type.id_for_label }}">Oda Tipi Adı</label>
+                                                    {{ form.juniper_room_type }}
+                                                    {% if form.juniper_room_type.errors %}
+                                                        <div class="invalid-feedback">{{ form.juniper_room_type.errors }}</div>
+                                                    {% endif %}
+                                                </div>
+                                                <div class="form-group col-md-2">
+                                                    <label for="{{ form.room_code.id_for_label }}">Oda Kodu</label>
+                                                    {{ form.room_code }}
+                                                    {% if form.room_code.errors %}
+                                                        <div class="invalid-feedback">{{ form.room_code.errors }}</div>
+                                                    {% endif %}
+                                                </div>
+                                                <div class="form-group col-md-5">
+                                                    <label for="{{ form.group_name.id_for_label }}">Oda Grubu</label>
+                                                    {{ form.group_name }}
+                                                    <small class="helptext">{{ form.group_name.help_text }}</small>
+                                                    {% if form.group_name.errors %}
+                                                        <div class="invalid-feedback">{{ form.group_name.errors }}</div>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            
+                                            {% if room_formset.can_delete %}
+                                                <div class="delete-row">
+                                                    {{ form.DELETE }}
+                                                    <label for="{{ form.DELETE.id_for_label }}" class="ml-2">Bu odayı sil</label>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                                <button type="button" id="add-room" class="btn btn-outline-secondary mt-2" onclick="window.addNewRoomForm(); return false;">
+                                    <i class="fa fa-plus"></i> Yeni Oda Ekle
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Contract-Market Information Section -->
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h5>Kontrat ve Pazar Bilgileri</h5>
+                            </div>
+                            <div class="card-body">
+                                {{ contract_formset.management_form }}
+                                <div id="contract-formset">
+                                    {% for form in contract_formset %}
+                                        <div class="formset-item">
+                                            <h6>Kontrat #{{ forloop.counter }}</h6>
+                                            
+                                            <div class="form-row">
+                                                <div class="form-group col-md-6">
+                                                    <label for="{{ form.contract_name.id_for_label }}">Kontrat Adı</label>
+                                                    {{ form.contract_name }}
+                                                    {% if form.contract_name.errors %}
+                                                        <div class="invalid-feedback">{{ form.contract_name.errors }}</div>
+                                                    {% endif %}
+                                                </div>
+                                                <div class="form-group col-md-3">
+                                                    <label for="{{ form.season.id_for_label }}">Sezon</label>
+                                                    {{ form.season }}
+                                                    {% if form.season.errors %}
+                                                        <div class="invalid-feedback">{{ form.season.errors }}</div>
+                                                    {% endif %}
+                                                </div>
+                                                <div class="form-group col-md-3">
+                                                    <label for="{{ form.access.id_for_label }}">Erişim</label>
+                                                    {{ form.access }}
+                                                    {% if form.access.errors %}
+                                                        <div class="invalid-feedback">{{ form.access.errors }}</div>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="form-group">
+                                                <label>Pazarlar</label>
+                                                <div class="market-checklist">
+                                                    {{ form.markets }}
+                                                </div>
+                                                {% if form.markets.errors %}
+                                                    <div class="invalid-feedback">{{ form.markets.errors }}</div>
+                                                {% endif %}
+                                            </div>
+                                            
+                                            {% if contract_formset.can_delete %}
+                                                <div class="delete-row">
+                                                    {{ form.DELETE }}
+                                                    <label for="{{ form.DELETE.id_for_label }}" class="ml-2">Bu kontratı sil</label>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                                
+                                <button type="button" id="add-contract" class="btn btn-outline-secondary mt-2" onclick="window.addNewContractForm(); return false;">
+                                    <i class="fa fa-plus"></i> Yeni Kontrat Ekle
+                                </button>
+                                
+                                {% if is_edit %}
+                                <div class="form-check mt-3">
+                                    <input type="checkbox" class="form-check-input" id="reset_contracts" name="reset_contracts">
+                                    <label class="form-check-label" for="reset_contracts">
+                                        Mevcut kontratları temizle (Dikkat: Bu işlem tüm kontratları silip yeniden oluşturacak)
+                                    </label>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="form-actions">
+                            <a href="{% url 'admin:hotels_hotel_changelist' %}" class="btn btn-secondary">İptal</a>
+                            <button type="submit" class="btn btn-primary">Kaydet</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

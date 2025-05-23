@@ -1,0 +1,169 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Manuel Kural Ekle{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header">
+            <h4>Manuel Kural Ekle</h4>
+            {% if email %}
+            <p class="text-muted mb-0">E-posta: {{ email.subject }}</p>
+            {% endif %}
+        </div>
+        <div class="card-body">
+            <form method="post" id="manualRuleForm">
+                {% csrf_token %}
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="hotel_id">Otel*</label>
+                            <select class="form-control" id="hotel_id" name="hotel_id" required>
+                                <option value="">Otel Seçin</option>
+                                {% for hotel in hotels %}
+                                <option value="{{ hotel.id }}">{{ hotel.juniper_hotel_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Oda Tipi*</label>
+                            <div class="custom-control custom-checkbox mb-2">
+                                <input type="checkbox" class="custom-control-input" id="all_rooms" name="room_types" value="all">
+                                <label class="custom-control-label" for="all_rooms"><strong>Tüm Odalar</strong></label>
+                            </div>
+                            <div id="roomTypesContainer">
+                                <select class="form-control" id="room_types" name="room_types" multiple size="5" disabled>
+                                    <option>Önce otel seçin</option>
+                                </select>
+                                <small class="form-text text-muted">Birden fazla oda tipi seçmek için CTRL tuşuna basılı tutun</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="market_ids">Pazar*</label>
+                            <select class="form-control" id="market_ids" name="market_ids" multiple size="5" required>
+                                {% for market in markets %}
+                                <option value="{{ market.id }}">{{ market.name }}</option>
+                                {% endfor %}
+                            </select>
+                            <small class="form-text text-muted">Birden fazla pazar seçmek için CTRL tuşuna basılı tutun</small>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="contracts">Kontratlar</label>
+                            <select class="form-control" id="contracts" name="contracts" multiple size="5" disabled>
+                                <option>Önce otel seçin</option>
+                            </select>
+                            <small class="form-text text-muted">Birden fazla kontrat seçmek için CTRL tuşuna basılı tutun</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="start_date">Başlangıç Tarihi*</label>
+                            <input type="date" class="form-control" id="start_date" name="start_date" required>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="end_date">Bitiş Tarihi*</label>
+                            <input type="date" class="form-control" id="end_date" name="end_date" required>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="sale_type">Satış Durumu*</label>
+                            <select class="form-control" id="sale_type" name="sale_type" required>
+                                <option value="stop">Stop Sale</option>
+                                <option value="open">Open Sale</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group mt-4">
+                    <button type="submit" class="btn btn-primary">Kural Ekle</button>
+                    <a href="{% if email %}{% url 'emails:email_detail' email_id=email.id %}{% else %}{% url 'emails:email_list' %}{% endif %}" class="btn btn-secondary">İptal</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Otel seçimi değiştiğinde odaları ve kontratları güncelle
+    const hotelSelect = document.getElementById('hotel_id');
+    const roomTypesSelect = document.getElementById('room_types');
+    const contractsSelect = document.getElementById('contracts');
+    const allRoomsCheckbox = document.getElementById('all_rooms');
+
+    // Tüm odalar checkbox değişimi
+    allRoomsCheckbox.addEventListener('change', function() {
+        if (this.checked) {
+            roomTypesSelect.disabled = true;
+        } else {
+            roomTypesSelect.disabled = false;
+        }
+    });
+
+    // Otel değişimi
+    hotelSelect.addEventListener('change', function() {
+        const hotelId = this.value;
+        
+        // Odaları yükle
+        if (hotelId) {
+            fetch(`/emails/get-rooms-by-hotel/${hotelId}/`)
+                .then(response => response.json())
+                .then(data => {
+                    roomTypesSelect.innerHTML = '';
+                    roomTypesSelect.disabled = allRoomsCheckbox.checked;
+                    
+                    data.rooms.forEach(room => {
+                        const option = document.createElement('option');
+                        option.value = room.id;
+                        option.textContent = room.juniper_room_type;
+                        roomTypesSelect.appendChild(option);
+                    });
+                })
+                .catch(error => console.error('Error loading rooms:', error));
+                
+            // Kontratları yükle
+            fetch(`/emails/get-contracts-by-hotel/${hotelId}/`)
+                .then(response => response.json())
+                .then(data => {
+                    contractsSelect.innerHTML = '';
+                    contractsSelect.disabled = false;
+                    
+                    data.contracts.forEach(contract => {
+                        const option = document.createElement('option');
+                        option.value = contract;
+                        option.textContent = contract;
+                        contractsSelect.appendChild(option);
+                    });
+                })
+                .catch(error => console.error('Error loading contracts:', error));
+        } else {
+            roomTypesSelect.innerHTML = '<option>Önce otel seçin</option>';
+            roomTypesSelect.disabled = true;
+            contractsSelect.innerHTML = '<option>Önce otel seçin</option>';
+            contractsSelect.disabled = true;
+        }
+    });
+
+    // Tarih alanları için bugünü varsayılan olarak ayarla
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('start_date').value = today;
+    document.getElementById('end_date').value = today;
+});
+</script>
+{% endblock %} 

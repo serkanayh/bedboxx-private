@@ -15,8 +15,9 @@ def auto_analyze_email(sender, instance, created, **kwargs):
     """
     Signal to automatically analyze new emails when they are created
     """
-    # Only analyze newly created emails that are in pending status and don't have rows yet
-    if created and instance.status == 'pending' and not instance.rows.exists():
+    logger.error(f"[DEBUG] AUTO_ANALYZE_EMAIL SİNYALİ ÇALIŞTI - Email ID: {instance.id}, created={created}, status={instance.status}")
+    # Sadece yeni oluşturulmuşsa veya status 'pending' ve hiç row yoksa çalıştır
+    if (created or (instance.status == 'pending' and not instance.rows.exists())):
         logger.info(f"Auto-analyzing email: {instance.id} - {instance.subject}")
         print(f"AUTO-ANALYZE: Starting analysis for email {instance.id} - {instance.subject}")
         
@@ -52,6 +53,7 @@ def auto_analyze_email(sender, instance, created, **kwargs):
                 
                 print(f"AUTO-ANALYZE: Calling API with payload for email {instance.id}")
                 response = client.post('/api/parse-email-content/', payload, format='json')
+                logger.error(f"[DEBUG] AUTO_ANALYZE_EMAIL API RESPONSE: {response.status_code} - {getattr(response, 'content', str(response.data) if hasattr(response, 'data') else 'NO_CONTENT')}")
                 
                 # --- Handle API Response (Simplified - No Attachment Logic Here) --- 
                 api_success = False
@@ -108,14 +110,26 @@ def auto_analyze_email(sender, instance, created, **kwargs):
                                     end_date = start_date # Use start_date as fallback
                             # --- End Date Parsing ---
 
-                            # --- YENİ: Eğer veri mail tarihi ile aynı gün ise bu veriyi atla ---
+                            # --- Filter rules with problematic dates ---
                             mail_date = instance.received_date.date()
-                            # Aşağıdaki satırlar şimdilik yorum satırına alındı
-                            # if (start_date == mail_date and end_date == mail_date) or (start_date == mail_date and end_date is None):
-                            #     logger.warning(f"[Signal] Skipping row with same date as email: {mail_date}. Start: {start_date}, End: {end_date}")
-                            #     print(f"AUTO-ANALYZE: Skipping row with same date as email {instance.id}. Mail date: {mail_date}, Row date: {start_date}")
-                            #     continue
-                            # --- END YENİ ---
+                            
+                            # 1. Skip rules where BOTH start date AND end date match email received date
+                            if start_date == mail_date and end_date == mail_date:
+                                logger.warning(f"[Signal] Skipping rule with BOTH start and end dates matching email date: {mail_date}. Start: {start_date}, End: {end_date}")
+                                print(f"AUTO-ANALYZE: Skipping rule with BOTH start and end dates matching email date for email {instance.id}. Mail date: {mail_date}, Rule dates: {start_date} to {end_date}")
+                                continue  # Skip to next rule
+                                
+                            # 2. Check if date only comes from the subject line
+                            date_source = row_data.get('date_source', {})
+                            if date_source == 'subject_only':
+                                logger.warning(f"[Signal] Skipping rule with date only from subject for email {instance.id}")
+                                print(f"AUTO-ANALYZE: Skipping rule with date only from subject for email {instance.id}")
+                                continue  # Skip to next rule
+                            elif isinstance(date_source, dict) and date_source.get('from_subject', False) and not date_source.get('from_body', False):
+                                logger.warning(f"[Signal] Skipping rule with date only from subject (dict format) for email {instance.id}")
+                                print(f"AUTO-ANALYZE: Skipping rule with date only from subject for email {instance.id}")
+                                continue  # Skip to next rule
+                            # --- End filtering ---
 
                             # --- Market Resolution Logic --- 
                             ai_market_names = row_data.get('markets', ['ALL']) # Expects a list from analyzer
@@ -289,3 +303,24 @@ def trigger_matching_task(sender, instance, created, **kwargs):
         # from .tasks import match_single_email_row_task 
         # match_single_email_row_task.delay(instance.id)
         pass # For now, rely on the batch task triggered after all rows are created in the email signal
+
+@receiver(post_save, sender=EmailRow)
+def check_room_variants_after_save(sender, instance, created, **kwargs):
+    """
+    EmailRow kaydedildiğinde, oda tipi grubu varyantlarını kontrol edip
+    otomatik olarak doğru odaları atayan sinyal.
+    """
+    # Bu işlem uzun sürebilir, bu nedenle async olarak çalıştırırız
+    # Ayrıca, recursive çağrıları önlemek için bu işlemi atlarız 
+    # eğer save nedeni oda güncellemesiyse
+    if hasattr(instance, '_room_variants_checked'):
+        return
+    
+    if instance.juniper_hotel and instance.room_type and instance.status in ['pending', 'matching']:
+        # ALL ROOM tiplerini atla
+        if instance.room_type.strip().upper() in ["ALL ROOM", "ALL ROOMS", "ALL ROOM TYPES", "TÜM ODALAR"]:
+            return
+        
+        # Ayrıntılı oda varyant kontrolünü Celery task'a bırak
+        from emails.tasks import check_room_variants_task
+        check_room_variants_task.delay(instance.id)

@@ -503,8 +503,14 @@ class ClaudeAnalyzer:
         if len(text_content) > max_chars:
             logger.warning(f"Content truncated for AI analysis. Original length: {len(text_content)}, truncated to {max_chars}")
             text_content = text_content[:max_chars]
+        
+        # Add the subject context to the content if available
+        content_to_send = text_content
+        if context_subject:
+            content_to_send = f"Subject: {context_subject}\n\nIMPORTANT: The hotel name is likely in the subject line above.\n\n{text_content}"
             
-        logger.debug(f"Sending content to Claude for analysis (first 500 chars):\n{text_content[:500]}...")
+        logger.debug(f"Sending content to Claude for analysis (first 500 chars):\n{content_to_send[:500]}...")
+        logger.info(f"[CLAUDE INPUT] Content being sent to Claude for analysis (Subject: {context_subject}):\n{content_to_send}")
         
         try:
             message = self.claude_client.messages.create(
@@ -512,7 +518,7 @@ class ClaudeAnalyzer:
                 max_tokens=4096,
                 temperature=0.1,
                 system=self.system_prompt,
-                messages=[{"role": "user", "content": text_content}]
+                messages=[{"role": "user", "content": content_to_send}]
             )
             
             raw_response = ""
@@ -543,7 +549,8 @@ class ClaudeAnalyzer:
                 if matches:
                     logger.info(f"Special date format found in AI response: {matches} (pattern: {pattern})")
             
-            logger.info(f"[RAW AI RESPONSE DUMP] Subject: {context_subject}:\n{raw_response[:1000]}")
+            # Log the entire raw response, not just the first 1000 characters
+            logger.info(f"[RAW AI RESPONSE DUMP] Subject: {context_subject}:\n{raw_response}")
             
             # Parse JSON response
             parsed_data = self._safe_json_parse(raw_response)
@@ -553,10 +560,27 @@ class ClaudeAnalyzer:
                 result_template['error'] = 'Failed to parse AI response'
                 return result_template
             
-            # Add raw response to each rule for potential fallback extraction
-            for rule in parsed_data:
-                if isinstance(rule, dict):
-                    rule['raw_response'] = raw_response
+            # Process each row to ensure hotel_name is present
+            for row in parsed_data:
+                if isinstance(row, dict):
+                    # If hotel_name is missing or empty, try to extract from subject
+                    if 'hotel_name' not in row or not row['hotel_name'] or row['hotel_name'].strip() == '':
+                        if context_subject:
+                            # Use subject as hotel name, but clean it first
+                            hotel_name = context_subject.strip()
+                            # Remove common prefixes
+                            prefixes_to_remove = ["Stop Sale:", "Stop sale:", "STOP SALE:", "Open Sale:", "Open sale:", "OPEN SALE:", 
+                                                "Stop:", "STOP:", "Open:", "OPEN:", "Re:", "RE:", "Fwd:", "FWD:"]
+                            for prefix in prefixes_to_remove:
+                                if hotel_name.startswith(prefix):
+                                    hotel_name = hotel_name[len(prefix):].strip()
+                                    break
+                            
+                            row['hotel_name'] = hotel_name
+                            logger.info(f"Added missing hotel_name from subject: '{hotel_name}'")
+                    
+                    # Add raw response to each rule for potential fallback extraction
+                    row['raw_response'] = raw_response
             
             # Post-process data (normalize dates, validate, etc.)
             processed_rows = self.post_process_ai_rules(parsed_data)
@@ -696,6 +720,25 @@ class ClaudeAnalyzer:
 
             # --- Field Extraction and Validation ---
             hotel_name = rule.get('hotel_name')
+            
+            # YENİ: Eğer otel adı yoksa veya boşsa, konu satırından çıkarmaya çalış
+            if not hotel_name or hotel_name.strip() == '':
+                # Konu satırını kontrol et
+                if hasattr(self, 'last_subject') and self.last_subject:
+                    logger.info(f"Hotel name not found in AI response. Attempting to extract from subject: {self.last_subject}")
+                    # Konu satırını otel adı olarak kullan
+                    hotel_name = self.last_subject.strip()
+                    # Bazı yaygın ön ekleri kaldır
+                    prefixes_to_remove = ["Stop Sale:", "Stop sale:", "STOP SALE:", "Open Sale:", "Open sale:", "OPEN SALE:", 
+                                         "Stop:", "STOP:", "Open:", "OPEN:", "Re:", "RE:", "Fwd:", "FWD:"]
+                    for prefix in prefixes_to_remove:
+                        if hotel_name.startswith(prefix):
+                            hotel_name = hotel_name[len(prefix):].strip()
+                            break
+                    
+                    rule['hotel_name'] = hotel_name
+                    logger.info(f"Extracted hotel name from subject: '{hotel_name}'")
+            
             start_date_str = rule.get('start_date') # Expect YYYY-MM-DD
             end_date_str = rule.get('end_date')     # Expect YYYY-MM-DD
             sale_status = rule.get('sale_status') # Expect 'stop' or 'open'
@@ -782,6 +825,11 @@ class ClaudeAnalyzer:
                                     start_date_str = normalized_date
                                     end_date_str = normalized_date
                                     logger.info(f"Normalized date from subject to: {normalized_date}")
+                                    # Track that this date came from the subject only
+                                    if 'date_source' not in row:
+                                        row['date_source'] = {'from_body': False, 'from_subject': True}
+                                    else:
+                                        row['date_source']['from_subject'] = True
                             elif '/' in date_str:
                                 # DD/MM/YYYY format
                                 parts = date_str.split('/')
@@ -790,6 +838,11 @@ class ClaudeAnalyzer:
                                     start_date_str = normalized_date
                                     end_date_str = normalized_date
                                     logger.info(f"Normalized date from subject to: {normalized_date}")
+                                    # Track that this date came from the subject only
+                                    if 'date_source' not in row:
+                                        row['date_source'] = {'from_body': False, 'from_subject': True}
+                                    else:
+                                        row['date_source']['from_subject'] = True
                         except Exception as e:
                             logger.error(f"Error normalizing date from subject '{date_str}': {e}")
                         
@@ -1272,10 +1325,17 @@ class ClaudeAnalyzer:
             # Use Claude API to analyze the content
             logger.debug(f"Calling Claude API with text length: {len(email_content)}")
             
+            # Store the email subject for later use in post-processing
+            self.last_subject = email_subject
+            
             # Add the subject if available for better context
             content_to_analyze = email_content
             if email_subject:
-                content_to_analyze = f"Subject: {email_subject}\n\n{email_content}"
+                # Add subject in a more prominent way to help Claude identify the hotel name
+                content_to_analyze = f"Subject: {email_subject}\n\nIMPORTANT: The hotel name is likely in the subject line above.\n\n{email_content}"
+            
+            # Log the full content being sent to Claude for analysis
+            logger.info(f"[CLAUDE INPUT] Content being sent to Claude for analysis (Subject: {email_subject}):\n{content_to_analyze}")
             
             # Call the AI API for analysis
             response = self.claude_client.messages.create(
@@ -1290,6 +1350,14 @@ class ClaudeAnalyzer:
             
             # Get the raw response text
             raw_response = response.content[0].text
+            
+            # Store the raw response for later use in post-processing
+            self.last_raw_response = raw_response
+            
+            # Log the complete raw response from Claude
+            logger.info(f"[CLAUDE RESPONSE] Raw response from Claude API (Subject: {email_subject}):\n{raw_response}")
+            # EXTRA DEBUG LOG FOR RAW AI RESPONSE
+            logger.debug(f"[DEBUG] RAW_AI_RESPONSE: {raw_response}")
             
             # Try to parse the JSON from the response
             try:
@@ -1319,6 +1387,24 @@ class ClaudeAnalyzer:
                 if 'rows' in ai_result and len(ai_result['rows']) > 0:
                     # Found data in the body, mark as having sale info
                     has_sale_info = True
+                    
+                    # Process each row to ensure hotel_name is present
+                    for row in ai_result['rows']:
+                        # If hotel_name is missing or empty, try to extract from subject
+                        if 'hotel_name' not in row or not row['hotel_name'] or row['hotel_name'].strip() == '':
+                            if email_subject:
+                                # Use subject as hotel name, but clean it first
+                                hotel_name = email_subject.strip()
+                                # Remove common prefixes
+                                prefixes_to_remove = ["Stop Sale:", "Stop sale:", "STOP SALE:", "Open Sale:", "Open sale:", "OPEN SALE:", 
+                                                    "Stop:", "STOP:", "Open:", "OPEN:", "Re:", "RE:", "Fwd:", "FWD:"]
+                                for prefix in prefixes_to_remove:
+                                    if hotel_name.startswith(prefix):
+                                        hotel_name = hotel_name[len(prefix):].strip()
+                                        break
+                                
+                                row['hotel_name'] = hotel_name
+                                logger.info(f"Added missing hotel_name from subject: '{hotel_name}'")
                     
                     # Extract stop sale dates from body
                     sale_dates = []

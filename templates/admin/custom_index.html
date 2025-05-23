@@ -1,0 +1,20 @@
+{% extends "admin/index.html" %}
+
+{% block content %}
+{{ block.super }}
+<div class="module">
+    <h2>Özel İşlevler</h2>
+    <table>
+        <caption>Otel Yönetimi</caption>
+        <tbody>
+            <tr>
+                <th scope="row">
+                    <a href="{% url 'admin:hotel_portal_create' %}">Otel Portal (Tek Ekranda Oluştur)</a>
+                </th>
+                <td></td>
+                <td></td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+{% endblock %} 

@@ -11,6 +11,7 @@ from django.core.management.base import BaseCommand
 from django.utils import timezone
 from django.db import transaction
 from django.core.files.base import ContentFile
+from django.contrib.auth.models import User
 from core.models import EmailConfiguration
 from emails.models import Email, EmailRow, EmailAttachment
 
@@ -299,6 +300,59 @@ class Command(BaseCommand):
                     self.stdout.write(f"[SKIP] Email with identical content detected: {subject} matches ID: {recent_email.id}")
                     logger.info(f"[SKIP] Email with identical content detected: {subject} matches ID: {recent_email.id}")
                     return False  # Indicate that the email was not processed
+                    
+            # Fourth check: Check if sender is in the blocked list
+            sender_email = sender
+            if '<' in sender_email and '>' in sender_email:
+                # Format: "Name Surname <email@domain.com>" - Extract just the email part
+                sender_email = sender_email.split('<')[1].split('>')[0].strip()
+            elif '@' in sender_email:
+                # Format: email@domain.com - Clean any extra whitespace
+                sender_email = sender_email.strip()
+                
+            # Import here to avoid circular imports
+            from emails.models import EmailBlockList
+            
+            # Check if sender is in the blocked list
+            is_blocked = EmailBlockList.objects.filter(
+                sender_email=sender_email,
+                is_active=True  # Only consider active blocks
+            ).exists()
+            
+            if is_blocked:
+                # Create the email but mark it as blocked automatically
+                self.stdout.write(f"[AUTO-BLOCK] Email from blocked sender: {sender_email}")
+                logger.info(f"[AUTO-BLOCK] Email from blocked sender: {sender_email}")
+                
+                # We still create the email object but mark it as blocked
+                email_obj = Email.objects.create(
+                    subject=subject,
+                    sender=sender,
+                    recipient=recipient,
+                    received_date=received_date,
+                    message_id=message_id,
+                    body_text=body_text,
+                    body_html=body_html,
+                    status='blocked_hotel_not_found',  # Automatically mark as blocked
+                    has_attachments=False
+                )
+                
+                # Add a system log about the auto-blocking
+                from emails.models import UserLog
+                try:
+                    system_user = User.objects.get(username='system')
+                except User.DoesNotExist:
+                    system_user = None
+                    
+                UserLog.objects.create(
+                    user=system_user,
+                    action_type='auto_block_email',
+                    email=email_obj,
+                    ip_address='127.0.0.1',
+                    details=f"Email automatically blocked - Sender {sender_email} is on the block list"
+                )
+                
+                return email_obj  # Return the created email object
 
             # Create email object
             email_obj = Email.objects.create(

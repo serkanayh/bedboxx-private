@@ -129,6 +129,9 @@
 <div class="page-header d-flex justify-content-between align-items-center mb-4">
     <h1>E-posta Listesi</h1>
     <div class="d-flex">
+        <a href="{% url 'emails:add_manual_rule' %}" class="btn btn-success me-2">
+            <i class="bi bi-plus-circle"></i> Manuel Kural Ekle
+        </a>
         <form method="get" class="d-flex me-2">
             <div class="input-group">
                 <input type="text" name="search" class="form-control" placeholder="E-posta ara..." value="{{ request.GET.search|default:'' }}">
@@ -148,6 +151,7 @@
                 <li><a class="dropdown-item {% if request.GET.status == 'approved' %}active{% endif %}" href="?status=approved{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.hotel %}&hotel={{ request.GET.hotel }}{% endif %}{% if request.GET.start_date %}&start_date={{ request.GET.start_date }}{% endif %}{% if request.GET.end_date %}&end_date={{ request.GET.end_date }}{% endif %}">Onaylandı</a></li>
                 <li><a class="dropdown-item {% if request.GET.status == 'rejected' %}active{% endif %}" href="?status=rejected{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.hotel %}&hotel={{ request.GET.hotel }}{% endif %}{% if request.GET.start_date %}&start_date={{ request.GET.start_date }}{% endif %}{% if request.GET.end_date %}&end_date={{ request.GET.end_date }}{% endif %}">Reddedildi</a></li>
                 <li><a class="dropdown-item {% if request.GET.status == 'rejected_hotel_not_found' %}active{% endif %}" href="?status=rejected_hotel_not_found{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.hotel %}&hotel={{ request.GET.hotel }}{% endif %}{% if request.GET.start_date %}&start_date={{ request.GET.start_date }}{% endif %}{% if request.GET.end_date %}&end_date={{ request.GET.end_date }}{% endif %}">JP Otel Yok</a></li>
+                <li><a class="dropdown-item {% if request.GET.status == 'blocked_hotel_not_found' %}active{% endif %}" href="?status=blocked_hotel_not_found{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.hotel %}&hotel={{ request.GET.hotel }}{% endif %}{% if request.GET.start_date %}&start_date={{ request.GET.start_date }}{% endif %}{% if request.GET.end_date %}&end_date={{ request.GET.end_date }}{% endif %}">Bloklanmış Oteller</a></li>
                 <li><a class="dropdown-item {% if request.GET.status == 'rejected_room_not_found' %}active{% endif %}" href="?status=rejected_room_not_found{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.hotel %}&hotel={{ request.GET.hotel }}{% endif %}{% if request.GET.start_date %}&start_date={{ request.GET.start_date }}{% endif %}{% if request.GET.end_date %}&end_date={{ request.GET.end_date }}{% endif %}">JP Oda Yok</a></li>
                 <li><a class="dropdown-item {% if request.GET.status == 'sent_to_robot' %}active{% endif %}" href="?status=sent_to_robot{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.hotel %}&hotel={{ request.GET.hotel }}{% endif %}{% if request.GET.start_date %}&start_date={{ request.GET.start_date }}{% endif %}{% if request.GET.end_date %}&end_date={{ request.GET.end_date }}{% endif %}">Robota Gönderildi</a></li>
                 <li><a class="dropdown-item {% if request.GET.status == 'robot_processed' %}active{% endif %}" href="?status=robot_processed{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.hotel %}&hotel={{ request.GET.hotel }}{% endif %}{% if request.GET.start_date %}&start_date={{ request.GET.start_date }}{% endif %}{% if request.GET.end_date %}&end_date={{ request.GET.end_date }}{% endif %}">Robot İşledi</a></li>
@@ -332,11 +336,33 @@
 
 <div class="card email-card">
     <div class="card-body p-0">
+        <!-- Bulk Actions Bar -->
+        <div class="bg-light px-3 py-2 border-bottom d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center">
+                <div class="form-check me-2">
+                    <input class="form-check-input" type="checkbox" id="selectAllEmails">
+                    <label class="form-check-label" for="selectAllEmails">Tümünü seç</label>
+                </div>
+                <div class="dropdown ms-2">
+                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="bulkActionDropdown" data-bs-toggle="dropdown" aria-expanded="false" disabled>
+                        Seçilenleri İşle
+                    </button>
+                    <ul class="dropdown-menu" aria-labelledby="bulkActionDropdown">
+                        <li><a class="dropdown-item" href="#" id="bulkApprove">Onayla</a></li>
+                        <li><a class="dropdown-item" href="#" id="bulkReject">Reddet</a></li>
+                        <li><a class="dropdown-item" href="#" id="bulkRejectHotelNotFound">JP Otel Yok</a></li>
+                        <li><a class="dropdown-item" href="#" id="bulkRejectRoomNotFound">JP Oda Yok</a></li>
+                    </ul>
+                </div>
+                <span class="ms-3 text-muted" id="selectedCount">0 e-posta seçildi</span>
+            </div>
+        </div>
         <div class="table-responsive">
             <table class="table table-hover mb-0 email-table">
                 <thead>
                     <tr>
-                        <th style="width: 35%">Subject</th>
+                        <th style="width: 3%"><div class="form-check m-0"><input type="checkbox" class="form-check-input"></div></th>
+                        <th style="width: 32%">Subject</th>
                         <th style="width: 15%">Sender</th>
                         <th style="width: 15%" class="text-nowrap">
                             Received Date
@@ -363,6 +389,11 @@
                     {% for email in page_obj %}
                     <tr id="email-row-{{ email.id }}">
                         <td>
+                            <div class="form-check m-0">
+                                <input type="checkbox" class="form-check-input">
+                            </div>
+                        </td>
+                        <td>
                             {% if email.status == 'pending' %}<span class="unread-indicator"></span>{% endif %}
                             <a href="{% url 'emails:email_detail' email.id %}" class="email-subject text-decoration-none">{{ email.subject }}</a>
                         </td>
@@ -383,6 +414,10 @@
                                     {% else %}
                                         Rejected
                                     {% endif %}
+                                </span>
+                            {% elif email.status == 'blocked_hotel_not_found' %}
+                                <span class="badge bg-dark">
+                                    <i class="bi bi-shield-x me-1"></i> Bloklandı
                                 </span>
                             {% elif email.status == 'sent_to_robot' %}
                                 <span class="badge bg-info">{{ email.get_status_display }}</span>
@@ -527,6 +562,22 @@
                         </div>
                     </div>
                     
+                    <!-- Quick Date Filter Buttons -->
+                    <div class="mb-3">
+                        <label class="form-label">Hızlı Tarih Filtreleri</label>
+                        <div class="d-flex flex-wrap gap-2">
+                            <button type="button" class="btn btn-sm btn-outline-primary quick-date-btn" 
+                                    data-pattern="last3days">Son 3 Gün</button>
+                            <button type="button" class="btn btn-sm btn-outline-primary quick-date-btn" 
+                                    data-pattern="last7days">Son 7 Gün</button>
+                            <button type="button" class="btn btn-sm btn-outline-primary quick-date-btn" 
+                                    data-pattern="last14days">Son 14 Gün</button>
+                            <button type="button" class="btn btn-sm btn-outline-primary quick-date-btn" 
+                                    data-pattern="thismonth">Bu Ay</button>
+                        </div>
+                        <input type="hidden" id="datePatternInput" name="date_pattern" value="{{ request.GET.date_pattern|default:'' }}">
+                    </div>
+                    
                     <!-- Date Sort Order -->
                     <div class="mb-3">
                         <label class="form-label">Tarih Sıralaması</label>
@@ -617,13 +668,60 @@
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
                 <button type="button" class="btn btn-primary" onclick="document.getElementById('advancedFilterForm').submit();">Filtreleri Uygula</button>
             </div>
+            
+            <script>
+                // Add event listeners to quick date filter buttons
+                document.addEventListener('DOMContentLoaded', function() {
+                    const quickDateButtons = document.querySelectorAll('.quick-date-btn');
+                    const datePatternInput = document.getElementById('datePatternInput');
+                    const startDateInput = document.getElementById('startDateFilter');
+                    const endDateInput = document.getElementById('endDateFilter');
+                    
+                    quickDateButtons.forEach(button => {
+                        button.addEventListener('click', function() {
+                            // Get the date pattern from the button's data attribute
+                            const pattern = this.dataset.pattern;
+                            
+                            // Set the pattern in the hidden input
+                            datePatternInput.value = pattern;
+                            
+                            // Clear the date inputs to avoid conflicts
+                            startDateInput.value = '';
+                            endDateInput.value = '';
+                            
+                            // Highlight the selected button
+                            quickDateButtons.forEach(btn => {
+                                btn.classList.remove('btn-primary');
+                                btn.classList.add('btn-outline-primary');
+                            });
+                            this.classList.remove('btn-outline-primary');
+                            this.classList.add('btn-primary');
+                            
+                            // Auto-submit the form when a quick filter is selected
+                            document.getElementById('advancedFilterForm').submit();
+                        });
+                    });
+                    
+                    // Highlight the currently active button if any
+                    const currentPattern = datePatternInput.value;
+                    if (currentPattern) {
+                        const activeButton = document.querySelector(`.quick-date-btn[data-pattern="${currentPattern}"]`);
+                        if (activeButton) {
+                            activeButton.classList.remove('btn-outline-primary');
+                            activeButton.classList.add('btn-primary');
+                        }
+                    }
+                });
+            </script>
         </div>
     </div>
 </div>
-{% endblock %}
 
-{% block extra_js %}
 <script>
+// Debug etmek için jQuery yüklü mü kontrol edelim
+console.log("jQuery loaded:", typeof $ !== 'undefined');
+console.log("Bootstrap loaded:", typeof bootstrap !== 'undefined');
+
 document.addEventListener('DOMContentLoaded', function () {
     console.log("DOM fully loaded, initializing email list functions...");
     
@@ -652,288 +750,138 @@ document.addEventListener('DOMContentLoaded', function () {
     const emailRows = document.querySelectorAll('tr[id^="email-row-"]');
     console.log(`Found ${emailRows.length} email rows to process`);
     
-    emailRows.forEach(row => {
-        const emailId = row.id.replace('email-row-', '');
-        console.log(`Processing row for email ID: ${emailId}`);
-        
-        // E-posta durumu badge'ini bul
-        const statusBadge = row.querySelector('td:nth-child(4) .badge'); // Status column (4th column) -> badge
-        
-        if (emailId && statusBadge) {
-            console.log(`Found status badge for email ${emailId}, current text: ${statusBadge.textContent.trim()}`);
-            // Email durumunu API'den sorgula ve güncelle
-            checkEmailStatus(emailId, statusBadge);
-        } else {
-            console.warn(`Could not find status badge for email ${emailId}`);
-        }
+    // Bulk selection and actions
+    const selectAllCheckbox = document.getElementById('selectAllEmails');
+    const emailCheckboxes = document.querySelectorAll('tr[id^="email-row-"] .form-check-input');
+    const bulkActionDropdown = document.getElementById('bulkActionDropdown');
+    const selectedCountSpan = document.getElementById('selectedCount');
+    let selectedCount = 0;
+    
+    console.log("Elements found:", {
+        selectAllCheckbox: selectAllCheckbox,
+        emailCheckboxes: emailCheckboxes.length,
+        bulkActionDropdown: bulkActionDropdown,
+        selectedCountSpan: selectedCountSpan
     });
-
-    // Email durumunu API'den kontrol eden fonksiyon
-    function checkEmailStatus(emailId, badge) {
-        console.log(`Fetching status for email ${emailId}...`);
-        fetch(`/api/emails/${emailId}/status/`)
-            .then(response => response.json())
-            .then(data => {
-                console.log('Email status response:', data);
-                // API'den gelen durum ile UI'daki durum farklıysa güncelle
-                updateBadge(badge, data.status, emailId);
-            })
-            .catch(error => {
-                console.error('Error fetching email status:', error);
-            });
-    }
-
-    // Badge'i güncelle
-    function updateBadge(badge, status, emailId) {
-        console.log(`Updating badge for email ${emailId} with status: ${status}`);
+    
+    // Function to update UI based on selection state
+    function updateSelectionUI() {
+        selectedCount = document.querySelectorAll('tr[id^="email-row-"] .form-check-input:checked').length;
+        selectedCountSpan.textContent = selectedCount + ' e-posta seçildi';
         
-        // Önce tüm sınıfları kaldır
-        badge.classList.remove('bg-warning', 'bg-success', 'bg-danger', 'bg-info', 'bg-secondary', 'bg-primary', 'bg-light', 'bg-dark');
-        
-        // Duruma göre sınıf ve metin içeriğini ayarla
-        let badgeText = '';
-        let badgeClass = '';
-        
-        if (status === 'pending') {
-            badgeClass = 'bg-warning';
-            badgeText = 'Pending';
-        } else if (status === 'approved') {
-            badgeClass = 'bg-success';
-            badgeText = 'Approved';
-        } else if (status === 'rejected_hotel_not_found') {
-            badgeClass = 'bg-danger';
-            badgeText = 'JP Otel Yok';
-        } else if (status === 'rejected_room_not_found') {
-            badgeClass = 'bg-danger';
-            badgeText = 'JP Oda Yok';
-        } else if (status === 'rejected') {
-            badgeClass = 'bg-danger';
-            badgeText = 'Rejected';
-        } else if (status === 'processing') {
-            badgeClass = 'bg-primary';
-            badgeText = 'Processing';
-        } else if (status === 'manual_processed') {
-            badgeClass = 'bg-info';
-            badgeText = 'Manual Processed';
-        } else if (status === 'sent_to_robot') {
-            badgeClass = 'bg-info';
-            badgeText = 'Sent to Robot';
-        } else if (status === 'robot_processed') {
-            badgeClass = 'bg-success';
-            badgeText = 'Robot Processed';
-        } else if (status === 'processed_nodata') {
-            badgeClass = 'bg-secondary';
-            badgeText = 'No Data Found';
+        // Enable/disable bulk action dropdown
+        if (selectedCount > 0) {
+            bulkActionDropdown.removeAttribute('disabled');
         } else {
-            badgeClass = 'bg-secondary';
-            badgeText = status.replace('_', ' ');
+            bulkActionDropdown.setAttribute('disabled', 'disabled');
         }
-        
-        // Sınıf ekle
-        badge.classList.add(badgeClass);
-        
-        // İçeriği ayarla
-        badge.textContent = badgeText;
-        
-        // Log olarak yazalım
-        console.log(`Email ID ${emailId} status updated: ${status} → ${badgeText} (class: ${badgeClass})`);
     }
-
-    // Add event listeners to all delete buttons
-    const deleteButtons = document.querySelectorAll('.delete-email-btn');
-    deleteButtons.forEach(button => {
-        button.addEventListener('click', function () {
-            const emailId = this.dataset.emailId;
-            const emailSubject = this.dataset.emailSubject;
-            const apiUrl = `/api/emails/${emailId}/`;
-
-            // Confirmation dialog
-            if (confirm(`Are you sure you want to delete the email: "${emailSubject}"? This cannot be undone.`)) {
-                // Send DELETE request
-                fetch(apiUrl, {
-                    method: 'DELETE',
-                    headers: {
-                        'X-CSRFToken': csrftoken,
-                        'Content-Type': 'application/json'
-                        // Add any other necessary headers like Authorization if needed
-                    }
-                })
-                .then(response => {
-                    if (response.ok && response.status === 204) {
-                        // Success: Remove the row from the table
-                        const row = document.getElementById(`email-row-${emailId}`);
-                        if (row) {
-                            row.remove();
-                            // Optionally, display a success message
-                            console.log(`Email ${emailId} deleted successfully.`);
-                            // Example: showToast('Email deleted successfully.');
-                        }
-                    } else {
-                        // Handle errors
-                        response.json().then(data => {
-                            console.error('Error deleting email:', response.status, data);
-                            alert(`Error deleting email: ${data.detail || response.statusText}`);
-                        }).catch(() => {
-                            console.error('Error deleting email:', response.status, response.statusText);
-                            alert(`Error deleting email: ${response.statusText}`);
-                        });
-                    }
-                })
-                .catch(error => {
-                    console.error('Network error:', error);
-                    alert('Network error occurred while trying to delete the email.');
-                });
-            }
+    
+    // Handle "Select All" checkbox
+    selectAllCheckbox.addEventListener('change', function() {
+        console.log("Select All checkbox changed, checked:", this.checked);
+        console.log("Number of checkboxes:", emailCheckboxes.length);
+        
+        emailCheckboxes.forEach(checkbox => {
+            checkbox.checked = this.checked;
+        });
+        updateSelectionUI();
+    });
+    
+    // Handle individual checkboxes
+    emailCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            // Update "Select All" checkbox state
+            selectAllCheckbox.checked = 
+                emailCheckboxes.length === 
+                document.querySelectorAll('tr[id^="email-row-"] .form-check-input:checked').length;
+            
+            updateSelectionUI();
         });
     });
-
-    // Initialize Email Notification System with auto-refresh for this page
-    if (typeof EmailNotificationSystem !== 'undefined') {
-        const emailList = document.querySelector('.email-table tbody');
-        
-        // Reset notification count when on this page
-        if (window.notificationSystem) {
-            window.notificationSystem.resetUnreadCount();
-        } else {
-            // If not already initialized in base template, initialize it here
-            window.notificationSystem = new EmailNotificationSystem({
-                checkInterval: 20000, // 20 seconds
-                enableSound: true,
-                autoRefresh: false, // We'll handle updates manually
-                onNewEmail: function(email) {
-                    // Add the new email to the table
-                    addNewEmailToTable(email);
+    
+    // Function to handle bulk actions
+    function bulkAction(action) {
+        // Get selected email IDs
+        const selectedEmailIds = [];
+        emailCheckboxes.forEach(checkbox => {
+            if (checkbox.checked) {
+                const row = checkbox.closest('tr[id^="email-row-"]');
+                if (row) {
+                    const emailId = row.id.replace('email-row-', '');
+                    selectedEmailIds.push(emailId);
                 }
-            });
-            window.notificationSystem.startPolling();
+            }
+        });
+        
+        // Make sure we have selected emails
+        if (selectedEmailIds.length === 0) {
+            alert('Lütfen işlem yapmak için en az bir e-posta seçin.');
+            return;
         }
         
-        // Function to add a new email to the table
-        function addNewEmailToTable(email) {
-            // Skip if already exists
-            if (document.getElementById(`email-row-${email.id}`)) {
-                return;
-            }
-            
-            const row = document.createElement('tr');
-            row.id = `email-row-${email.id}`;
-            row.classList.add('new-email-highlight');
-            
-            // Create the row HTML structure
-            row.innerHTML = `
-                <td>
-                    <span class="unread-indicator"></span>
-                    <a href="${email.url}" class="email-subject text-decoration-none">${email.subject}</a>
-                </td>
-                <td class="email-meta">${email.sender}</td>
-                <td class="email-meta">${formatDate(email.received_date)}</td>
-                <td>
-                    <span class="badge bg-warning">Pending</span>
-                </td>
-                <td class="email-meta">
-                    <span class="badge bg-secondary">(0/0)</span>
-                </td>
-                <td class="text-center email-meta">
-                    ${email.has_attachments ? '<i class="bi bi-paperclip"></i>' : ''}
-                </td>
-                <td>
-                    <a href="${email.url}" class="btn btn-sm btn-outline-primary me-1 btn-action" title="View Details">
-                        <i class="bi bi-eye"></i>
-                    </a>
-                    <button class="btn btn-sm btn-delete delete-email-btn" 
-                            title="Delete Email"
-                            data-email-id="${email.id}"
-                            data-email-subject="${email.subject}">
-                        <i class="bi bi-trash3"></i>
-                    </button>
-                </td>
-            `;
-            
-            // Get the current sort order from URL parameters
-            const urlParams = new URLSearchParams(window.location.search);
-            const sortOrder = urlParams.get('sort') || 'asc';  // Default to asc if not specified
-            
-            // Add to the appropriate position in the table based on sort order
-            if (sortOrder === 'desc') {
-                // For newest first (desc), add to the top
-                const firstRow = emailList.querySelector('tr');
-                if (firstRow) {
-                    emailList.insertBefore(row, firstRow);
-                } else {
-                    emailList.appendChild(row);
-                }
+        // Create form data for the request
+        const formData = new FormData();
+        formData.append('email_ids', JSON.stringify(selectedEmailIds));
+        formData.append('action', action);
+        
+        // Show loading state
+        document.body.style.cursor = 'wait';
+        
+        // Send the request
+        fetch('/emails/bulk-action/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrftoken
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Process response
+            if (data.success) {
+                // Show success message
+                alert(`İşlem başarılı: ${data.message || 'Seçilen e-postalar işlendi.'}`);
+                
+                // Reload page to reflect changes
+                window.location.reload();
             } else {
-                // For oldest first (asc), add to the bottom
-                emailList.appendChild(row);
+                // Show error message
+                alert(`Hata: ${data.message || 'Bir hata oluştu. Lütfen tekrar deneyin.'}`);
             }
-            
-            // Add event listener to the new delete button
-            const deleteButton = row.querySelector('.delete-email-btn');
-            deleteButton.addEventListener('click', function () {
-                const emailId = this.dataset.emailId;
-                const emailSubject = this.dataset.emailSubject;
-                const apiUrl = `/api/emails/${emailId}/`;
-
-                if (confirm(`Are you sure you want to delete the email: "${emailSubject}"? This cannot be undone.`)) {
-                    fetch(apiUrl, {
-                        method: 'DELETE',
-                        headers: {
-                            'X-CSRFToken': csrftoken,
-                            'Content-Type': 'application/json'
-                        }
-                    })
-                    .then(response => {
-                        if (response.ok && response.status === 204) {
-                            const row = document.getElementById(`email-row-${emailId}`);
-                            if (row) {
-                                row.remove();
-                            }
-                        } else {
-                            response.json().then(data => {
-                                alert(`Error deleting email: ${data.detail || response.statusText}`);
-                            }).catch(() => {
-                                alert(`Error deleting email: ${response.statusText}`);
-                            });
-                        }
-                    })
-                    .catch(error => {
-                        alert('Network error occurred while trying to delete the email.');
-                    });
-                }
-            });
-            
-            // Add highlight animation
-            setTimeout(() => {
-                row.classList.add('highlight-active');
-            }, 100);
-            
-            // Remove highlight after 5 seconds
-            setTimeout(() => {
-                row.classList.remove('highlight-active');
-                row.classList.remove('new-email-highlight');
-            }, 5000);
-        }
-        
-        // Helper function to format a date
-        function formatDate(dateString) {
-            const date = new Date(dateString);
-            return date.toLocaleDateString() + ' ' + 
-                   date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        }
-        
-        // Add CSS for the highlighting effect
-        const style = document.createElement('style');
-        style.textContent = `
-            .new-email-highlight {
-                background-color: rgba(74, 107, 223, 0.05);
-                transition: background-color 0.5s ease;
-            }
-            .highlight-active {
-                background-color: rgba(74, 107, 223, 0.2);
-            }
-        `;
-        document.head.appendChild(style);
+        })
+        .catch(error => {
+            console.error('Bulk action error:', error);
+            alert('İşlem sırasında bir hata oluştu. Lütfen tekrar deneyin.');
+        })
+        .finally(() => {
+            // Reset loading state
+            document.body.style.cursor = 'default';
+        });
     }
+    
+    // Set up bulk action handlers
+    document.getElementById('bulkApprove').addEventListener('click', function() {
+        bulkAction('approve');
+    });
+    
+    document.getElementById('bulkReject').addEventListener('click', function() {
+        bulkAction('reject');
+    });
+    
+    document.getElementById('bulkRejectHotelNotFound').addEventListener('click', function() {
+        console.log("JP Otel Yok button clicked");
+        
+        // Tek bir onay mesajı (bloklama seçeneği hakkında bilgi veren)
+        if (confirm("Seçilen tüm e-postaları \"JP Otel Yok\" olarak reddetmek istediğinizden emin misiniz?\n\nNot: Bu işlem, e-postaları normal şekilde reddedecektir. Benzer e-postaları gelecekte otomatik olarak 'Juniper Otel Yok' olarak işaretlemek için ayrıca bloklama yapmanız gerekir.")) {
+            // Doğrudan reject-hotel-not-found işlemini çalıştır
+            bulkAction('reject-hotel-not-found');
+        }
+    });
+    
+    document.getElementById('bulkRejectRoomNotFound').addEventListener('click', function() {
+        bulkAction('reject-room-not-found');
+    });
 });
 </script>
 {% endblock %}

@@ -1,0 +1,161 @@
+Veritabanı Şeması (Tablo ve Alanlar)
+1. Hotel
+Alan	Tipi	Açıklama
+id	PK	Otomatik
+code	string	Otel kodu (benzersiz)
+name	string	Otel adı
+
+2. Room
+Alan	Tipi	Açıklama
+id	PK	Otomatik
+hotel_id	FK	Hotel tablosuna bağlı
+juniper_room_type	string	Orijinal oda tipi adı
+group_name	string	Normalize oda grubu adı
+
+3. RoomTypeGroupLearning (opsiyonel, öğrenilen oda eşleştirmeleri için)
+Alan	Tipi	Açıklama
+id	PK	Otomatik
+hotel_id	FK	Hotel tablosuna bağlı
+mail_room_type	string	Mailden gelen oda tipi
+group_name	string	Elde edilen grup adı
+juniper_room_type	string	Elde edilen oda tipi
+
+4. Contract
+Alan	Tipi	Açıklama
+id	PK	Otomatik
+hotel_id	FK	Hotel tablosuna bağlı
+code	string	Kontrat kodu
+
+5. Market
+Alan	Tipi	Açıklama
+id	PK	Otomatik
+code	string	Pazar kodu (EN, RU, UK)
+name	string	Pazar adı
+
+6. ContractMarket
+Alan	Tipi	Açıklama
+id	PK	Otomatik
+contract_id	FK	Contract tablosuna bağlı
+market_id	FK	Market tablosuna bağlı
+
+7. HotelLearning (opsiyonel, öğrenilen otel adı eşleştirmeleri için)
+Alan	Tipi	Açıklama
+id	PK	Otomatik
+mail_hotel_name	string	Mailden gelen otel adı
+hotel_id	FK	Hotel tablosuna bağlı
+
+İlişkiler:
+Room —> Hotel
+
+RoomTypeGroupLearning —> Hotel (veya Room, ihtiyaca göre)
+
+Contract —> Hotel
+
+ContractMarket —> Contract ve Market
+
+HotelLearning —> Hotel
+
+Django Model Karşılığı:
+
+class Hotel(models.Model):
+    code = models.CharField(max_length=50, unique=True)
+    name = models.CharField(max_length=255)
+
+class Room(models.Model):
+    hotel = models.ForeignKey(Hotel, on_delete=models.CASCADE)
+    juniper_room_type = models.CharField(max_length=255)
+    group_name = models.CharField(max_length=255)
+
+class RoomTypeGroupLearning(models.Model):
+    hotel = models.ForeignKey(Hotel, on_delete=models.CASCADE)
+    mail_room_type = models.CharField(max_length=255)
+    group_name = models.CharField(max_length=255)
+    juniper_room_type = models.CharField(max_length=255)
+
+class Contract(models.Model):
+    hotel = models.ForeignKey(Hotel, on_delete=models.CASCADE)
+    code = models.CharField(max_length=50)
+
+class Market(models.Model):
+    code = models.CharField(max_length=10)
+    name = models.CharField(max_length=100)
+
+class ContractMarket(models.Model):
+    contract = models.ForeignKey(Contract, on_delete=models.CASCADE)
+    market = models.ForeignKey(Market, on_delete=models.CASCADE)
+
+class HotelLearning(models.Model):
+    mail_hotel_name = models.CharField(max_length=255)
+    hotel = models.ForeignKey(Hotel, on_delete=models.CASCADE)
+Bu Şemada Ne Var/Ne Yok?
+Her otelin kendi odaları ve oda grupları var (başka otelin oda tipi karışmaz!)
+
+Kontratlar sadece o otele ait.
+
+Pazara göre kontrat ilişkisi ContractMarket ile.
+
+Kullanıcı manuel olarak otel veya oda tipi eşleştirirse, bu “learning” tablosunda tutulur.
+-----------------------------------------------------------------
+
+STOP/OPEN SALE Mail İşleme Akışı (Öğrenen Otomasyon)
+1. Otel Eşleştirme
+Mailden gelen otel adı önce Otel tablosunda aranır.
+
+Eğer tam eşleşme yoksa, geçmişte kullanıcı tarafından elle düzeltilmiş/öğrenilmiş otel adları kontrol edilir.
+
+Doğru otel bulunursa, çıkarılan kurala Juniper otel adı yazılır.
+
+2. Oda Tipi Eşleştirme
+Mailden gelen oda tipi (veya tipleri) alınır.
+
+Sadece ilgili otele ait oda tipleri taban alınır.
+
+Oda tipi normalize edilip (group_name), o oteldeki aynı gruba ait tüm varyasyon odalar belirlenir.
+
+Eğer oda tipi veri tabanında yok veya yanlış yazılmışsa ve kullanıcı manuel düzeltirse, sistem bunu öğrenir; bir dahaki seferde otomatik eşleşir.
+
+Doğru eşleşen tüm Juniper oda tipleri çıkarılan kurala eklenir.
+
+3. Pazar (Market) ve Kontrat Seçimi
+Mailde pazar (market) bilgisi varsa:
+
+Sadece o otelin, o pazara atanmış kontrat(lar)ı seçilir.
+
+Örneğin, “UK market” için otelin “Summer 2025 GBP” kontratı gibi.
+
+Mailde pazar yoksa ya da “tüm pazarlar” denmişse:
+
+O otele ait tüm kontratlar seçilir.
+
+Kontratlarda tarih aralığı veya geçerlilik kontrolü yapılmaz; sadece otel ve pazar esas alınır.
+
+Çıkarılan kurala seçilen pazar(lar) ve kontrat(lar) yazılır.
+
+4. Tarih Bilgisi
+Mailde yazan başlangıç ve bitiş tarihleri otomatik olarak çıkarılan kurala eklenir.
+
+5. İşlem Tipi (Stop/Open Sale)
+Mailde “stop sale” veya “open sale” olarak belirtilen bilgi çıkarılan kurala yazılır.
+
+6. Kullanıcı Onayı ve Manuel Düzeltme
+Tüm çıkarılan bilgiler ekranda kullanıcıya gösterilir.
+
+Kullanıcı isterse herhangi bir alanı manuel olarak değiştirebilir ve ardından onaylar.
+
+Onaylanmış kurallar, Juniper robotu için JSON dosyası olarak kaydedilebilir/klasöre atılabilir.
+
+7. Sürekli Öğrenme ve Gelişim
+Her onaylanmış veya manuel düzeltilmiş maildeki otel ve oda tipi eşleşmeleri sistem tarafından öğrenilir ve kaydedilir.
+
+Gelecekte aynı (veya benzer) otel veya oda tipi geldiğinde, sistem otomatik olarak öğrenilmiş eşleşmeyi kullanır.
+
+Sistem, gerekirse group name ve varyasyonları da otomatik yazabilir.
+
+Bu akış;
+
+Sadece ilgili otelin oda ve kontratlarını seçer,
+
+Yanlış veya eksik yazılmış alanlarda kullanıcı müdahalesiyle öğrenir,
+
+Sonraki işlemleri her seferinde daha otomatik ve doğru hale getirir.
+

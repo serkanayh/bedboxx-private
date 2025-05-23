@@ -5,7 +5,7 @@ import os
 from datetime import datetime, timedelta
 from django.utils import timezone
 from .models import Email, EmailRow, EmailAttachment, AIModel, Prompt, RoomTypeMatch, RoomTypeReject
-from hotels.models import Hotel, Room, Market, JuniperContractMarket
+from hotels.models import Hotel, Room, Market, JuniperContractMarket, RoomTypeGroup, RoomTypeVariant
 from difflib import SequenceMatcher
 from thefuzz import fuzz
 from core.ai_analyzer import ClaudeAnalyzer
@@ -145,8 +145,11 @@ def process_email_attachments_task(email_id):
             
             # Check if attachment should be processed based on filename
             # SADECE PDF ve Word dosyalarını işle, diğerlerini atla
-            attachment_ext = os.path.splitext(attachment.filename.lower())[1]
             allowed_extensions = ['.pdf', '.doc', '.docx']
+            
+            # Use the model's file_extension property which handles MIME encoding correctly
+            attachment_ext = attachment.file_extension
+            logger.debug(f"Attachment extension detected: '{attachment_ext}' for {attachment.filename}")
             
             if attachment_ext not in allowed_extensions:
                 logger.info(f"Skipping non-PDF/Word attachment: {attachment.filename} (extension: {attachment_ext})")
@@ -390,6 +393,7 @@ def match_email_rows_batch_task(email_id, row_ids):
     
     processed_count = 0
     not_found_count = 0
+    skipped_count = 0
     
     try:
         email = Email.objects.get(pk=email_id)
@@ -397,7 +401,53 @@ def match_email_rows_batch_task(email_id, row_ids):
         all_hotels = list(Hotel.objects.all())
         all_rooms_by_hotel = {h.id: list(Room.objects.filter(hotel=h)) for h in all_hotels}
         
-        # --- Improve learned email-to-hotel mapping check ---
+        # --- Email received date validation ---
+        email_received_date = email.received_date.date() if email.received_date else None
+        
+        # --- First pass: Filter out rows with problematic dates ---
+        if email_received_date:
+            rows_to_skip = []
+            for row in rows_to_process:
+                # Skip rules where BOTH start AND end date match email received date
+                if row.start_date == email_received_date and row.end_date == email_received_date:
+                    logger.warning(f"Row {row.id}: BOTH start and end dates ({row.start_date}/{row.end_date}) match email received date. Skipping rule.")
+                    rows_to_skip.append(row.id)
+                    skipped_count += 1
+                    
+                # Check for date source if available in extra_data
+                if hasattr(row, 'extra_data') and row.extra_data:
+                    try:
+                        extra_data = row.extra_data
+                        if isinstance(extra_data, str):
+                            import json
+                            extra_data = json.loads(extra_data)
+                            
+                        date_source = extra_data.get('date_source', {})
+                        
+                        # Skip if date is from subject only
+                        if (isinstance(date_source, dict) and 
+                            date_source.get('from_subject', False) and 
+                            not date_source.get('from_body', False)):
+                            logger.warning(f"Row {row.id}: Date is from subject line only. Skipping rule.")
+                            if row.id not in rows_to_skip:
+                                rows_to_skip.append(row.id)
+                                skipped_count += 1
+                                
+                        # Skip if date_source is explicitly marked as 'subject_only'
+                        elif date_source == 'subject_only':
+                            logger.warning(f"Row {row.id}: Date is marked as subject_only. Skipping rule.")
+                            if row.id not in rows_to_skip:
+                                rows_to_skip.append(row.id)
+                                skipped_count += 1
+                    except Exception as e:
+                        logger.error(f"Error checking date source for row {row.id}: {e}")
+            
+            # Filter out the rows to skip
+            if rows_to_skip:
+                rows_to_process = rows_to_process.exclude(id__in=rows_to_skip)
+                logger.info(f"Skipped {skipped_count} rows due to date validation issues")
+        
+        # --- Learned email-to-hotel mapping check ---
         learned_hotel = None
         sender_email = email.sender
         
@@ -427,6 +477,7 @@ def match_email_rows_batch_task(email_id, row_ids):
         
         for row in rows_to_process:
             logger.info(f"Matching row {row.id}: Hotel='{row.hotel_name}', Room='{row.room_type}'")
+            
             hotel_name = row.hotel_name
             room_type_input = row.room_type
             
@@ -499,162 +550,480 @@ def match_email_rows_batch_task(email_id, row_ids):
                         best_hotel_score = current_score
                         best_hotel_match = hotel
             
+            # Auto-match hotel if good enough
+            # Use a lower threshold for task (HOTEL_FUZZY_MATCH_THRESHOLD) compared to web UI
             if best_hotel_match and best_hotel_score >= HOTEL_FUZZY_MATCH_THRESHOLD:
+                logger.info(f"  [Hotel Match] Row {row.id}: Matched '{hotel_name}' -> '{best_hotel_match.juniper_hotel_name}' (Score: {best_hotel_score}%)")
                 row.juniper_hotel = best_hotel_match
                 row.hotel_match_score = best_hotel_score
-                logger.info(f"  [Hotel Match] Row {row.id}: '{hotel_name}' -> '{best_hotel_match.juniper_hotel_name}' (Score: {best_hotel_score:.2f})")
                 
-                # --- RoomTypeReject blacklist check ---
-                market_obj = row.markets.first() if hasattr(row, 'markets') and row.markets.exists() else None
-                reject_exists = RoomTypeReject.objects.filter(
-                    hotel=best_hotel_match,
-                    email_room_type=room_type_input,
-                    market=market_obj
-                ).exists()
-                if reject_exists:
-                    logger.info(f"  [RoomTypeReject] Row {row.id}: Found in blacklist, automatic matching will not be performed.")
-                    row.juniper_rooms.clear()
-                    row.room_match_score = None
-                    row.status = 'room_not_found'
-                    row.save()
+                # Otel otomatik eşleşti, şimdi oda eşleştirme kısmına geçelim
+                # Oda tipini işle ve odaları eşleştir
+                # "All Room" veya "All Rooms" durumunda özel işlem
+                all_room_keywords = ['all room', 'all rooms', 'all room types', 'tüm odalar']
+                input_room_type = str(room_type_input).strip()
+                
+                if not input_room_type:
+                    logger.warning(f"  [Room Match] Row {row.id}: Empty room type, using ALL ROOM.")
+                    input_room_type = "ALL ROOM"
+                
+                if input_room_type.lower() in all_room_keywords:
+                    # Özel "All Room" durumu - odaları eşleştirmeye gerek yok
+                    logger.info(f"  [Room Match] Row {row.id}: ALL ROOM type detected. Skipping room matching.")
+                    row.status = 'pending'
+                    row.save(update_fields=['juniper_hotel', 'hotel_match_score', 'status']) 
                     processed_count += 1
-                    not_found_count += 1
                     continue
                 
-                matched_juniper_rooms = []
-                room_scores = []
-                best_single_room_score = 0
-                hotel_rooms = all_rooms_by_hotel.get(best_hotel_match.id, [])
-
-                # Check for learned room matches
-                learned_matches = RoomTypeMatch.objects.filter(email_room_type=room_type_input)
-                learned_rooms = [m.juniper_room for m in learned_matches if m.juniper_room.hotel_id == best_hotel_match.id]
-                if learned_rooms:
-                    matched_juniper_rooms = learned_rooms
-                    logger.info(f"  [RoomTypeMatch] Row {row.id}: Found learned room match: {[room.juniper_room_type for room in matched_juniper_rooms]}")
-                    row.room_match_score = None
-                elif ',' in room_type_input:
-                    # We don't fully support comma-separated room types yet
-                    logger.warning(f"  [Room Match] Row {row.id}: Multiple room types detected ('{room_type_input}') - matching not fully implemented yet.")
-                    row.room_match_score = None
-                    row.juniper_rooms.clear()
-                elif room_type_input.upper() in ['ALL ROOM', 'ALL ROOMS', 'ALL ROOM TYPES']:
-                    # Special cases like ALL ROOM
-                    logger.info(f"  [Room Match] Row {row.id}: '{room_type_input}' detected. Applying to all rooms conceptually.")
-                    row.room_match_score = None
-                    row.juniper_rooms.clear()
-                    matched_juniper_rooms = []
-                else:
-                    # Skip normalization and segment comparison
-                    # Use direct string matching instead
-                    matched_juniper_rooms = []
-                    room_scores = []
-                    input_room_lower = room_type_input.lower()
+                # Diğer oda tipleri için normal eşleşme:
+                
+                # 1. İlk olarak RoomTypeGroup eşleşmesini deneyelim
+                # (a) Tam eşleşme
+                room_type_group = RoomTypeGroup.objects.filter(
+                    hotel=best_hotel_match,
+                    name__iexact=input_room_type
+                ).first()
+                
+                # (b) Eğer tam eşleşme bulunamazsa, kapsama eşleşmesi deneyelim
+                if not room_type_group:
+                    room_type_group = RoomTypeGroup.objects.filter(
+                        hotel=best_hotel_match,
+                        name__icontains=input_room_type
+                    ).first()
+                
+                # (c) Hala bulunamazsa, oda tipi bir grup adını içeriyor mu kontrol et
+                if not room_type_group:
+                    all_groups = RoomTypeGroup.objects.filter(hotel=best_hotel_match)
+                    for group in all_groups:
+                        if group.name.upper() in input_room_type.upper():
+                            room_type_group = group
+                            break
+                
+                # Oda tipi grubu bulduk mu?
+                if room_type_group:
+                    logger.info(f"  [Room Match] Row {row.id}: Found room type GROUP match: '{input_room_type}' -> Group: '{room_type_group.name}'")
+                    # Grup bulundu, şimdi bu gruba ait tüm varyantları eşleştirelim
                     
-                    # Calculate fuzzy match score for all rooms
-                    best_score = 0
-                    best_rooms = []
-                    
-                    # Show log details
-                    logger.info(f"  [Room Match] Row {row.id}: Searching for match for room type '{room_type_input}'")
-                    
-                    for juniper_room in hotel_rooms:
-                        room_name_lower = str(juniper_room.juniper_room_type).lower()
+                    # Gruptaki tüm varyantları al
+                    variants = room_type_group.variants.all()
+                    if not variants.exists():
+                        logger.warning(f"  [Room Match] Row {row.id}: Room type group '{room_type_group.name}' has no variants.")
                         
-                        # Exact match (full score)
-                        if input_room_lower == room_name_lower:
-                            score = 100
-                            logger.info(f"  [EXACT MATCH] Row {row.id}: '{room_type_input}' = '{juniper_room.juniper_room_type}'")
-                        else:
-                            # Calculate fuzzy match score
-                            score = fuzz.token_set_ratio(input_room_lower, room_name_lower)
+                        # Grup varyantı yoksa doğrudan fuzzy match deneyelim
+                        best_room_match = None
+                        best_room_score = 0
+                        for room in all_rooms_by_hotel.get(best_hotel_match.id, []):
+                            # Direct similarity score (token_set_ratio is more flexible than ratio)
+                            current_score = fuzz.token_set_ratio(input_room_type.lower(), room.juniper_room_type.lower())
                             
-                            # --- Word set comparison for better matching ---
-                            # This helps match rooms like "Family Room With Bunkbed" and "Bunk Bed Family Room"
-                            # which have different word order but same meaning
-                            input_words = set(input_room_lower.split())
-                            room_words = set(room_name_lower.split())
-                            
-                            # Find number of common words
-                            common_words = input_words.intersection(room_words)
-                            
-                            # Calculate ratio based on total words
-                            if len(input_words) > 0 and len(room_words) > 0:
-                                common_word_ratio = len(common_words) / max(len(input_words), len(room_words))
-                                # Give more weight to special words like "bunk", "bed", "family", "room"
-                                key_term_matches = sum(1 for word in ["family", "bunk", "bed", "room", "suite"] if word in common_words)
+                            # Give full score for exact match 
+                            if input_room_type.lower() == room.juniper_room_type.lower():
+                                current_score = 100
                                 
-                                # If special word matches and high common word ratio, strengthen the score
-                                if key_term_matches >= 2 and common_word_ratio >= 0.5:
-                                    word_match_score = 85 + (key_term_matches * 3) # Bonus based on number of special words
-                                    score = max(score, word_match_score) # Take higher of fuzzy score or word match score
-                                    logger.info(f"  [WORD SET MATCH] '{room_type_input}' vs '{juniper_room.juniper_room_type}': {common_words} | Score: {score}")
-                            # --- End word set comparison ---
+                            if current_score > best_room_score:
+                                best_room_score = current_score
+                                best_room_match = room
+                                
+                        if best_room_match and best_room_score >= ROOM_FUZZY_MATCH_THRESHOLD:
+                            logger.info(f"  [Room Match] Row {row.id}: Fallback to direct match. Matched '{input_room_type}' -> '{best_room_match.juniper_room_type}' (Score: {best_room_score}%)")
+                            row.juniper_rooms.add(best_room_match)
+                            row.room_match_score = best_room_score
+                            row.status = 'pending'
+                        else:
+                            logger.warning(f"  [Room Match] Row {row.id}: Could not find matching room for '{input_room_type}' in hotel '{best_hotel_match.juniper_hotel_name}'")
+                            row.status = 'room_not_found'
+                    else:
+                        # Varyantlardan oda eşleşmelerini bul
+                        matched_rooms = []
+                        for variant in variants:
+                            # Varyant adını içeren odaları bul
+                            variant_rooms = Room.objects.filter(
+                                hotel=best_hotel_match,
+                                juniper_room_type__icontains=variant.variant_room_name
+                            )
+                            # Bulunan odaları listeye ekle
+                            if variant_rooms.exists():
+                                matched_rooms.extend(variant_rooms)
+                                
+                        if matched_rooms:
+                            # Tekrarlanan odaları kaldır
+                            unique_matched_rooms = list(set(matched_rooms))
                             
-                            logger.debug(f"  [Score] '{room_type_input}' vs '{juniper_room.juniper_room_type}' = {score}")
-                        
-                        if score > best_score:
-                            best_score = score
-                            best_rooms = [juniper_room]
-                        elif score == best_score and score > 0:
-                            best_rooms.append(juniper_room)
-                    
-                    # Is there a room that passes the threshold?
-                    if best_score >= ROOM_FUZZY_MATCH_THRESHOLD:
-                        matched_juniper_rooms = best_rooms
-                        room_scores = [best_score] * len(best_rooms) 
-                        row.room_match_score = best_score
-                        logger.info(f"  [Room Match] Row {row.id}: '{room_type_input}' -> {[room.juniper_room_type for room in best_rooms]} (Score: {best_score})")
-                        
-                        # --- EXTRA: Look for similar room names and add them too ---
-                        all_juniper_rooms = all_rooms_by_hotel.get(best_hotel_match.id, [])
-                        new_matches = []
-                        for best_room in best_rooms:
-                            best_name = str(best_room.juniper_room_type).strip().lower()
-                            for other_room in all_juniper_rooms:
-                                other_name = str(other_room.juniper_room_type).strip().lower()
-                                if other_room not in matched_juniper_rooms and (best_name in other_name or other_name in best_name):
-                                    matched_juniper_rooms.append(other_room)
-                                    new_matches.append(other_room.juniper_room_type)
-                        if new_matches:
-                            logger.info(f"  [Room Name Contains Extension] Row {row.id}: Added rooms: {new_matches}")
-                    else:
-                        matched_juniper_rooms = []
-                        room_scores = []
-                        row.room_match_score = None
-                        logger.warning(f"  [Room Match] Row {row.id}: No room match found for '{room_type_input}'. Best score was {best_score} with rooms {[room.juniper_room_type for room in best_rooms]}")
-
-                if matched_juniper_rooms:
-                    row.juniper_rooms.set(matched_juniper_rooms)
+                            # Tüm eşleşen odaları ekle
+                            row.juniper_rooms.set(unique_matched_rooms)
+                            row.room_match_score = 100  # Grup eşleşmesi olduğu için yüksek skor ver
+                            row.status = 'pending'
+                            logger.info(f"  [Room Match] Row {row.id}: Matched {len(unique_matched_rooms)} rooms from group '{room_type_group.name}'")
+                            
+                            # RoomTypeMatch kayıtlarını oluştur (öğrenen sistem için)
+                            for room in unique_matched_rooms:
+                                RoomTypeMatch.objects.get_or_create(
+                                    email_room_type=input_room_type, 
+                                    juniper_room=room
+                                )
+                        else:
+                            # Grup varyantları var ama eşleşen oda yok
+                            logger.warning(f"  [Room Match] Row {row.id}: No matching rooms found for variants in group '{room_type_group.name}'")
+                            row.status = 'room_not_found'
                 else:
-                    row.juniper_rooms.clear()
-
-                final_row_status = 'hotel_not_found'
-                if best_hotel_match:
-                    is_all_room_case = room_type_input.upper() in ['ALL ROOM', 'ALL ROOMS', 'ALL ROOM TYPES']
-                    if is_all_room_case or matched_juniper_rooms:
-                        final_row_status = 'pending'
+                    # Grup eşleşmedi, doğrudan fuzzy match deneyelim
+                    best_room_match = None
+                    best_room_score = 0
+                    for room in all_rooms_by_hotel.get(best_hotel_match.id, []):
+                        # Direct similarity score (token_set_ratio is more flexible than ratio)
+                        current_score = fuzz.token_set_ratio(input_room_type.lower(), room.juniper_room_type.lower())
+                        
+                        # Give full score for exact match 
+                        if input_room_type.lower() == room.juniper_room_type.lower():
+                            current_score = 100
+                            
+                        if current_score > best_room_score:
+                            best_room_score = current_score
+                            best_room_match = room
+                            
+                    if best_room_match and best_room_score >= ROOM_FUZZY_MATCH_THRESHOLD:
+                        # Get related room suggestions to capture variants
+                        from emails.views import get_room_suggestions
+                        _, room_suggestions, _ = get_room_suggestions(input_room_type, best_hotel_match)
+                        
+                        # If we got multiple suggestions from room group variants, use all of them
+                        if len(room_suggestions) > 1:
+                            logger.info(f"  [Room Match] Row {row.id}: Found multiple room suggestions - likely group variants. Matching all {len(room_suggestions)} rooms")
+                            row.juniper_rooms.set(room_suggestions)
+                            row.room_match_score = best_room_score
+                            row.status = 'pending'
+                            
+                            # Create RoomTypeMatch records for all matched rooms
+                            for room in room_suggestions:
+                                RoomTypeMatch.objects.get_or_create(
+                                    email_room_type=input_room_type, 
+                                    juniper_room=room
+                                )
+                        else:
+                            # Just match the single best room
+                            logger.info(f"  [Room Match] Row {row.id}: Matched '{input_room_type}' -> '{best_room_match.juniper_room_type}' (Score: {best_room_score}%)")
+                            row.juniper_rooms.add(best_room_match)
+                            row.room_match_score = best_room_score
+                            row.status = 'pending'
+                            
+                            # RoomTypeMatch kaydı oluştur (öğrenen sistem için)
+                            RoomTypeMatch.objects.get_or_create(
+                                email_room_type=input_room_type, 
+                                juniper_room=best_room_match
+                            )
                     else:
-                        final_row_status = 'room_not_found'
-
-                row.status = final_row_status
-            
+                        logger.warning(f"  [Room Match] Row {row.id}: Could not find matching room for '{input_room_type}' in hotel '{best_hotel_match.juniper_hotel_name}'")
+                        row.status = 'room_not_found'
+                
+                row.save()
+                processed_count += 1
             else:
-                logger.warning(f"  [Hotel Match] Row {row.id}: No hotel match found for '{hotel_name}'")
+                # Not a good enough hotel match 
+                logger.warning(f"  [Hotel Match] Row {row.id}: No hotel match found for '{hotel_name}' (Best score: {best_hotel_score if best_hotel_match else 0})")
                 row.status = 'hotel_not_found'
-                row.hotel_match_score = None
-                row.room_match_score = None
-                row.juniper_hotel = None
-                row.juniper_rooms.clear()
-            
-            row.save()
-            processed_count += 1
-            if row.status == 'hotel_not_found' or row.status == 'room_not_found':
+                row.save(update_fields=['status'])
                 not_found_count += 1
-
-        logger.info(f"Matching task finished for Email ID: {email_id}. Processed: {processed_count}, Not Found: {not_found_count}")
-
+        
+        # Update email status based on how many rows were successfully processed
+        if rows_to_process:
+            total_rows = len(rows_to_process)
+            email.status = 'processed'
+            # Update pending rows to needs_review if needed
+            email.save(update_fields=['status', 'updated_at'])
+            
+            logger.info(f"Finished matching for Email ID: {email_id}. Processed {processed_count}/{total_rows} rows successfully, {not_found_count} not found.")
+            return True
+        else:
+            logger.warning(f"No rows found to process for Email ID: {email_id}")
+            email.status = 'error' 
+            email.save(update_fields=['status', 'updated_at'])
+            return False
+            
     except Email.DoesNotExist:
-        logger.error(f"Matching task failed: Email ID {email_id} not found.")
+        logger.error(f"Match task failed: Email ID {email_id} not found")
+        return False
     except Exception as e:
-        logger.error(f"Matching task failed for Email ID: {email_id}, Row IDs: {row_ids}. Error: {str(e)}", exc_info=True)
+        logger.error(f"Match task failed for Email ID: {email_id}. Error: {str(e)}", exc_info=True)
+        try:
+            email = Email.objects.get(pk=email_id)
+            email.status = 'error'
+            email.save(update_fields=['status', 'updated_at'])
+        except:
+            pass
+        return False
+
+@shared_task(name="emails.tasks.update_room_groups_task")
+def update_room_groups_task():
+    """
+    Oda grubu eşleştirmelerini güncelleyen düzenli celery task.
+    Bu task, RoomTypeGroup ile eşleşen tüm oda tiplerini bulur ve
+    grupta bulunan tüm varyantların doğru şekilde eşleştirilmesini sağlar.
+    """
+    from difflib import SequenceMatcher
+    from emails.models import EmailRow
+    from hotels.models import Hotel, Room, RoomTypeGroup, RoomTypeVariant
+    from emails.models import RoomTypeMatch
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    logger.info("Oda Grupları Güncelleme Görevi başlatıldı.")
+    
+    def find_best_group_match(room_type, groups):
+        """Verilen oda tipi için en iyi grup eşleşmesini bulan yardımcı fonksiyon"""
+        best_match = None
+        best_score = 0
+        
+        clean_room_type = room_type.strip().upper()
+        
+        for group in groups:
+            # Tam eşleşme kontrolü
+            if group.name.upper() == clean_room_type:
+                return group, 1.0  # Tam eşleşme, skor 1.0
+            
+            # Bulanık eşleşme
+            score = SequenceMatcher(None, clean_room_type, group.name.upper()).ratio()
+            
+            # Kelime içerme kontrolü (ilave puan)
+            if clean_room_type in group.name.upper() or group.name.upper() in clean_room_type:
+                score += 0.2
+                
+            if score > best_score:
+                best_score = score
+                best_match = group
+        
+        return best_match, best_score
+    
+    try:
+        # Juniper otelle eşleşmiş ve henüz onaylanmamış bütün satırları bul
+        all_rows = EmailRow.objects.filter(
+            juniper_hotel__isnull=False, 
+            status__in=['pending', 'matching']
+        ).order_by('-id')
+        
+        logger.info(f"Toplam {all_rows.count()} işlenecek satır bulundu.")
+        
+        fixed_count = 0
+        skipped_count = 0
+        
+        for row in all_rows:
+            logger.debug(f"İşleniyor: Row ID: {row.id}, Hotel: {row.hotel_name}, Room Type: {row.room_type}")
+            
+            if not row.room_type or row.room_type.strip() == '':
+                logger.debug(f"  Bu satırda oda tipi yok, atlanıyor.")
+                skipped_count += 1
+                continue
+                
+            # ALL ROOM tiplerini atla
+            if row.room_type.strip().upper() in ["ALL ROOM", "ALL ROOMS", "ALL ROOM TYPES", "TÜM ODALAR"]:
+                logger.debug(f"  Bu satır 'ALL ROOM' tipi içeriyor, atlanıyor.")
+                skipped_count += 1
+                continue
+                
+            hotel = row.juniper_hotel
+            
+            # Oda tipini temizle
+            clean_room_type = row.room_type.strip().upper()
+            
+            # 1. Otele ait tüm oda gruplarını al
+            hotel_groups = RoomTypeGroup.objects.filter(hotel=hotel)
+            if not hotel_groups.exists():
+                logger.debug(f"  Bu otel için hiç oda grubu tanımlanmamış, atlanıyor.")
+                skipped_count += 1
+                continue
+            
+            # 2. En iyi grup eşleşmesini bul
+            best_group, group_score = find_best_group_match(clean_room_type, hotel_groups)
+            
+            # Eğer iyi bir grup eşleşmesi yoksa atla
+            if not best_group or group_score < 0.6:  # 0.6 eşik değeri
+                logger.debug(f"  Bu oda tipi için uygun grup bulunamadı (En yüksek skor: {group_score:.2f})")
+                skipped_count += 1
+                continue
+                
+            # 3. Gruptaki varyantları al
+            variants = best_group.variants.all()
+            if not variants.exists():
+                logger.debug(f"  Bu grupta hiç varyant tanımlanmamış, atlanıyor.")
+                skipped_count += 1
+                continue
+            
+            # 4. Bu varyantlara sahip odaları bul
+            all_variant_rooms = []
+            for variant in variants:
+                variant_rooms = Room.objects.filter(
+                    hotel=hotel, 
+                    juniper_room_type__icontains=variant.variant_room_name
+                )
+                if variant_rooms.exists():
+                    all_variant_rooms.extend(variant_rooms)
+            
+            # 5. Eğer hiç oda bulunamadıysa atla
+            if not all_variant_rooms:
+                logger.debug(f"  Bu grup için hiç oda bulunamadı, atlanıyor.")
+                skipped_count += 1
+                continue
+            
+            # 6. Tekrarlanan odaları kaldır
+            unique_rooms = list(set(all_variant_rooms))
+            
+            # 7. Önceki oda sayısını kontrol et
+            previous_rooms = row.juniper_rooms.all()
+            
+            # 8. Eğer zaten birden fazla oda eşleşmişse ve sayı aynıysa atla
+            if previous_rooms.count() >= len(unique_rooms):
+                logger.debug(f"  Bu satır için zaten {previous_rooms.count()} oda eşleşmiş, güncellemeye gerek yok.")
+                skipped_count += 1
+                continue
+            
+            # 9. Yeni odaları ekle
+            row.juniper_rooms.set(unique_rooms)
+            
+            # RoomTypeMatch kayıtlarını oluştur (öğrenen sistem için)
+            for room in unique_rooms:
+                RoomTypeMatch.objects.get_or_create(
+                    email_room_type=row.room_type, 
+                    juniper_room=room
+                )
+            
+            fixed_count += 1
+            logger.info(f"Satır {row.id} güncellendi: '{row.room_type}' için {len(unique_rooms)} oda eşleştirildi.")
+        
+        logger.info(f"Oda Grupları Güncelleme Görevi tamamlandı. {fixed_count} satır güncellendi, {skipped_count} satır atlandı.")
+        return {"fixed": fixed_count, "skipped": skipped_count}
+        
+    except Exception as e:
+        logger.error(f"Oda Grupları Güncelleme Görevi hata ile sonlandı: {str(e)}")
+        return {"error": str(e)}
+
+@shared_task(name="emails.tasks.check_room_variants_task")
+def check_room_variants_task(row_id):
+    """
+    Tek bir EmailRow satırının oda tipini kontrol edip, eğer bir oda grubu ile eşleşiyorsa
+    o grubun tüm varyantlarını ekler.
+    
+    Args:
+        row_id (int): İşlenecek EmailRow'un ID'si
+    
+    Returns:
+        dict: İşlem sonucu
+    """
+    from difflib import SequenceMatcher
+    from emails.models import EmailRow
+    from hotels.models import Hotel, Room, RoomTypeGroup, RoomTypeVariant
+    from emails.models import RoomTypeMatch
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    logger.debug(f"Oda varyant kontrolü başlatıldı: Row ID: {row_id}")
+    
+    try:
+        # EmailRow'u bul
+        row = EmailRow.objects.get(id=row_id)
+        
+        # Eğer otel veya oda tipi yoksa işleme
+        if not row.juniper_hotel or not row.room_type:
+            return {"status": "skipped", "reason": "no_hotel_or_room_type"}
+        
+        # ALL ROOM tiplerini atla
+        if row.room_type.strip().upper() in ["ALL ROOM", "ALL ROOMS", "ALL ROOM TYPES", "TÜM ODALAR"]:
+            return {"status": "skipped", "reason": "all_room_type"}
+        
+        # Sadece bekleyen veya eşleştirme durumundaki satırları kontrol et
+        if row.status not in ['pending', 'matching']:
+            return {"status": "skipped", "reason": "status_not_matching"}
+        
+        hotel = row.juniper_hotel
+        clean_room_type = row.room_type.strip().upper()
+        
+        # Tam eşleşen bir grup var mı kontrol et
+        room_type_group = RoomTypeGroup.objects.filter(
+            hotel=hotel,
+            name__iexact=clean_room_type
+        ).first()
+        
+        # Eğer tam eşleşme yoksa, içerik eşleşmesi dene
+        if not room_type_group:
+            room_type_group = RoomTypeGroup.objects.filter(
+                hotel=hotel,
+                name__icontains=clean_room_type
+            ).first()
+        
+        # Eğer içerik eşleşmesi de yoksa, daha yüksek bir bulanık eşleşme eşiği ile başka grupları dene
+        if not room_type_group:
+            best_group = None
+            best_score = 0
+            
+            for group in RoomTypeGroup.objects.filter(hotel=hotel):
+                score = SequenceMatcher(None, clean_room_type, group.name.upper()).ratio()
+                
+                # Kelime içerme kontrolü (ilave puan)
+                if clean_room_type in group.name.upper() or group.name.upper() in clean_room_type:
+                    score += 0.2
+                    
+                if score > best_score and score >= 0.6:  # 0.6 eşik değeri
+                    best_score = score
+                    best_group = group
+            
+            room_type_group = best_group
+        
+        # Eğer uygun grup bulunamadıysa işlemi sonlandır
+        if not room_type_group:
+            return {"status": "skipped", "reason": "no_matching_group"}
+        
+        # Gruptaki varyantları al
+        variants = room_type_group.variants.all()
+        if not variants.exists():
+            return {"status": "skipped", "reason": "no_variants_in_group"}
+        
+        # Varyantlara ait odaları bul
+        all_variant_rooms = []
+        for variant in variants:
+            variant_rooms = Room.objects.filter(
+                hotel=hotel, 
+                juniper_room_type__icontains=variant.variant_room_name
+            )
+            if variant_rooms.exists():
+                all_variant_rooms.extend(variant_rooms)
+        
+        # Eğer hiç oda bulunamadıysa işlemi sonlandır
+        if not all_variant_rooms:
+            return {"status": "skipped", "reason": "no_rooms_for_variants"}
+        
+        # Tekrarlanan odaları kaldır
+        unique_rooms = list(set(all_variant_rooms))
+        
+        # Önceki oda sayısını kontrol et
+        previous_rooms = row.juniper_rooms.all()
+        
+        # Eğer zaten birden fazla oda eşleşmişse ve sayı aynıysa atla
+        if previous_rooms.count() >= len(unique_rooms):
+            return {"status": "skipped", "reason": "already_has_same_or_more_rooms"}
+        
+        # Özyinelemeyi önlemek için flag ekle
+        row._room_variants_checked = True
+        
+        # Yeni odaları ekle
+        row.juniper_rooms.set(unique_rooms)
+        
+        # RoomTypeMatch kayıtlarını oluştur (öğrenen sistem için)
+        for room in unique_rooms:
+            RoomTypeMatch.objects.get_or_create(
+                email_room_type=row.room_type, 
+                juniper_room=room
+            )
+        
+        logger.info(f"Oda varyantları güncellendi: Row {row_id} için {len(unique_rooms)} oda eklendi - Grup: {room_type_group.name}")
+        return {
+            "status": "updated", 
+            "row_id": row_id,
+            "group": room_type_group.name,
+            "variants_count": variants.count(),
+            "rooms_count": len(unique_rooms)
+        }
+        
+    except EmailRow.DoesNotExist:
+        logger.warning(f"Row ID {row_id} bulunamadı.")
+        return {"status": "error", "reason": "row_not_found"}
+    except Exception as e:
+        logger.error(f"Oda varyant kontrolü hatası (Row ID: {row_id}): {str(e)}")
+        return {"status": "error", "reason": str(e)}

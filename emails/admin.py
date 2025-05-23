@@ -5,7 +5,7 @@ from django.utils import timezone
 from .models import (
     AIModel, Prompt, RegexRule, Email, EmailAttachment, 
     EmailRow, UserLog, EmailFilter, RoomTypeMatch, RoomTypeReject,
-    EmailHotelMatch
+    EmailHotelMatch, EmailBlockList
 )
 
 @admin.register(AIModel)
@@ -141,3 +141,30 @@ class EmailHotelMatchAdmin(admin.ModelAdmin):
             )
         return "-"
     hotel_display.short_description = 'Otel'
+
+@admin.register(EmailBlockList)
+class EmailBlockListAdmin(admin.ModelAdmin):
+    list_display = ('sender_email', 'reason', 'is_active', 'blocked_by', 'blocked_at', 'original_email_link')
+    list_filter = ('is_active', 'reason', 'blocked_at', 'blocked_by')
+    search_fields = ('sender_email', 'reason')
+    readonly_fields = ('blocked_at', 'last_updated')
+    actions = ['activate_blocks', 'deactivate_blocks']
+    
+    def original_email_link(self, obj):
+        if obj.original_email:
+            return format_html('<a href="{}">{}</a>', 
+                reverse('admin:emails_email_change', args=[obj.original_email.id]),
+                f"E-posta #{obj.original_email.id}: {obj.original_email.subject[:30]}..."
+            )
+        return "-"
+    original_email_link.short_description = 'Orijinal E-posta'
+    
+    def activate_blocks(self, request, queryset):
+        queryset.update(is_active=True)
+        self.message_user(request, f"{queryset.count()} blok aktifleştirildi.")
+    activate_blocks.short_description = "Seçili blokları aktifleştir"
+    
+    def deactivate_blocks(self, request, queryset):
+        queryset.update(is_active=False)
+        self.message_user(request, f"{queryset.count()} blok devre dışı bırakıldı.")
+    deactivate_blocks.short_description = "Seçili blokları devre dışı bırak"

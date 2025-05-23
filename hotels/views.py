@@ -4,9 +4,13 @@ from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db.models import Q
 from django.http import JsonResponse
-from .models import Hotel, Room, Market
+from .models import Hotel, Room, Market, JuniperContractMarket, RoomTypeGroup, RoomTypeVariant
+from .forms import HotelForm, RoomFormSet, ContractMarketFormSet
 import csv
 import io
+from django.views.decorators.http import require_http_methods
+from django.db import transaction
+from django.urls import reverse
 
 @login_required
 def hotel_list(request):
@@ -438,3 +442,215 @@ def room_delete(request, room_id):
     }
     
     return render(request, 'hotels/room_delete.html', context)
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def hotel_portal_create(request):
+    """
+    View for creating a new hotel with related data in a single form
+    """
+    if request.method == 'POST':
+        hotel_form = HotelForm(request.POST)
+        room_formset = RoomFormSet(request.POST, prefix='rooms')
+        contract_formset = ContractMarketFormSet(request.POST, prefix='contracts')
+        
+        if hotel_form.is_valid() and room_formset.is_valid() and contract_formset.is_valid():
+            try:
+                with transaction.atomic():
+                    # Save hotel
+                    hotel = hotel_form.save()
+                    
+                    # Save rooms and create room type groups
+                    rooms = room_formset.save(commit=False)
+                    for room_form, room in zip(room_formset.forms, rooms):
+                        if not room_form.cleaned_data.get('DELETE', False):
+                            # Set hotel for each room
+                            room.hotel = hotel
+                            room.save()
+                            
+                            # Create or get room type group
+                            group_name = room_form.cleaned_data.get('group_name')
+                            if group_name:
+                                group, created = RoomTypeGroup.objects.get_or_create(
+                                    hotel=hotel,
+                                    name=group_name
+                                )
+                                
+                                # Create room type variant
+                                RoomTypeVariant.objects.get_or_create(
+                                    group=group,
+                                    variant_room_name=room.juniper_room_type
+                                )
+                    
+                    # Save contract-market relationships
+                    for contract_form in contract_formset:
+                        if contract_form.is_valid() and not contract_form.cleaned_data.get('DELETE', False):
+                            contract_data = contract_form.cleaned_data
+                            
+                            # Create a contract for each selected market
+                            for market in contract_data.get('markets', []):
+                                JuniperContractMarket.objects.create(
+                                    hotel=hotel,
+                                    market=market,
+                                    contract_name=contract_data.get('contract_name'),
+                                    season=contract_data.get('season'),
+                                    access=contract_data.get('access')
+                                )
+                    
+                    messages.success(request, f"Otel {hotel.juniper_hotel_name} ve ilgili veriler başarıyla oluşturuldu.")
+                    return redirect('admin:hotels_hotel_change', object_id=hotel.id)
+            
+            except Exception as e:
+                messages.error(request, f"Hata oluştu: {str(e)}")
+    else:
+        hotel_form = HotelForm()
+        room_formset = RoomFormSet(prefix='rooms')
+        contract_formset = ContractMarketFormSet(prefix='contracts')
+    
+    return render(request, 'hotels/hotel_portal.html', {
+        'hotel_form': hotel_form,
+        'room_formset': room_formset,
+        'contract_formset': contract_formset,
+        'available_markets': Market.objects.all(),
+        'title': 'Yeni Otel Ekle',
+        'is_edit': False
+    })
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def hotel_portal_edit(request, hotel_id):
+    """
+    View for editing an existing hotel with related data in a single form
+    """
+    hotel = get_object_or_404(Hotel, id=hotel_id)
+    
+    if request.method == 'POST':
+        hotel_form = HotelForm(request.POST, instance=hotel)
+        room_formset = RoomFormSet(request.POST, instance=hotel, prefix='rooms')
+        
+        # For contracts, we need custom handling since we're using a formset not directly tied to the hotel
+        contract_formset = ContractMarketFormSet(request.POST, prefix='contracts')
+        
+        if hotel_form.is_valid() and room_formset.is_valid() and contract_formset.is_valid():
+            try:
+                with transaction.atomic():
+                    # Save hotel
+                    hotel = hotel_form.save()
+                    
+                    # Save rooms and create room type groups
+                    rooms = room_formset.save(commit=False)
+                    for room_form, room in zip(room_formset.forms, rooms):
+                        if not room_form.cleaned_data.get('DELETE', False):
+                            # Set hotel for each room
+                            room.hotel = hotel
+                            room.save()
+                            
+                            # Create or get room type group
+                            group_name = room_form.cleaned_data.get('group_name')
+                            if group_name:
+                                group, created = RoomTypeGroup.objects.get_or_create(
+                                    hotel=hotel,
+                                    name=group_name
+                                )
+                                
+                                # Create room type variant if it doesn't exist
+                                RoomTypeVariant.objects.get_or_create(
+                                    group=group,
+                                    variant_room_name=room.juniper_room_type
+                                )
+                    
+                    # Delete the forms marked for deletion
+                    room_formset.save()
+                    
+                    # Handle contracts - first clear existing ones
+                    if 'reset_contracts' in request.POST:
+                        # If user checked "reset contracts" box, remove all existing contracts
+                        JuniperContractMarket.objects.filter(hotel=hotel).delete()
+                    
+                    # Add new contracts from the formset
+                    for contract_form in contract_formset:
+                        if contract_form.is_valid() and not contract_form.cleaned_data.get('DELETE', False):
+                            contract_data = contract_form.cleaned_data
+                            
+                            # Create a contract for each selected market
+                            for market in contract_data.get('markets', []):
+                                JuniperContractMarket.objects.get_or_create(
+                                    hotel=hotel,
+                                    market=market,
+                                    contract_name=contract_data.get('contract_name'),
+                                    season=contract_data.get('season'),
+                                    defaults={'access': contract_data.get('access')}
+                                )
+                    
+                    messages.success(request, f"Otel {hotel.juniper_hotel_name} ve ilgili veriler başarıyla güncellendi.")
+                    return redirect('admin:hotels_hotel_change', object_id=hotel.id)
+            
+            except Exception as e:
+                messages.error(request, f"Hata oluştu: {str(e)}")
+    else:
+        hotel_form = HotelForm(instance=hotel)
+        
+        # Her oda için grup bilgilerini içeren formset oluştur
+        # Önce odaların grup bilgilerini toplayalım
+        rooms_with_groups = []
+        for room in hotel.rooms.all():
+            # Bu oda için grup bilgisini ara
+            room_group = None
+            # İlgili RoomTypeVariant kaydı üzerinden grup bilgisini bulalım
+            variant = RoomTypeVariant.objects.filter(variant_room_name=room.juniper_room_type, group__hotel=hotel).first()
+            if variant:
+                room_group = variant.group.name
+            
+            # Dikkat: group_name doğrudan modelde olmadığından initial data olarak eklemeliyiz
+            rooms_with_groups.append({
+                'group_name': room_group,
+                'juniper_room_type': room.juniper_room_type,
+                'room_code': room.room_code,
+            })
+        
+        # Özel initial data ile formset oluştur
+        room_formset = RoomFormSet(instance=hotel, prefix='rooms')
+        
+        # Her form için grup bilgilerini atayalım
+        for i, form in enumerate(room_formset.forms):
+            if i < len(rooms_with_groups) and rooms_with_groups[i]['group_name']:
+                form.initial['group_name'] = rooms_with_groups[i]['group_name']
+        
+        # Pre-populate contract data
+        existing_contracts = {}
+        for contract in JuniperContractMarket.objects.filter(hotel=hotel).order_by('contract_name', 'season'):
+            key = (contract.contract_name, contract.season)
+            if key not in existing_contracts:
+                existing_contracts[key] = {
+                    'contract_name': contract.contract_name,
+                    'season': contract.season,
+                    'access': contract.access,
+                    'markets': []
+                }
+            existing_contracts[key]['markets'].append(contract.market)
+        
+        # Initialize formset with existing contract data
+        initial_contracts = []
+        for contract_data in existing_contracts.values():
+            initial_contracts.append({
+                'contract_name': contract_data['contract_name'],
+                'season': contract_data['season'],
+                'access': contract_data['access'],
+                'markets': [m.id for m in contract_data['markets']]
+            })
+        
+        # If there are no contracts, provide empty forms
+        if not initial_contracts:
+            contract_formset = ContractMarketFormSet(prefix='contracts')
+        else:
+            contract_formset = ContractMarketFormSet(initial=initial_contracts, prefix='contracts')
+    
+    return render(request, 'hotels/hotel_portal.html', {
+        'hotel_form': hotel_form,
+        'room_formset': room_formset,
+        'contract_formset': contract_formset,
+        'available_markets': Market.objects.all(),
+        'title': f'Otel Düzenle: {hotel.juniper_hotel_name}',
+        'is_edit': True,
+        'hotel': hotel
+    })
